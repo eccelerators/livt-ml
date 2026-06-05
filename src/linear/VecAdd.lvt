@@ -1,0 +1,38 @@
+namespace Livt.ML.Linear
+
+/**
+ * Adds two fixed 8-element integer vectors and stores the result.
+ */
+component VecAdd
+{
+	// Number of integer elements accepted by Compute.
+	public const VECTOR_SIZE: int = 8
+
+	output: int[8]
+
+	/**
+	 * Adds each element of a and b into the stored output vector.
+	 */
+	public fn Compute(a: int[8], b: int[8])
+	{
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			output[i] = a[i] + b[i]
+		}
+	}
+
+	/**
+	 * Returns one output element, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return output[index]
+	}
+}

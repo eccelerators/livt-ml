@@ -1,0 +1,48 @@
+namespace Livt.ML.Tests.Embedding
+
+using Livt.ML.Embedding
+
+@Test
+component FixedTokenEmbeddingTest
+{
+	embedding: FixedTokenEmbedding
+
+	new()
+	{
+		embedding = new FixedTokenEmbedding()
+	}
+
+	@Test
+	fn DefaultsToZeroVector()
+	{
+		embedding.Embed(3)
+
+		assert embedding.GetOutput(0) == 0
+		assert embedding.GetOutput(7) == 0
+	}
+
+	@Test
+	fn EmbedsConfiguredToken()
+	{
+		embedding.SetValue(2, 1, 256)
+		embedding.SetValue(2, 7, 128)
+		embedding.Embed(2)
+
+		assert embedding.GetOutput(0) == 0
+		assert embedding.GetOutput(1) == 256
+		assert embedding.GetOutput(7) == 128
+		assert embedding.GetValue(2, 1) == 256
+	}
+
+	@Test
+	fn IgnoresOutOfRangeAccess()
+	{
+		embedding.SetValue(99, 1, 256)
+		embedding.SetValue(1, 99, 256)
+		embedding.Embed(99)
+
+		assert embedding.GetOutput(0) == 0
+		assert embedding.GetOutput(8) == 0
+		assert embedding.GetValue(99, 1) == 0
+	}
+}

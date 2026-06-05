@@ -1,0 +1,19 @@
+namespace Livt.ML.Activation
+
+/**
+ * Stateless rectified linear unit for integer activations.
+ */
+component ReLU
+{
+	/**
+	 * Returns input when it is positive, otherwise returns zero.
+	 */
+	public fn Apply(input: int) int
+	{
+		if (input > 0) {
+			return input
+		}
+
+		return 0
+	}
+}

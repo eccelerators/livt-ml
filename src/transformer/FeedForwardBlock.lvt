@@ -1,0 +1,184 @@
+namespace Livt.ML.Transformer
+
+using Livt.ML.Activation
+using Livt.ML.Linear
+
+/**
+ * Two-layer fixed 8-element feed-forward block with ReLU hidden activation.
+ */
+component FeedForwardBlock
+{
+	// Number of integer elements in inputs, hidden rows, and outputs.
+	public const VECTOR_SIZE: int = 8
+
+	hiddenRows: int[8, 8]
+	outputRows: int[8, 8]
+	relu: ReLU
+	output: int[8]
+
+	/**
+	 * Creates the ReLU helper used for hidden activations.
+	 */
+	new()
+	{
+		relu = new ReLU()
+	}
+
+	/**
+	 * Copies weights into one hidden row and ignores invalid row indexes.
+	 */
+	public fn SetHiddenRow(rowIndex: int, weights: int[8])
+	{
+		if (rowIndex >= 0) {
+			if (rowIndex < VECTOR_SIZE) {
+				for (var i = 0; i < VECTOR_SIZE; i++) {
+					hiddenRows[rowIndex, i] = weights[i]
+				}
+			}
+		}
+	}
+
+	/**
+	 * Sets one hidden row from scalar weight arguments.
+	 */
+	public fn SetHiddenRowValues(
+		rowIndex: int,
+		w0: int, w1: int, w2: int, w3: int,
+		w4: int, w5: int, w6: int, w7: int)
+	{
+		if (rowIndex >= 0) {
+			if (rowIndex < VECTOR_SIZE) {
+				hiddenRows[rowIndex, 0] = w0
+				hiddenRows[rowIndex, 1] = w1
+				hiddenRows[rowIndex, 2] = w2
+				hiddenRows[rowIndex, 3] = w3
+				hiddenRows[rowIndex, 4] = w4
+				hiddenRows[rowIndex, 5] = w5
+				hiddenRows[rowIndex, 6] = w6
+				hiddenRows[rowIndex, 7] = w7
+			}
+		}
+	}
+
+	/**
+	 * Copies weights into one output row and ignores invalid row indexes.
+	 */
+	public fn SetOutputRow(rowIndex: int, weights: int[8])
+	{
+		if (rowIndex >= 0) {
+			if (rowIndex < VECTOR_SIZE) {
+				for (var i = 0; i < VECTOR_SIZE; i++) {
+					outputRows[rowIndex, i] = weights[i]
+				}
+			}
+		}
+	}
+
+	/**
+	 * Sets one output row from scalar weight arguments.
+	 */
+	public fn SetOutputRowValues(
+		rowIndex: int,
+		w0: int, w1: int, w2: int, w3: int,
+		w4: int, w5: int, w6: int, w7: int)
+	{
+		if (rowIndex >= 0) {
+			if (rowIndex < VECTOR_SIZE) {
+				outputRows[rowIndex, 0] = w0
+				outputRows[rowIndex, 1] = w1
+				outputRows[rowIndex, 2] = w2
+				outputRows[rowIndex, 3] = w3
+				outputRows[rowIndex, 4] = w4
+				outputRows[rowIndex, 5] = w5
+				outputRows[rowIndex, 6] = w6
+				outputRows[rowIndex, 7] = w7
+			}
+		}
+	}
+
+	/**
+	 * Clears all weights and installs identity hidden and output projections.
+	 */
+	public fn SetIdentityWeights()
+	{
+		ClearWeights()
+
+		hiddenRows[0, 0] = 1
+		hiddenRows[1, 1] = 1
+		hiddenRows[2, 2] = 1
+		hiddenRows[3, 3] = 1
+		hiddenRows[4, 4] = 1
+		hiddenRows[5, 5] = 1
+		hiddenRows[6, 6] = 1
+		hiddenRows[7, 7] = 1
+
+		outputRows[0, 0] = 1
+		outputRows[1, 1] = 1
+		outputRows[2, 2] = 1
+		outputRows[3, 3] = 1
+		outputRows[4, 4] = 1
+		outputRows[5, 5] = 1
+		outputRows[6, 6] = 1
+		outputRows[7, 7] = 1
+	}
+
+	/**
+	 * Clears all hidden and output weights to zero.
+	 */
+	public fn ClearWeights()
+	{
+		for (var row = 0; row < VECTOR_SIZE; row++) {
+			for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+				hiddenRows[row, elem] = 0
+				outputRows[row, elem] = 0
+			}
+		}
+	}
+
+	/**
+	 * Computes the feed-forward projection and stores the output vector.
+	 */
+	public fn Compute(input: int[8])
+	{
+		for (var outputRow = 0; outputRow < VECTOR_SIZE; outputRow++) {
+			var acc = 0
+
+			for (var hiddenRow = 0; hiddenRow < VECTOR_SIZE; hiddenRow++) {
+				var hiddenAcc = 0
+
+				for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+					hiddenAcc = hiddenAcc + hiddenRows[hiddenRow, elem] * input[elem]
+				}
+
+				if (hiddenAcc > DotProduct.ACC_MAX) {
+					hiddenAcc = DotProduct.ACC_MAX
+				}
+
+				var hiddenValue = relu.Apply(hiddenAcc)
+				acc = acc + outputRows[outputRow, hiddenRow] * hiddenValue
+			}
+
+			if (acc > DotProduct.ACC_MAX) {
+				acc = DotProduct.ACC_MAX
+			}
+
+			output[outputRow] = acc
+		}
+	}
+
+	/**
+	 * Returns one output element, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return output[index]
+	}
+}

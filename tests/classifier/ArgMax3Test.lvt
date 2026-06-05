@@ -1,0 +1,46 @@
+namespace Livt.ML.Tests.Classifier
+
+using Livt.ML.Classifier
+
+@Test
+component ArgMax3Test
+{
+	argmax: ArgMax3
+
+	new()
+	{
+		argmax = new ArgMax3()
+	}
+
+	@Test
+	fn SelectsClass0()
+	{
+		argmax.Compute(10, 0, 0)
+
+		assert argmax.GetClass() == ArgMax3.CLASS_0
+	}
+
+	@Test
+	fn SelectsClass1()
+	{
+		argmax.Compute(0, 10, 3)
+
+		assert argmax.GetClass() == ArgMax3.CLASS_1
+	}
+
+	@Test
+	fn SelectsClass2()
+	{
+		argmax.Compute(0, 3, 10)
+
+		assert argmax.GetClass() == ArgMax3.CLASS_2
+	}
+
+	@Test
+	fn TiesResolveToLowestClass()
+	{
+		argmax.Compute(5, 5, 5)
+
+		assert argmax.GetClass() == ArgMax3.CLASS_0
+	}
+}

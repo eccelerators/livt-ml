@@ -1,0 +1,66 @@
+namespace Livt.ML.Tests.Transformer
+
+using Livt.ML.Transformer
+
+@Test
+component TransformerBlockTest
+{
+	block: TransformerBlock
+
+	new()
+	{
+		block = new TransformerBlock()
+	}
+
+	@Test
+	fn ComputesZeroInput()
+	{
+		block.Clear()
+
+		var input: int[8]
+
+		block.Compute(input)
+
+		assert block.GetOutput(0) == 0
+		assert block.GetOutput(7) == 0
+	}
+
+	@Test
+	fn ComputesNonZeroInput()
+	{
+		block.Clear()
+
+		var input: int[8] = [2, 0, 0, 0, 0, 0, 0, 0]
+
+		block.Compute(input)
+
+		assert block.GetOutput(0) == 3
+		assert block.GetOutput(1) == 0
+	}
+
+	@Test
+	fn PreservesResidualSignal()
+	{
+		block.Clear()
+
+		var input: int[8] = [4, 4, 0, 0, 0, 0, 0, 0]
+
+		block.Compute(input)
+
+		assert block.GetOutput(0) > 0
+		assert block.GetOutput(1) > 0
+	}
+
+	@Test
+	fn ReturnsZeroOutOfBounds()
+	{
+		block.Clear()
+
+		var input: int[8]
+
+		block.Compute(input)
+
+		assert block.GetOutput(7) == 0
+		assert block.GetOutput(8) == 0
+	}
+}

@@ -1,0 +1,94 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component MatrixVectorMultiplicationTest
+{
+	mv: MatrixVectorMultiplication
+
+	new()
+	{
+		mv = new MatrixVectorMultiplication()
+	}
+
+	@Test
+	fn ZeroWeightsGiveZeroOutput()
+	{
+		mv.SetRowValues(0, 0, 0, 0, 0, 0, 0, 0, 0)
+		mv.SetRowValues(1, 0, 0, 0, 0, 0, 0, 0, 0)
+		mv.SetRowValues(2, 0, 0, 0, 0, 0, 0, 0, 0)
+		mv.SetRowValues(3, 0, 0, 0, 0, 0, 0, 0, 0)
+
+		var input: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+
+		mv.Compute(input)
+
+		assert mv.GetOutput(0) == 0
+		assert mv.GetOutput(1) == 0
+		assert mv.GetOutput(2) == 0
+		assert mv.GetOutput(3) == 0
+	}
+
+	@Test
+	fn IdentityRowsExtractInputs()
+	{
+		mv.SetRowValues(0, 1, 0, 0, 0, 0, 0, 0, 0)
+		mv.SetRowValues(1, 0, 1, 0, 0, 0, 0, 0, 0)
+		mv.SetRowValues(2, 0, 0, 1, 0, 0, 0, 0, 0)
+		mv.SetRowValues(3, 0, 0, 0, 1, 0, 0, 0, 0)
+
+		var input: int[8] = [10, 20, 30, 40, 50, 60, 70, 80]
+
+		mv.Compute(input)
+
+		assert mv.GetOutput(0) == 10
+		assert mv.GetOutput(1) == 20
+		assert mv.GetOutput(2) == 30
+		assert mv.GetOutput(3) == 40
+	}
+
+	@Test
+	fn UniformRowsScaleSums()
+	{
+		mv.SetRowValues(0, 1, 1, 1, 1, 1, 1, 1, 1)
+		mv.SetRowValues(1, 2, 2, 2, 2, 2, 2, 2, 2)
+		mv.SetRowValues(2, 3, 3, 3, 3, 3, 3, 3, 3)
+		mv.SetRowValues(3, 4, 4, 4, 4, 4, 4, 4, 4)
+
+		var input: int[8] = [1, 1, 1, 1, 1, 1, 1, 1]
+
+		mv.Compute(input)
+
+		assert mv.GetOutput(0) == 8
+		assert mv.GetOutput(1) == 16
+		assert mv.GetOutput(2) == 24
+		assert mv.GetOutput(3) == 32
+	}
+
+	@Test
+	fn SupportsArrayRowSetter()
+	{
+		var weights: int[8] = [5, 0, 0, 0, 0, 0, 0, 0]
+		var input: int[8] = [3, 0, 0, 0, 0, 0, 0, 0]
+
+		mv.SetRow(0, weights)
+		mv.SetRow(99, weights)
+		mv.Compute(input)
+
+		assert mv.GetOutput(0) == 15
+		assert mv.GetOutput(99) == 0
+	}
+
+	@Test
+	fn SaturatesOutputs()
+	{
+		mv.SetRowValues(0, 100, 100, 100, 100, 100, 100, 100, 100)
+
+		var input: int[8] = [100, 100, 100, 100, 100, 100, 100, 100]
+
+		mv.Compute(input)
+
+		assert mv.GetOutput(0) == DotProduct.ACC_MAX
+	}
+}

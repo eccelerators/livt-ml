@@ -1,0 +1,56 @@
+namespace Livt.ML.Classifier
+
+/**
+ * Small deterministic 8-element state projection to three class logits.
+ *
+ * This is intentionally fixed-size and simple for early FPGA classifier
+ * wrappers. Later trained projections can grow beside this component without
+ * changing application-level classifier contracts.
+ */
+component ClassProjection
+{
+	// First projected class index.
+	public const CLASS_0: int = 0
+	// Second projected class index.
+	public const CLASS_1: int = 1
+	// Third projected class index.
+	public const CLASS_2: int = 2
+	// Number of logits stored by Project.
+	public const CLASS_COUNT: int = 3
+	// Number of integer features consumed by Project.
+	public const VECTOR_SIZE: int = 8
+
+	logits: int[3]
+
+	/**
+	 * Projects an 8-element feature vector into three deterministic logits.
+	 */
+	public fn Project(input: int[8])
+	{
+		var class0BaseScore = input[0] + input[1] + input[2] + input[3] + input[4]
+		var class1Score = input[6] - input[4]
+		var class2FeatureA = input[5] * 4
+		var class2FeatureB = input[7] * 4
+		var class2Score = class2FeatureA + class2FeatureB
+
+		logits[CLASS_0] = class0BaseScore - class2FeatureA - input[6] - class2FeatureB
+		logits[CLASS_1] = class1Score
+		logits[CLASS_2] = class2Score
+	}
+
+	/**
+	 * Returns one projected logit, or zero when index is out of range.
+	 */
+	public fn GetLogit(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index < CLASS_COUNT) {
+			return logits[index]
+		}
+
+		return 0
+	}
+}

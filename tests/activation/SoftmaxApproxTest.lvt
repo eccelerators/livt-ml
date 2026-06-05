@@ -1,0 +1,49 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component SoftmaxApproxTest
+{
+	softmax: SoftmaxApprox
+
+	new()
+	{
+		softmax = new SoftmaxApprox()
+	}
+
+	@Test
+	fn ComputesUniformDistribution()
+	{
+		var input: int[8]
+
+		softmax.Compute(input)
+
+		assert softmax.GetOutput(0) == 32
+		assert softmax.GetOutput(7) == 32
+	}
+
+	@Test
+	fn ComputesDominantElement()
+	{
+		var input: int[8] = [6, 3, 0, 0, 0, 0, 0, 0]
+
+		softmax.Compute(input)
+
+		assert softmax.GetOutput(0) == 240
+		assert softmax.GetOutput(1) == 11
+		assert softmax.GetOutput(2) == 0
+		assert softmax.GetOutput(8) == 0
+	}
+
+	@Test
+	fn ClampsHighInput()
+	{
+		var input: int[8] = [20, 0, 0, 0, 0, 0, 0, 0]
+
+		softmax.Compute(input)
+
+		assert softmax.GetOutput(0) == 255
+		assert softmax.GetOutput(1) == 0
+	}
+}

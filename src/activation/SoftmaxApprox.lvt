@@ -1,0 +1,97 @@
+namespace Livt.ML.Activation
+
+/**
+ * Computes an 8-element integer softmax approximation with scaled outputs.
+ */
+component SoftmaxApprox
+{
+	// Number of logits processed by Compute.
+	public const VECTOR_SIZE: int = 8
+	// Number of entries in the clamped exponential lookup table.
+	public const LUT_SIZE: int = 16
+	// Fixed-point probability scale used for stored outputs.
+	public const SCALE_FACTOR: int = 256
+
+	expLut: int[16]
+	output: int[8]
+
+	/**
+	 * Initializes the 16-entry exponential approximation table.
+	 */
+	new()
+	{
+		expLut[0] = 1
+		expLut[1] = 2
+		expLut[2] = 7
+		expLut[3] = 20
+		expLut[4] = 54
+		expLut[5] = 148
+		expLut[6] = 403
+		expLut[7] = 1096
+		expLut[8] = 2980
+		expLut[9] = 8103
+		expLut[10] = 22026
+		expLut[11] = 59874
+		expLut[12] = 162754
+		expLut[13] = 442413
+		expLut[14] = 1202604
+		expLut[15] = 3269446
+	}
+
+	/**
+	 * Computes scaled softmax probabilities after clamping logits to [0, 15].
+	 */
+	public fn Compute(input: int[8])
+	{
+		var sumExp = 0
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			var clampedA = input[i]
+
+			if (clampedA < 0) {
+				clampedA = 0
+			}
+
+			if (clampedA > 15) {
+				clampedA = 15
+			}
+
+			sumExp = sumExp + expLut[clampedA]
+		}
+
+		if (sumExp == 0) {
+			sumExp = 1
+		}
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			var clampedB = input[i]
+
+			if (clampedB < 0) {
+				clampedB = 0
+			}
+
+			if (clampedB > 15) {
+				clampedB = 15
+			}
+
+			var ev = expLut[clampedB]
+			output[i] = ev * SCALE_FACTOR / sumExp
+		}
+	}
+
+	/**
+	 * Returns one scaled probability, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return output[index]
+	}
+}

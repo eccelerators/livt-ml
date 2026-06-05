@@ -1,0 +1,30 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component ReLUTest
+{
+	relu: ReLU
+
+	new()
+	{
+		relu = new ReLU()
+	}
+
+	@Test
+	fn PassesPositiveValues()
+	{
+		assert relu.Apply(42) == 42
+		assert relu.Apply(32767) == 32767
+		assert relu.Apply(1) == 1
+	}
+
+	@Test
+	fn ClampsNonPositiveValuesToZero()
+	{
+		assert relu.Apply(-5) == 0
+		assert relu.Apply(0) == 0
+		assert relu.Apply(-128) == 0
+	}
+}

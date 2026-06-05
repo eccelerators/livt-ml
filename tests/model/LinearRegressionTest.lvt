@@ -1,0 +1,120 @@
+namespace Livt.ML.Tests.Model
+
+using Livt.ML.Model
+
+@Test
+component LinearRegressionTest
+{
+	model: LinearRegression
+
+	new()
+	{
+		model = new LinearRegression()
+	}
+
+	fn LoadCalibrationData(x: int[32], y: int[32])
+	{
+		x[0] = 180
+		x[1] = 200
+		x[2] = 220
+		x[3] = 240
+		x[4] = 260
+		x[5] = 280
+
+		y[0] = 170
+		y[1] = 190
+		y[2] = 210
+		y[3] = 230
+		y[4] = 250
+		y[5] = 270
+	}
+
+	@Test
+	fn FitsLinearModel()
+	{
+		var x: int[32]
+		var y: int[32]
+		this.LoadCalibrationData(x, y)
+
+		model.Fit(x, y, 6)
+
+		var aFixed = model.GetAFixed()
+		var b = model.GetB()
+
+		assert aFixed > 900
+		assert aFixed < 1100
+		assert b > -20
+		assert b < 0
+	}
+
+	@Test
+	fn PredictsWithinTrainingRange()
+	{
+		var x: int[32]
+		var y: int[32]
+		this.LoadCalibrationData(x, y)
+
+		model.Fit(x, y, 6)
+
+		var predicted = model.Predict(215)
+
+		assert predicted > 200
+		assert predicted < 210
+	}
+
+	@Test
+	fn PredictsTrainingDataWithSmallError()
+	{
+		var x: int[32]
+		var y: int[32]
+		this.LoadCalibrationData(x, y)
+
+		model.Fit(x, y, 6)
+
+		for (var i = 0; i < 6; i++) {
+			var predicted = model.Predict(x[i])
+			var error = predicted - y[i]
+
+			if (error < 0) {
+				error = -error
+			}
+
+			assert error <= 5
+		}
+	}
+
+	@Test
+	fn RejectsInsufficientData()
+	{
+		var x: int[32]
+		var y: int[32]
+
+		x[0] = 100
+		y[0] = 90
+
+		model.Fit(x, y, 1)
+
+		assert model.GetAFixed() == 0
+		assert model.GetB() == 0
+	}
+
+	@Test
+	fn RejectsDegenerateData()
+	{
+		var x: int[32]
+		var y: int[32]
+
+		x[0] = 100
+		x[1] = 100
+		x[2] = 100
+
+		y[0] = 90
+		y[1] = 91
+		y[2] = 92
+
+		model.Fit(x, y, 3)
+
+		assert model.GetAFixed() == 0
+		assert model.GetB() == 0
+	}
+}

@@ -1,0 +1,77 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Linear8x8Test
+{
+	layer: Linear8x8
+
+	new()
+	{
+		layer = new Linear8x8()
+	}
+
+	fn LoadIdentity()
+	{
+		layer.SetRowValues(0, 1, 0, 0, 0, 0, 0, 0, 0)
+		layer.SetRowValues(1, 0, 1, 0, 0, 0, 0, 0, 0)
+		layer.SetRowValues(2, 0, 0, 1, 0, 0, 0, 0, 0)
+		layer.SetRowValues(3, 0, 0, 0, 1, 0, 0, 0, 0)
+		layer.SetRowValues(4, 0, 0, 0, 0, 1, 0, 0, 0)
+		layer.SetRowValues(5, 0, 0, 0, 0, 0, 1, 0, 0)
+		layer.SetRowValues(6, 0, 0, 0, 0, 0, 0, 1, 0)
+		layer.SetRowValues(7, 0, 0, 0, 0, 0, 0, 0, 1)
+	}
+
+	@Test
+	fn ZeroWeightsGiveZeroOutput()
+	{
+		var input: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+
+		layer.Compute(input)
+
+		assert layer.GetOutput(0) == 0
+		assert layer.GetOutput(7) == 0
+	}
+
+	@Test
+	fn IdentityRowsPassInputsThrough()
+	{
+		LoadIdentity()
+
+		var input: int[8] = [11, 22, 33, 44, 55, 66, 77, 88]
+
+		layer.Compute(input)
+
+		assert layer.GetOutput(0) == 11
+		assert layer.GetOutput(3) == 44
+		assert layer.GetOutput(7) == 88
+	}
+
+	@Test
+	fn SupportsArrayRowSetter()
+	{
+		var weights: int[8] = [2, 0, 0, 0, 0, 0, 0, 0]
+		var input: int[8] = [9, 0, 0, 0, 0, 0, 0, 0]
+
+		layer.SetRow(0, weights)
+		layer.SetRow(99, weights)
+		layer.Compute(input)
+
+		assert layer.GetOutput(0) == 18
+		assert layer.GetOutput(8) == 0
+	}
+
+	@Test
+	fn SaturatesOutputs()
+	{
+		layer.SetRowValues(0, 100, 100, 100, 100, 100, 100, 100, 100)
+
+		var input: int[8] = [100, 100, 100, 100, 100, 100, 100, 100]
+
+		layer.Compute(input)
+
+		assert layer.GetOutput(0) == DotProduct.ACC_MAX
+	}
+}

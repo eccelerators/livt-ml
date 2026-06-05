@@ -1,0 +1,82 @@
+namespace Livt.ML.Linear
+
+/**
+ * Stores four 8-element weight rows and applies them to an input vector.
+ */
+component MatrixVectorMultiplication
+{
+	// Number of output rows produced by Compute.
+	public const ROW_COUNT: int = 4
+	// Number of integer elements in each input and weight row.
+	public const VECTOR_SIZE: int = 8
+
+	rows: int[4, 8]
+	results: int[4]
+	dp: DotProduct
+
+	/**
+	 * Creates the dot-product helper used for each matrix row.
+	 */
+	new()
+	{
+		dp = new DotProduct()
+	}
+
+	/**
+	 * Copies weights into one matrix row and ignores invalid row indexes.
+	 */
+	public fn SetRow(rowIndex: int, weights: int[8])
+	{
+		if (rowIndex >= 0) {
+			if (rowIndex < ROW_COUNT) {
+				for (var i = 0; i < VECTOR_SIZE; i++) {
+					rows[rowIndex, i] = weights[i]
+				}
+			}
+		}
+	}
+
+	/**
+	 * Sets one matrix row from scalar weight arguments.
+	 */
+	public fn SetRowValues(
+		rowIndex: int,
+		w0: int, w1: int, w2: int, w3: int,
+		w4: int, w5: int, w6: int, w7: int)
+	{
+		var weights: int[8] = [w0, w1, w2, w3, w4, w5, w6, w7]
+		SetRow(rowIndex, weights)
+	}
+
+	/**
+	 * Computes all row dot products against input and stores the outputs.
+	 */
+	public fn Compute(input: int[8])
+	{
+		for (var row = 0; row < ROW_COUNT; row++) {
+			var weights: int[8]
+
+			for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+				weights[elem] = rows[row, elem]
+			}
+
+			results[row] = dp.Compute(weights, input)
+		}
+	}
+
+	/**
+	 * Returns one computed row output, or zero when row is out of range.
+	 */
+	public fn GetOutput(row: int) int
+	{
+		if (row < 0) {
+			return 0
+		}
+
+		if (row < ROW_COUNT) {
+			return results[row]
+		}
+
+		return 0
+	}
+}

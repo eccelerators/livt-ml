@@ -1,0 +1,77 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component SigmoidLUTTest
+{
+	sig: SigmoidLUT
+
+	new()
+	{
+		sig = new SigmoidLUT()
+	}
+
+	@Test
+	fn TestMidpoint()
+	{
+		var result = sig.Apply(128)
+		assert result == 128
+	}
+
+	@Test
+	fn TestLowSaturation()
+	{
+		var result = sig.Apply(0)
+		assert result == 0
+	}
+
+	@Test
+	fn TestHighSaturation()
+	{
+		var result = sig.Apply(255)
+		assert result == 255
+	}
+
+	@Test
+	fn TestPositiveOne()
+	{
+		var result = sig.Apply(144)
+		assert result == 186
+	}
+
+	@Test
+	fn TestNegativeOne()
+	{
+		var result = sig.Apply(112)
+		assert result == 69
+	}
+
+	@Test
+	fn TestPositiveTwo()
+	{
+		var result = sig.Apply(160)
+		assert result == 225
+	}
+
+	@Test
+	fn TestNegativeTwo()
+	{
+		var result = sig.Apply(96)
+		assert result == 30
+	}
+
+	@Test
+	fn TestClampLow()
+	{
+		var result = sig.Apply(-10)
+		assert result == 0
+	}
+
+	@Test
+	fn TestClampHigh()
+	{
+		var result = sig.Apply(300)
+		assert result == 255
+	}
+}

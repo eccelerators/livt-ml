@@ -1,0 +1,102 @@
+namespace Livt.ML.Attention
+
+using Livt.ML.Activation
+
+/**
+ * Computes scaled dot-product attention over a four-slot key/value cache.
+ */
+component ScaledDotProductAttention
+{
+	// Number of integer elements in query, key, value, and output vectors.
+	public const VECTOR_SIZE: int = 8
+	// Maximum number of cached key/value pairs.
+	public const CACHE_SIZE: int = 4
+	// Integer divisor applied to raw dot-product scores.
+	public const SCORE_SCALE: int = 3
+	// Fixed-point scale used by SoftmaxApprox weights.
+	public const WEIGHT_SCALE: int = 256
+
+	kvcache: KVCache
+	softmax: SoftmaxApprox
+
+	output: int[8]
+
+	/**
+	 * Creates the owned cache and softmax approximation components.
+	 */
+	new()
+	{
+		kvcache = new KVCache()
+		softmax = new SoftmaxApprox()
+	}
+
+	/**
+	 * Adds one key/value pair to the attention cache.
+	 */
+	public fn Write(key: int[8], val: int[8])
+	{
+		kvcache.Write(key, val)
+	}
+
+	/**
+	 * Computes attention for query against the cached key/value pairs.
+	 */
+	public fn Compute(query: int[8])
+	{
+		var scores: int[8]
+
+		for (var slot = 0; slot < CACHE_SIZE; slot++) {
+			var dot = 0
+
+			for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+				dot = dot + query[elem] * kvcache.GetKeyElement(slot, elem)
+			}
+
+			scores[slot] = dot / SCORE_SCALE
+		}
+
+		softmax.Compute(scores)
+
+		for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+			var weighted = 0
+
+			for (var slot = 0; slot < CACHE_SIZE; slot++) {
+				weighted = weighted + softmax.GetOutput(slot) * kvcache.GetValueElement(slot, elem)
+			}
+
+			output[elem] = weighted / WEIGHT_SCALE
+		}
+	}
+
+	/**
+	 * Returns one attention output element, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return output[index]
+	}
+
+	/**
+	 * Returns the number of key/value pairs currently cached.
+	 */
+	public fn GetCacheSize() int
+	{
+		return kvcache.GetSize()
+	}
+
+	/**
+	 * Clears the owned key/value cache.
+	 */
+	public fn ClearCache()
+	{
+		kvcache.Clear()
+	}
+}

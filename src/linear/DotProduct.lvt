@@ -1,0 +1,30 @@
+namespace Livt.ML.Linear
+
+/**
+ * Computes a saturated dot product for two fixed 8-element integer vectors.
+ */
+component DotProduct
+{
+	// Number of integer elements consumed from each input vector.
+	public const VECTOR_SIZE: int = 8
+	// Positive saturation limit for the accumulated result.
+	public const ACC_MAX: int = 32767
+
+	/**
+	 * Returns the dot product of a and b, clamped to ACC_MAX on positive overflow.
+	 */
+	public fn Compute(a: int[8], b: int[8]) int
+	{
+		var acc = 0
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			acc = acc + a[i] * b[i]
+		}
+
+		if (acc > ACC_MAX) {
+			acc = ACC_MAX
+		}
+
+		return acc
+	}
+}

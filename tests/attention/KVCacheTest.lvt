@@ -1,0 +1,103 @@
+namespace Livt.ML.Tests.Attention
+
+using Livt.ML.Attention
+
+@Test
+component KVCacheTest
+{
+	cache: KVCache
+
+	new()
+	{
+		cache = new KVCache()
+	}
+
+	@Test
+	fn NewCacheIsEmpty()
+	{
+		assert cache.IsEmpty() == true
+		assert cache.IsFull() == false
+		assert cache.GetSize() == 0
+	}
+
+	@Test
+	fn WritesSinglePair()
+	{
+		cache.Clear()
+
+		var k: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+		var v: int[8] = [10, 20, 30, 40, 50, 60, 70, 80]
+
+		cache.Write(k, v)
+
+		assert cache.GetSize() == 1
+		assert cache.IsEmpty() == false
+		assert cache.GetKeyElement(0, 0) == 1
+		assert cache.GetKeyElement(0, 7) == 8
+		assert cache.GetValueElement(0, 0) == 10
+		assert cache.GetValueElement(0, 7) == 80
+	}
+
+	@Test
+	fn EvictsOldestPairWhenFull()
+	{
+		cache.Clear()
+
+		var k: int[8]
+		var v: int[8]
+
+		k[0] = 1
+		k[7] = 11
+		v[0] = 10
+		v[7] = 110
+		cache.Write(k, v)
+
+		k[0] = 2
+		k[7] = 22
+		v[0] = 20
+		v[7] = 220
+		cache.Write(k, v)
+
+		k[0] = 3
+		k[7] = 33
+		v[0] = 30
+		v[7] = 330
+		cache.Write(k, v)
+
+		k[0] = 4
+		k[7] = 44
+		v[0] = 40
+		v[7] = 440
+		cache.Write(k, v)
+
+		k[0] = 5
+		k[7] = 55
+		v[0] = 50
+		v[7] = 550
+		cache.Write(k, v)
+
+		assert cache.GetSize() == 4
+		assert cache.IsFull() == true
+		assert cache.GetKeyElement(0, 0) == 2
+		assert cache.GetKeyElement(0, 7) == 22
+		assert cache.GetKeyElement(3, 0) == 5
+		assert cache.GetKeyElement(3, 7) == 55
+		assert cache.GetValueElement(0, 0) == 20
+		assert cache.GetValueElement(0, 7) == 220
+		assert cache.GetValueElement(3, 0) == 50
+		assert cache.GetValueElement(3, 7) == 550
+	}
+
+	@Test
+	fn ClearsCache()
+	{
+		var k: int[8] = [1, 0, 0, 0, 0, 0, 0, 0]
+		var v: int[8] = [10, 0, 0, 0, 0, 0, 0, 0]
+
+		cache.Write(k, v)
+		cache.Clear()
+
+		assert cache.IsEmpty() == true
+		assert cache.GetSize() == 0
+	}
+}

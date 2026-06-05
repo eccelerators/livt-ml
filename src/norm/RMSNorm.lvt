@@ -1,0 +1,62 @@
+namespace Livt.ML.Norm
+
+using Livt.Math.Sqrt
+
+/**
+ * Computes integer RMS normalization for a fixed 8-element vector.
+ */
+component RMSNorm
+{
+	// Number of integer elements processed by Compute.
+	public const VECTOR_SIZE: int = 8
+
+	sqrtNr: SqrtNewtonRaphson
+	output: int[8]
+
+	/**
+	 * Creates the integer square-root helper used for RMS scaling.
+	 */
+	new()
+	{
+		this.sqrtNr = new SqrtNewtonRaphson()
+	}
+
+	/**
+	 * Normalizes input by the integer root mean square and stores the output.
+	 */
+	public fn Compute(input: int[8])
+	{
+		var sumSq = 0
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			sumSq = sumSq + input[i] * input[i]
+		}
+
+		var meanSq = sumSq / VECTOR_SIZE
+		var rms = this.sqrtNr.Compute(meanSq)
+
+		if (rms == 0) {
+			rms = 1
+		}
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			this.output[i] = input[i] / rms
+		}
+	}
+
+	/**
+	 * Returns one normalized output element, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return this.output[index]
+	}
+}

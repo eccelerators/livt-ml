@@ -1,0 +1,51 @@
+namespace Livt.ML.Tests.Classifier
+
+using Livt.ML.Classifier
+
+@Test
+component ClassProjectionTest
+{
+	projection: ClassProjection
+
+	new()
+	{
+		projection = new ClassProjection()
+	}
+
+	@Test
+	fn ProjectsClass0LikeVector()
+	{
+		var input: int[8] = [0, 256, 256, 256, 256, 0, 0, 0]
+
+		projection.Project(input)
+
+		assert projection.GetLogit(ClassProjection.CLASS_0) == 1024
+		assert projection.GetLogit(ClassProjection.CLASS_1) == -256
+		assert projection.GetLogit(ClassProjection.CLASS_2) == 0
+	}
+
+	@Test
+	fn ProjectsClass1LikeVector()
+	{
+		var input: int[8] = [0, 0, 0, 0, 0, 0, 256, 0]
+
+		projection.Project(input)
+
+		assert projection.GetLogit(ClassProjection.CLASS_0) == -256
+		assert projection.GetLogit(ClassProjection.CLASS_1) == 256
+		assert projection.GetLogit(ClassProjection.CLASS_2) == 0
+	}
+
+	@Test
+	fn ProjectsClass2LikeVector()
+	{
+		var input: int[8] = [0, 0, 0, 0, 0, 256, 0, 0]
+
+		projection.Project(input)
+
+		assert projection.GetLogit(ClassProjection.CLASS_0) == -1024
+		assert projection.GetLogit(ClassProjection.CLASS_1) == 0
+		assert projection.GetLogit(ClassProjection.CLASS_2) == 1024
+		assert projection.GetLogit(3) == 0
+	}
+}

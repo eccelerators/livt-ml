@@ -1,0 +1,41 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component DotProductTest
+{
+	dp: DotProduct
+
+	new()
+	{
+		dp = new DotProduct()
+	}
+
+	@Test
+	fn ComputesZeroVector()
+	{
+		var a: int[8]
+		var b: int[8] = [1, 1, 1, 1, 1, 1, 1, 1]
+
+		assert dp.Compute(a, b) == 0
+	}
+
+	@Test
+	fn ComputesWeightedSum()
+	{
+		var a: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+		var b: int[8] = [8, 7, 6, 5, 4, 3, 2, 1]
+
+		assert dp.Compute(a, b) == 120
+	}
+
+	@Test
+	fn SaturatesLargeAccumulation()
+	{
+		var a: int[8] = [200, 200, 200, 0, 0, 0, 0, 0]
+		var b: int[8] = [200, 200, 200, 0, 0, 0, 0, 0]
+
+		assert dp.Compute(a, b) == DotProduct.ACC_MAX
+	}
+}

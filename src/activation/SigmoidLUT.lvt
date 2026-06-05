@@ -1,0 +1,290 @@
+namespace Livt.ML.Activation
+
+/**
+ * Looks up a sigmoid approximation scaled to the range 0 through 255.
+ */
+component SigmoidLUT
+{
+	// Number of entries in the integer sigmoid lookup table.
+	const LUT_SIZE: int = 256
+
+	lut: int[256]
+
+	/**
+	 * Initializes the 256-entry sigmoid lookup table.
+	 */
+	new()
+	{
+		lut[0] = 0
+		lut[1] = 0
+		lut[2] = 0
+		lut[3] = 0
+		lut[4] = 0
+		lut[5] = 0
+		lut[6] = 0
+		lut[7] = 0
+		lut[8] = 0
+		lut[9] = 0
+		lut[10] = 0
+		lut[11] = 0
+		lut[12] = 0
+		lut[13] = 0
+		lut[14] = 0
+		lut[15] = 0
+		lut[16] = 0
+		lut[17] = 0
+		lut[18] = 0
+		lut[19] = 0
+		lut[20] = 0
+		lut[21] = 0
+		lut[22] = 0
+		lut[23] = 0
+		lut[24] = 0
+		lut[25] = 0
+		lut[26] = 0
+		lut[27] = 0
+		lut[28] = 0
+		lut[29] = 1
+		lut[30] = 1
+		lut[31] = 1
+		lut[32] = 1
+		lut[33] = 1
+		lut[34] = 1
+		lut[35] = 1
+		lut[36] = 1
+		lut[37] = 1
+		lut[38] = 1
+		lut[39] = 1
+		lut[40] = 1
+		lut[41] = 1
+		lut[42] = 1
+		lut[43] = 1
+		lut[44] = 1
+		lut[45] = 1
+		lut[46] = 2
+		lut[47] = 2
+		lut[48] = 2
+		lut[49] = 2
+		lut[50] = 2
+		lut[51] = 2
+		lut[52] = 2
+		lut[53] = 2
+		lut[54] = 2
+		lut[55] = 3
+		lut[56] = 3
+		lut[57] = 3
+		lut[58] = 3
+		lut[59] = 3
+		lut[60] = 4
+		lut[61] = 4
+		lut[62] = 4
+		lut[63] = 4
+		lut[64] = 5
+		lut[65] = 5
+		lut[66] = 5
+		lut[67] = 6
+		lut[68] = 6
+		lut[69] = 6
+		lut[70] = 7
+		lut[71] = 7
+		lut[72] = 7
+		lut[73] = 8
+		lut[74] = 8
+		lut[75] = 9
+		lut[76] = 10
+		lut[77] = 10
+		lut[78] = 11
+		lut[79] = 11
+		lut[80] = 12
+		lut[81] = 13
+		lut[82] = 14
+		lut[83] = 14
+		lut[84] = 15
+		lut[85] = 16
+		lut[86] = 17
+		lut[87] = 18
+		lut[88] = 19
+		lut[89] = 20
+		lut[90] = 22
+		lut[91] = 23
+		lut[92] = 24
+		lut[93] = 26
+		lut[94] = 27
+		lut[95] = 29
+		lut[96] = 30
+		lut[97] = 32
+		lut[98] = 34
+		lut[99] = 36
+		lut[100] = 38
+		lut[101] = 40
+		lut[102] = 42
+		lut[103] = 44
+		lut[104] = 47
+		lut[105] = 49
+		lut[106] = 51
+		lut[107] = 54
+		lut[108] = 57
+		lut[109] = 60
+		lut[110] = 62
+		lut[111] = 65
+		lut[112] = 69
+		lut[113] = 72
+		lut[114] = 75
+		lut[115] = 78
+		lut[116] = 82
+		lut[117] = 85
+		lut[118] = 89
+		lut[119] = 93
+		lut[120] = 96
+		lut[121] = 100
+		lut[122] = 104
+		lut[123] = 108
+		lut[124] = 112
+		lut[125] = 116
+		lut[126] = 120
+		lut[127] = 124
+		lut[128] = 128
+		lut[129] = 131
+		lut[130] = 135
+		lut[131] = 139
+		lut[132] = 143
+		lut[133] = 147
+		lut[134] = 151
+		lut[135] = 155
+		lut[136] = 159
+		lut[137] = 162
+		lut[138] = 166
+		lut[139] = 170
+		lut[140] = 173
+		lut[141] = 177
+		lut[142] = 180
+		lut[143] = 183
+		lut[144] = 186
+		lut[145] = 190
+		lut[146] = 193
+		lut[147] = 195
+		lut[148] = 198
+		lut[149] = 201
+		lut[150] = 204
+		lut[151] = 206
+		lut[152] = 208
+		lut[153] = 211
+		lut[154] = 213
+		lut[155] = 215
+		lut[156] = 217
+		lut[157] = 219
+		lut[158] = 221
+		lut[159] = 223
+		lut[160] = 225
+		lut[161] = 226
+		lut[162] = 228
+		lut[163] = 229
+		lut[164] = 231
+		lut[165] = 232
+		lut[166] = 233
+		lut[167] = 235
+		lut[168] = 236
+		lut[169] = 237
+		lut[170] = 238
+		lut[171] = 239
+		lut[172] = 240
+		lut[173] = 241
+		lut[174] = 241
+		lut[175] = 242
+		lut[176] = 243
+		lut[177] = 244
+		lut[178] = 244
+		lut[179] = 245
+		lut[180] = 245
+		lut[181] = 246
+		lut[182] = 247
+		lut[183] = 247
+		lut[184] = 248
+		lut[185] = 248
+		lut[186] = 248
+		lut[187] = 249
+		lut[188] = 249
+		lut[189] = 249
+		lut[190] = 250
+		lut[191] = 250
+		lut[192] = 250
+		lut[193] = 251
+		lut[194] = 251
+		lut[195] = 251
+		lut[196] = 251
+		lut[197] = 252
+		lut[198] = 252
+		lut[199] = 252
+		lut[200] = 252
+		lut[201] = 252
+		lut[202] = 253
+		lut[203] = 253
+		lut[204] = 253
+		lut[205] = 253
+		lut[206] = 253
+		lut[207] = 253
+		lut[208] = 253
+		lut[209] = 253
+		lut[210] = 253
+		lut[211] = 254
+		lut[212] = 254
+		lut[213] = 254
+		lut[214] = 254
+		lut[215] = 254
+		lut[216] = 254
+		lut[217] = 254
+		lut[218] = 254
+		lut[219] = 254
+		lut[220] = 254
+		lut[221] = 254
+		lut[222] = 254
+		lut[223] = 254
+		lut[224] = 254
+		lut[225] = 254
+		lut[226] = 254
+		lut[227] = 254
+		lut[228] = 255
+		lut[229] = 255
+		lut[230] = 255
+		lut[231] = 255
+		lut[232] = 255
+		lut[233] = 255
+		lut[234] = 255
+		lut[235] = 255
+		lut[236] = 255
+		lut[237] = 255
+		lut[238] = 255
+		lut[239] = 255
+		lut[240] = 255
+		lut[241] = 255
+		lut[242] = 255
+		lut[243] = 255
+		lut[244] = 255
+		lut[245] = 255
+		lut[246] = 255
+		lut[247] = 255
+		lut[248] = 255
+		lut[249] = 255
+		lut[250] = 255
+		lut[251] = 255
+		lut[252] = 255
+		lut[253] = 255
+		lut[254] = 255
+		lut[255] = 255
+	}
+
+	/**
+	 * Returns the clamped sigmoid-table value for input.
+	 */
+	public fn Apply(input: int) int
+	{
+		var index = input
+		if (index < 0) {
+			index = 0
+		}
+		if (index > 255) {
+			index = 255
+		}
+		return lut[index]
+	}
+}

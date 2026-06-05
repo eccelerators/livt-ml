@@ -1,0 +1,81 @@
+namespace Livt.ML.Embedding
+
+/**
+ * Mutable 16-token by 8-value integer embedding table.
+ */
+component FixedTokenEmbedding
+{
+	// Number of token rows in the embedding table.
+	public const TOKEN_COUNT: int = 16
+	// Number of integer values in each embedding row.
+	public const VECTOR_SIZE: int = 8
+
+	values: int[16, 8]
+	output: int[8]
+
+	/**
+	 * Writes one embedding-table value and ignores invalid token or index values.
+	 */
+	public fn SetValue(token: int, index: int, value: int)
+	{
+		if (token >= 0) {
+			if (token < TOKEN_COUNT) {
+				if (index >= 0) {
+					if (index < VECTOR_SIZE) {
+						values[token, index] = value
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Copies the selected token row into the stored output vector.
+	 */
+	public fn Embed(token: int)
+	{
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			output[i] = GetValue(token, i)
+		}
+	}
+
+	/**
+	 * Returns one embedded output value, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index < VECTOR_SIZE) {
+			return output[index]
+		}
+
+		return 0
+	}
+
+	/**
+	 * Returns one table value, or zero when token or index is out of range.
+	 */
+	public fn GetValue(token: int, index: int) int
+	{
+		if (token < 0) {
+			return 0
+		}
+
+		if (token >= TOKEN_COUNT) {
+			return 0
+		}
+
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return values[token, index]
+	}
+}

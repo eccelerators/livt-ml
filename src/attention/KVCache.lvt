@@ -1,0 +1,94 @@
+namespace Livt.ML.Attention
+
+/**
+ * Four-slot FIFO cache for fixed 8-element key and value vectors.
+ */
+component KVCache
+{
+	// Maximum number of key/value pairs retained by the cache.
+	public const CACHE_SIZE: int = 4
+	// Number of integer elements in each key and value vector.
+	public const VECTOR_SIZE: int = 8
+
+	keys: int[4, 8]
+	vals: int[4, 8]
+
+	head: int
+	tail: int
+	size: int
+
+	/**
+	 * Appends a key/value pair, evicting the oldest pair when the cache is full.
+	 */
+	public fn Write(key: int[8], val: int[8])
+	{
+		if (size == CACHE_SIZE) {
+			head = (head + 1) % CACHE_SIZE
+		}
+
+		if (size < CACHE_SIZE) {
+			size++
+		}
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			keys[tail, i] = key[i]
+			vals[tail, i] = val[i]
+		}
+
+		tail = (tail + 1) % CACHE_SIZE
+	}
+
+	/**
+	 * Returns one key element from the logical cache slot.
+	 */
+	public fn GetKeyElement(slot: int, elem: int) int
+	{
+		var physSlot = (head + slot) % CACHE_SIZE
+
+		return keys[physSlot, elem]
+	}
+
+	/**
+	 * Returns one value element from the logical cache slot.
+	 */
+	public fn GetValueElement(slot: int, elem: int) int
+	{
+		var physSlot = (head + slot) % CACHE_SIZE
+
+		return vals[physSlot, elem]
+	}
+
+	/**
+	 * Returns the number of key/value pairs currently stored.
+	 */
+	public fn GetSize() int
+	{
+		return size
+	}
+
+	/**
+	 * Returns true when the cache contains no key/value pairs.
+	 */
+	public fn IsEmpty() bool
+	{
+		return size == 0
+	}
+
+	/**
+	 * Returns true when the cache contains CACHE_SIZE key/value pairs.
+	 */
+	public fn IsFull() bool
+	{
+		return size == CACHE_SIZE
+	}
+
+	/**
+	 * Removes all cached key/value pairs and resets FIFO indexes.
+	 */
+	public fn Clear()
+	{
+		head = 0
+		tail = 0
+		size = 0
+	}
+}

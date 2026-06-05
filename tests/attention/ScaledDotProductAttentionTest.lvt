@@ -1,0 +1,81 @@
+namespace Livt.ML.Tests.Attention
+
+using Livt.ML.Attention
+
+@Test
+component ScaledDotProductAttentionTest
+{
+	attn: ScaledDotProductAttention
+
+	new()
+	{
+		attn = new ScaledDotProductAttention()
+	}
+
+	@Test
+	fn ComputesEmptyCacheAsZero()
+	{
+		var query: int[8]
+
+		attn.Compute(query)
+
+		assert attn.GetOutput(0) == 0
+		assert attn.GetOutput(7) == 0
+	}
+
+	@Test
+	fn ComputesSingleDominantWrite()
+	{
+		attn.ClearCache()
+
+		var key: int[8] = [4, 4, 4, 4, 4, 4, 4, 4]
+		var val: int[8] = [10, 20, 30, 40, 50, 60, 70, 80]
+		var query: int[8] = [4, 4, 4, 4, 4, 4, 4, 4]
+
+		attn.Write(key, val)
+		attn.Compute(query)
+
+		assert attn.GetOutput(0) == 9
+		assert attn.GetOutput(1) == 19
+		assert attn.GetOutput(2) == 29
+	}
+
+	@Test
+	fn ComputesTwoUniformScores()
+	{
+		attn.ClearCache()
+
+		var key0: int[8] = [1, 0, 0, 0, 0, 0, 0, 0]
+		var val0: int[8] = [8, 0, 0, 0, 0, 0, 0, 0]
+		var key1: int[8] = [0, 1, 0, 0, 0, 0, 0, 0]
+		var val1: int[8] = [0, 16, 0, 0, 0, 0, 0, 0]
+		var query: int[8] = [1, 0, 0, 0, 0, 0, 0, 0]
+
+		attn.Write(key0, val0)
+		attn.Write(key1, val1)
+		attn.Compute(query)
+
+		assert attn.GetOutput(0) == 1
+		assert attn.GetOutput(1) == 2
+		assert attn.GetOutput(2) == 0
+	}
+
+	@Test
+	fn ReportsCacheSizeAndOutputBounds()
+	{
+		attn.ClearCache()
+
+		assert attn.GetCacheSize() == 0
+
+		var key: int[8]
+		var val: int[8]
+		var query: int[8]
+
+		attn.Write(key, val)
+		attn.Compute(query)
+
+		assert attn.GetCacheSize() == 1
+		assert attn.GetOutput(7) == 0
+		assert attn.GetOutput(8) == 0
+	}
+}

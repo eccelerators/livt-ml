@@ -1,0 +1,36 @@
+[project]
+name = "Livt.ML"
+version = "0.1.0"
+path = "src"
+outdir = "out"
+
+[tests]
+path = "tests"
+components = [
+    "VecAddTest",
+    "DotProductTest",
+    "MatrixVectorMultiplicationTest",
+    "Linear8x8Test",
+    "ArgMax3Test",
+    "ClassProjectionTest",
+    "FixedTokenEmbeddingTest",
+    "ReLUTest",
+    "SigmoidLUTTest",
+    "SiLUApproxTest",
+    "SoftmaxApproxTest",
+    "RMSNormTest",
+    "KVCacheTest",
+    "ScaledDotProductAttentionTest",
+    "FeedForwardBlockTest",
+    "TransformerBlockTest",
+    "LinearRegressionTest"
+]
+
+[dependencies]
+Livt.Math = "0.2.1"
+
+[build.debug]
+warnings = ["all", "no-variable-divisor"]
+
+[build.release]
+warnings = ["all"]

@@ -1,0 +1,77 @@
+namespace Livt.ML.Activation
+
+/**
+ * Applies a fixed 8-element integer SiLU approximation using a sigmoid table.
+ */
+component SiLUApprox
+{
+	// Number of integer activations processed by Compute.
+	public const VECTOR_SIZE: int = 8
+	// Number of entries in the clamped sigmoid lookup table.
+	public const LUT_SIZE: int = 16
+	// Fixed-point scale used for sigmoid table values.
+	public const SCALE_FACTOR: int = 256
+
+	sigLut: int[16]
+	output: int[8]
+
+	/**
+	 * Initializes the 16-entry sigmoid approximation table.
+	 */
+	new()
+	{
+		sigLut[0] = 128
+		sigLut[1] = 187
+		sigLut[2] = 225
+		sigLut[3] = 244
+		sigLut[4] = 251
+		sigLut[5] = 254
+		sigLut[6] = 255
+		sigLut[7] = 255
+		sigLut[8] = 255
+		sigLut[9] = 255
+		sigLut[10] = 255
+		sigLut[11] = 255
+		sigLut[12] = 255
+		sigLut[13] = 255
+		sigLut[14] = 255
+		sigLut[15] = 255
+	}
+
+	/**
+	 * Computes input * sigmoid(input) for each element and stores the outputs.
+	 */
+	public fn Compute(input: int[8])
+	{
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			var clamped = input[i]
+
+			if (clamped < 0) {
+				clamped = 0
+			}
+
+			if (clamped > 15) {
+				clamped = 15
+			}
+
+			var sig = sigLut[clamped]
+			output[i] = input[i] * sig / SCALE_FACTOR
+		}
+	}
+
+	/**
+	 * Returns one computed output element, or zero when index is out of range.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= VECTOR_SIZE) {
+			return 0
+		}
+
+		return output[index]
+	}
+}

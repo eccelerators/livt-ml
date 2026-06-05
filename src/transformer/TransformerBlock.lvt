@@ -1,0 +1,95 @@
+namespace Livt.ML.Transformer
+
+using Livt.ML.Activation
+using Livt.ML.Attention
+using Livt.ML.Linear
+using Livt.ML.Norm
+
+/**
+ * Fixed 8-element transformer-style block with attention and residual paths.
+ */
+component TransformerBlock
+{
+	// Number of integer elements in the block input and output vectors.
+	public const VECTOR_SIZE: int = 8
+
+	preAttnNorm: RMSNorm
+	attn: ScaledDotProductAttention
+	attnResidual: VecAdd
+	preFfnNorm: RMSNorm
+	silu: SiLUApprox
+	ffnResidual: VecAdd
+
+	/**
+	 * Creates the normalization, attention, activation, and residual helpers.
+	 */
+	new()
+	{
+		preAttnNorm = new RMSNorm()
+		attn = new ScaledDotProductAttention()
+		attnResidual = new VecAdd()
+		preFfnNorm = new RMSNorm()
+		silu = new SiLUApprox()
+		ffnResidual = new VecAdd()
+	}
+
+	/**
+	 * Computes one transformer-block pass and stores the residual output.
+	 */
+	public fn Compute(input: int[8])
+	{
+		preAttnNorm.Compute(input)
+
+		var preAttnOut: int[8]
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			preAttnOut[i] = preAttnNorm.GetOutput(i)
+		}
+
+		attn.Write(preAttnOut, preAttnOut)
+		attn.Compute(preAttnOut)
+
+		var attnOut: int[8]
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			attnOut[i] = attn.GetOutput(i)
+		}
+
+		attnResidual.Compute(input, attnOut)
+
+		var attnResOut: int[8]
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			attnResOut[i] = attnResidual.GetOutput(i)
+		}
+
+		preFfnNorm.Compute(attnResOut)
+
+		var preFfnOut: int[8]
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			preFfnOut[i] = preFfnNorm.GetOutput(i)
+		}
+
+		silu.Compute(preFfnOut)
+
+		var ffnOut: int[8]
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			ffnOut[i] = silu.GetOutput(i)
+		}
+
+		ffnResidual.Compute(attnResOut, ffnOut)
+	}
+
+	/**
+	 * Returns one output element from the last Compute call.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		return ffnResidual.GetOutput(index)
+	}
+
+	/**
+	 * Clears cached attention state owned by this block.
+	 */
+	public fn Clear()
+	{
+		attn.ClearCache()
+	}
+}

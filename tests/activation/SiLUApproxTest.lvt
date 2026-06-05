@@ -1,0 +1,39 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component SiLUApproxTest
+{
+	silu: SiLUApprox
+
+	new()
+	{
+		silu = new SiLUApprox()
+	}
+
+	@Test
+	fn ComputesZeroVector()
+	{
+		var input: int[8]
+
+		silu.Compute(input)
+
+		assert silu.GetOutput(0) == 0
+		assert silu.GetOutput(7) == 0
+	}
+
+	@Test
+	fn ComputesApproximation()
+	{
+		var input: int[8] = [2, 4, 8, 20, 0, 0, 0, 0]
+
+		silu.Compute(input)
+
+		assert silu.GetOutput(0) == 1
+		assert silu.GetOutput(1) == 3
+		assert silu.GetOutput(2) == 7
+		assert silu.GetOutput(3) == 19
+		assert silu.GetOutput(8) == 0
+	}
+}

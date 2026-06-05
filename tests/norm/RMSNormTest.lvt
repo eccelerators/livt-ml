@@ -1,0 +1,48 @@
+namespace Livt.ML.Tests.Norm
+
+using Livt.ML.Norm
+
+@Test
+component RMSNormTest
+{
+	rms: RMSNorm
+
+	new()
+	{
+		rms = new RMSNorm()
+	}
+
+	@Test
+	fn ComputesZeroVector()
+	{
+		var input: int[8]
+
+		rms.Compute(input)
+
+		assert rms.GetOutput(0) == 0
+		assert rms.GetOutput(7) == 0
+	}
+
+	@Test
+	fn ComputesUniformVectors()
+	{
+		var input: int[8] = [4, 4, 4, 4, 4, 4, 4, 4]
+
+		rms.Compute(input)
+
+		assert rms.GetOutput(0) == 1
+		assert rms.GetOutput(7) == 1
+	}
+
+	@Test
+	fn ComputesVariedVector()
+	{
+		var input: int[8] = [6, 8, 0, 0, 0, 0, 0, 0]
+
+		rms.Compute(input)
+
+		assert rms.GetOutput(0) == 2
+		assert rms.GetOutput(1) == 2
+		assert rms.GetOutput(8) == 0
+	}
+}

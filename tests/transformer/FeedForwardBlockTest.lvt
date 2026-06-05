@@ -1,0 +1,63 @@
+namespace Livt.ML.Tests.Transformer
+
+using Livt.ML.Transformer
+
+@Test
+component FeedForwardBlockTest
+{
+	ffn: FeedForwardBlock
+
+	new()
+	{
+		ffn = new FeedForwardBlock()
+	}
+
+	@Test
+	fn ZeroWeightsGiveZeroOutput()
+	{
+		ffn.ClearWeights()
+
+		var input: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+
+		ffn.Compute(input)
+
+		assert ffn.GetOutput(0) == 0
+		assert ffn.GetOutput(7) == 0
+	}
+
+	@Test
+	fn IdentityWeightsApplyRelu()
+	{
+		ffn.ClearWeights()
+		ffn.SetIdentityWeights()
+
+		var input: int[8] = [-5, 2, 0, 4, -1, 6, 7, 8]
+
+		ffn.Compute(input)
+
+		assert ffn.GetOutput(0) == 0
+		assert ffn.GetOutput(1) == 2
+		assert ffn.GetOutput(3) == 4
+		assert ffn.GetOutput(4) == 0
+		assert ffn.GetOutput(7) == 8
+	}
+
+	@Test
+	fn CanProjectHiddenFeatures()
+	{
+		ffn.ClearWeights()
+
+		ffn.SetHiddenRowValues(0, 1, 1, 0, 0, 0, 0, 0, 0)
+		ffn.SetHiddenRowValues(99, 9, 9, 9, 9, 9, 9, 9, 9)
+		ffn.SetOutputRowValues(0, 3, 0, 0, 0, 0, 0, 0, 0)
+		ffn.SetOutputRowValues(99, 9, 9, 9, 9, 9, 9, 9, 9)
+
+		var input: int[8] = [4, 5, 0, 0, 0, 0, 0, 0]
+
+		ffn.Compute(input)
+
+		assert ffn.GetOutput(0) == 27
+		assert ffn.GetOutput(1) == 0
+		assert ffn.GetOutput(8) == 0
+	}
+}

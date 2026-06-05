@@ -1,0 +1,77 @@
+namespace Livt.ML.Model
+
+/**
+ * Fits a small integer linear regression model with fixed-point slope.
+ */
+component LinearRegression
+{
+	// Maximum number of samples accepted by Fit.
+	public const MAX_SAMPLES: int = 32
+	// Fixed-point scale used to store the slope coefficient.
+	public const SCALE: int = 1000
+
+	aFixed: int
+	b: int
+
+	/**
+	 * Fits y = a*x + b from n samples, clearing coefficients on invalid input.
+	 */
+	public fn Fit(x: int[32], y: int[32], n: int)
+	{
+		aFixed = 0
+		b = 0
+
+		if (n < 2) {
+			return
+		}
+
+		if (n > MAX_SAMPLES) {
+			return
+		}
+
+		var sumX = 0
+		var sumY = 0
+		var sumXX = 0
+		var sumXY = 0
+
+		for (var i = 0; i < n; i++) {
+			sumX = sumX + x[i]
+			sumY = sumY + y[i]
+			sumXX = sumXX + x[i] * x[i]
+			sumXY = sumXY + x[i] * y[i]
+		}
+
+		var denom = n * sumXX - sumX * sumX
+
+		if (denom == 0) {
+			return
+		}
+
+		aFixed = (n * sumXY - sumX * sumY) * SCALE / denom
+		b = (sumY - (aFixed * sumX) / SCALE) / n
+	}
+
+	/**
+	 * Predicts y for x using the last fitted coefficients.
+	 */
+	public fn Predict(x: int) int
+	{
+		return (aFixed * x) / SCALE + b
+	}
+
+	/**
+	 * Returns the fitted slope scaled by SCALE.
+	 */
+	public fn GetAFixed() int
+	{
+		return aFixed
+	}
+
+	/**
+	 * Returns the fitted intercept.
+	 */
+	public fn GetB() int
+	{
+		return b
+	}
+}

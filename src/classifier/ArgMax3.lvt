@@ -1,0 +1,51 @@
+namespace Livt.ML.Classifier
+
+/**
+ * Deterministic argmax for three logits.
+ *
+ * Ties resolve to the lowest class index. This keeps generated hardware
+ * branching stable when two logits are equal.
+ */
+component ArgMax3
+{
+	// First class index returned by the classifier.
+	public const CLASS_0: int = 0
+	// Second class index returned by the classifier.
+	public const CLASS_1: int = 1
+	// Third class index returned by the classifier.
+	public const CLASS_2: int = 2
+
+	classId: int
+
+	/**
+	 * Selects the largest logit and stores the winning class index.
+	 */
+	public fn Compute(logit0: int, logit1: int, logit2: int)
+	{
+		classId = CLASS_0
+
+		if (logit1 > logit0) {
+			classId = CLASS_1
+		}
+
+		if (classId == CLASS_0) {
+			if (logit2 > logit0) {
+				classId = CLASS_2
+			}
+		}
+
+		if (classId == CLASS_1) {
+			if (logit2 > logit1) {
+				classId = CLASS_2
+			}
+		}
+	}
+
+	/**
+	 * Returns the class index selected by the last Compute call.
+	 */
+	public fn GetClass() int
+	{
+		return classId
+	}
+}

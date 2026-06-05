@@ -1,0 +1,52 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component VecAddTest
+{
+	va: VecAdd
+
+	new()
+	{
+		va = new VecAdd()
+	}
+
+	@Test
+	fn AddsZeroVectors()
+	{
+		var a: int[8]
+		var b: int[8]
+
+		va.Compute(a, b)
+
+		assert va.GetOutput(0) == 0
+		assert va.GetOutput(7) == 0
+	}
+
+	@Test
+	fn AddsDenseVectors()
+	{
+		var a: int[8] = [1, 1, 1, 1, 1, 1, 1, 1]
+		var b: int[8] = [1, 1, 1, 1, 1, 1, 1, 1]
+
+		va.Compute(a, b)
+
+		assert va.GetOutput(0) == 2
+		assert va.GetOutput(7) == 2
+	}
+
+	@Test
+	fn AddsResidualPattern()
+	{
+		var residual: int[8] = [10, 20, 30, 0, 0, 0, 0, 0]
+		var sublayer: int[8] = [5, 3, 1, 0, 0, 0, 0, 0]
+
+		va.Compute(residual, sublayer)
+
+		assert va.GetOutput(0) == 15
+		assert va.GetOutput(1) == 23
+		assert va.GetOutput(2) == 31
+		assert va.GetOutput(8) == 0
+	}
+}
