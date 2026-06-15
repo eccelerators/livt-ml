@@ -27,7 +27,7 @@ components = [
 ]
 
 [dependencies]
-Livt.Math = "0.2.1"
+Livt.Math = "0.3.1"
 
 [build.debug]
 warnings = ["all", "no-variable-divisor"]
