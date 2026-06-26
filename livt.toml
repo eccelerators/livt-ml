@@ -30,7 +30,7 @@ components = [
 Livt.Math = "0.3.1"
 
 [build.debug]
-warnings = ["all", "no-variable-divisor"]
+warnings = ["all"]
 
 [build.release]
 warnings = ["all"]

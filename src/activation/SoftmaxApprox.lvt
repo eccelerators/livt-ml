@@ -1,5 +1,7 @@
 namespace Livt.ML.Activation
 
+using Livt.Lang.Annotations
+
 /**
  * Computes an 8-element integer softmax approximation with scaled outputs.
  */
@@ -41,6 +43,7 @@ component SoftmaxApprox
 	/**
 	 * Computes scaled softmax probabilities after clamping logits to [0, 15].
 	 */
+	@SuppressWarning("variable-divisor")
 	public fn Compute(input: int[8])
 	{
 		var sumExp = 0
