@@ -1,0 +1,35 @@
+namespace Livt.ML.Classifier
+
+/**
+ * Selects the first maximum among ten classifier outputs.
+ */
+component ArgMax10
+{
+	classId: int
+
+	/**
+	 * Stores the first index containing the largest value.
+	 */
+	public fn Compute(values: int[10])
+	{
+		var bestIndex = 0
+		var bestValue = values[0]
+
+		for (var index = 1; index < 10; index++) {
+			if (values[index] > bestValue) {
+				bestValue = values[index]
+				bestIndex = index
+			}
+		}
+
+		classId = bestIndex
+	}
+
+	/**
+	 * Returns the stored class in the range zero through nine.
+	 */
+	public fn GetClass() int
+	{
+		return classId
+	}
+}

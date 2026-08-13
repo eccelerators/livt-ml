@@ -1,0 +1,88 @@
+namespace Livt.ML.Linear
+
+/**
+ * Applies eight signed-int8 weight rows to a four-element input vector.
+ *
+ * Inputs and weights are represented in Livt `int` values constrained to the
+ * signed int8 range by the caller. Biases and stored results use signed int32
+ * accumulator semantics and are not saturated to int8.
+ */
+component Int8Linear4x8
+{
+	// Number of input elements consumed by Compute.
+	public const INPUT_SIZE: int = 4
+	// Number of accumulator outputs produced by Compute.
+	public const OUTPUT_SIZE: int = 8
+
+	weights: int[8, 4]
+	biases: int[8]
+	accumulators: int[8]
+
+	/**
+	 * Clears all weights, biases, and stored accumulator outputs.
+	 */
+	public fn ClearParameters()
+	{
+		for (var row = 0; row < OUTPUT_SIZE; row++) {
+			biases[row] = 0
+			accumulators[row] = 0
+
+			for (var column = 0; column < INPUT_SIZE; column++) {
+				weights[row, column] = 0
+			}
+		}
+	}
+
+	/**
+	 * Sets one four-element weight row and ignores an invalid row index.
+	 */
+	public fn SetRowValues(row: int, w0: int, w1: int, w2: int, w3: int)
+	{
+		if (row < 0) { return }
+		if (row >= OUTPUT_SIZE) { return }
+
+		weights[row, 0] = w0
+		weights[row, 1] = w1
+		weights[row, 2] = w2
+		weights[row, 3] = w3
+	}
+
+	/**
+	 * Sets one int32 accumulator bias and ignores an invalid row index.
+	 */
+	public fn SetBias(row: int, value: int)
+	{
+		if (row < 0) { return }
+		if (row >= OUTPUT_SIZE) { return }
+
+		biases[row] = value
+	}
+
+	/**
+	 * Computes eight int32 bias-plus-dot-product accumulators.
+	 */
+	public fn Compute(input: int[4])
+	{
+		for (var row = 0; row < OUTPUT_SIZE; row++) {
+			var accumulator = biases[row]
+
+			for (var column = 0; column < INPUT_SIZE; column++) {
+				var product = input[column] * weights[row, column]
+				accumulator = accumulator + product
+			}
+
+			accumulators[row] = accumulator
+		}
+	}
+
+	/**
+	 * Returns one stored accumulator, or zero for an invalid row index.
+	 */
+	public fn GetAccumulator(row: int) int
+	{
+		if (row < 0) { return 0 }
+		if (row >= OUTPUT_SIZE) { return 0 }
+
+		return accumulators[row]
+	}
+}

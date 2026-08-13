@@ -1,0 +1,91 @@
+namespace Livt.ML.Norm
+
+using Livt.Math.FixedPoint
+
+/**
+ * Applies true learned LayerNorm to a fixed 64-value vector.
+ *
+ * Inputs use a caller-defined integer scale. The normalized intermediate,
+ * output, gamma, and beta use Q8.8 scale 256. `epsilon` is expressed in squared
+ * input units and should be derived when the activation scale is fixed. Callers
+ * must bound inputs so the sum of 64 centered squares fits int32.
+ */
+component LayerNorm64
+{
+	public const VECTOR_SIZE: int = 64
+	public const AFFINE_SCALE: int = 256
+	input: int[64]
+	gamma: int[64]
+	beta: int[64]
+	output: int[64]
+	reciprocalSqrt: ReciprocalSqrtQ15
+
+	new()
+	{
+		reciprocalSqrt = new ReciprocalSqrtQ15()
+		for (var index = 0; index < VECTOR_SIZE; index++) { 
+			gamma[index] = AFFINE_SCALE 
+		}
+	}
+
+	/** Stores one input element and ignores invalid indexes. */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0 || index >= VECTOR_SIZE) { return }
+		input[index] = value
+	}
+
+	/** Stores one Q8.8 learned gamma and beta pair. */
+	public fn SetAffine(index: int, gammaValue: int, betaValue: int)
+	{
+		if (index < 0 || index >= VECTOR_SIZE) { return }
+		gamma[index] = gammaValue
+		beta[index] = betaValue
+	}
+
+	/** Copies complete Q8.8 gamma and beta vectors. */
+	public fn SetAffineValues(gammaValues: int[64], betaValues: int[64])
+	{
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			gamma[index] = gammaValues[index]
+			beta[index] = betaValues[index]
+		}
+	}
+
+	/** Computes LayerNorm; epsilon must be non-negative. */
+	public fn Compute(epsilon: int)
+	{
+		var sum = 0
+		for (var index = 0; index < VECTOR_SIZE; index++) { sum = sum + input[index] }
+		var mean = sum / VECTOR_SIZE
+		var squaredSum = 0
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			var centered = input[index] - mean
+			squaredSum = squaredSum + centered * centered
+		}
+		var variance = squaredSum / VECTOR_SIZE
+		var boundedEpsilon = epsilon
+		if (boundedEpsilon < 0) { boundedEpsilon = 0 }
+		var inverseStddev = reciprocalSqrt.Compute(variance + boundedEpsilon)
+
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			var centered = input[index] - mean
+			var normalized = centered * inverseStddev / 128
+			output[index] = normalized * gamma[index] / AFFINE_SCALE + beta[index]
+		}
+	}
+
+	/** Copies one complete vector, computes LayerNorm, and stores the outputs. */
+	public fn ComputeValues(values: int[64], epsilon: int)
+	{
+		for (var index = 0; index < VECTOR_SIZE; index++) { input[index] = values[index] }
+		this.Compute(epsilon)
+	}
+
+	/** Returns one Q8.8 normalized output, or zero for an invalid index. */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0 || index >= VECTOR_SIZE) { return 0 }
+		return output[index]
+	}
+}

@@ -1,0 +1,72 @@
+namespace Livt.ML.Pooling
+
+/**
+ * Applies a 3x3 stride-three max pool to sixteen 14x14 activation planes.
+ *
+ * ONNX floor output sizing produces sixteen 4x4 planes; the final two input
+ * rows and columns are outside every complete pooling window.
+ */
+component MaxPool16x14To4
+{
+	public const INPUT_SIZE: int = 3136
+	public const OUTPUT_SIZE: int = 256
+
+	inputValues: int[3136]
+	output: int[256]
+
+	/**
+	 * Stores one flattened NCHW input value and ignores an invalid index.
+	 */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+
+		inputValues[index] = value
+	}
+
+	/**
+	 * Computes sixteen row-major 4x4 output planes.
+	 */
+	public fn Compute()
+	{
+		for (var channel = 0; channel < 16; channel++) {
+			for (var row = 0; row < 4; row++) {
+				for (var column = 0; column < 4; column++) {
+					var maxValue = 0
+
+					for (var poolRow = 0; poolRow < 3; poolRow++) {
+						for (var poolColumn = 0; poolColumn < 3; poolColumn++) {
+							state {
+								var inputRow = row * 3 + poolRow
+								var inputColumn = column * 3 + poolColumn
+								var inputIndex = channel * 196 + inputRow * 14 + inputColumn
+								var value = inputValues[inputIndex]
+
+								if (value > maxValue) {
+									maxValue = value
+								}
+							}
+						}
+					}
+
+					state {
+						var outputIndex = channel * 16 + row * 4 + column
+						output[outputIndex] = maxValue
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns one flattened NCHW output value, or zero for an invalid index.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+
+		return output[index]
+	}
+}

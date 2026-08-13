@@ -1,0 +1,86 @@
+namespace Livt.ML.Pooling
+
+/**
+ * Streams a 2x2 stride-two max pool over eight 28x28 uint8 NCHW planes.
+ *
+ * The input and output use a toggle handshake. A producer changes
+ * `inputRequest` after placing `inputData` and `inputLast`; the value has been
+ * accepted when `inputAcknowledge` matches it. This component changes
+ * `outputRequest` when an output is available and holds the output stable
+ * until `outputAcknowledge` matches it.
+ *
+ * At most one output is pending. Input backpressure is therefore automatic.
+ * The implementation stores one 28-byte row rather than complete tensors.
+ */
+component MaxPool8x28To14Stream
+{
+	inputRequest: logic
+	inputData: byte
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: byte
+	outputLast: logic
+	outputAcknowledge: logic
+	inputSeen: logic
+	pending: bool
+	channel: int
+	row: int
+	column: int
+	previousRow: byte[28]
+	horizontalMaximum: byte
+
+	new(inputRequest: in logic, inputData: in byte, inputLast: in logic,
+		inputAcknowledge: out logic, outputRequest: out logic,
+		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic)
+	{
+		this.inputRequest = inputRequest
+		this.inputData = inputData
+		this.inputLast = inputLast
+		inputAcknowledge = this.inputAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+	}
+
+	process Main()
+	{
+		inputAcknowledge = inputSeen
+
+		if (pending) {
+			if (outputAcknowledge == outputRequest) { pending = false }
+		} else {
+			if (inputRequest != inputSeen) {
+				if (row < 1) {
+					previousRow[column] = inputData
+				} else {
+					var verticalMaximum = previousRow[column]
+					if (inputData > verticalMaximum) { verticalMaximum = inputData }
+
+					if (column == 0 || column == 2 || column == 4 || column == 6 ||
+						column == 8 || column == 10 || column == 12 || column == 14 ||
+						column == 16 || column == 18 || column == 20 || column == 22 ||
+						column == 24 || column == 26) {
+						horizontalMaximum = verticalMaximum
+					} else {
+						outputData = horizontalMaximum
+						if (verticalMaximum > horizontalMaximum) { outputData = verticalMaximum }
+						outputLast = inputLast
+						outputRequest = !outputRequest
+						pending = true
+					}
+				}
+
+				inputSeen = inputRequest
+				if (column == 27) {
+					column = 0
+					if (row == 1) {
+						row = 0
+						if (channel == 7) { channel = 0 } else { channel++ }
+					} else { row++ }
+				} else { column++ }
+			}
+		}
+	}
+}

@@ -1,0 +1,148 @@
+namespace Livt.ML.Norm
+
+/**
+ * Toggle-stream implementation of the LayerNorm64 numeric contract.
+ *
+ * Sixty-four Q8.8 gamma/beta records configure the component. Each input frame
+ * then contains exactly 64 signed integer values. Outputs use Q8.8 normalized
+ * and affine scaling. Internal arrays never cross a public-function boundary.
+ */
+component LayerNorm64Stream
+{
+	public const VECTOR_SIZE: int = 64
+	public const AFFINE_SCALE: int = 256
+
+	affineRequest: logic
+	affineGamma: int
+	affineBeta: int
+	affineEpsilon: int
+	affineAcknowledge: logic
+	inputRequest: logic
+	inputData: int
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: int
+	outputLast: logic
+	outputAcknowledge: logic
+	configured: logic
+	frameError: logic
+	affineSeen: logic
+	inputSeen: logic
+	affineIndex: int
+	inputIndex: int
+	outputIndex: int
+	epsilon: int
+	inputs: int[64]
+	gamma: int[64]
+	beta: int[64]
+	outputs: int[64]
+	configurationComplete: bool
+	computing: bool
+	emitting: bool
+	pending: bool
+
+	new(
+		affineRequest: in logic, affineGamma: in int, affineBeta: in int,
+		affineEpsilon: in int, affineAcknowledge: out logic,
+		inputRequest: in logic, inputData: in int, inputLast: in logic,
+		inputAcknowledge: out logic, outputRequest: out logic,
+		outputData: out int, outputLast: out logic, outputAcknowledge: in logic,
+		configured: out logic, frameError: out logic)
+	{
+		this.affineRequest = affineRequest
+		this.affineGamma = affineGamma
+		this.affineBeta = affineBeta
+		this.affineEpsilon = affineEpsilon
+		affineAcknowledge = this.affineAcknowledge
+		this.inputRequest = inputRequest
+		this.inputData = inputData
+		this.inputLast = inputLast
+		inputAcknowledge = this.inputAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+		configured = this.configured
+		frameError = this.frameError
+	}
+
+	process Main()
+	{
+		affineAcknowledge = affineSeen
+		inputAcknowledge = inputSeen
+		configured = 0b0
+		if (configurationComplete) { configured = 0b1 }
+
+		if (!configurationComplete && affineRequest != affineSeen) {
+			gamma[affineIndex] = affineGamma
+			beta[affineIndex] = affineBeta
+			epsilon = affineEpsilon
+			affineSeen = affineRequest
+			if (affineIndex == 63) {
+				affineIndex = 0
+				configurationComplete = true
+			} else { affineIndex++ }
+		}
+
+		if (pending) {
+			if (outputAcknowledge == outputRequest) { pending = false }
+		} else {
+			if (emitting) {
+				outputData = outputs[outputIndex]
+				outputLast = 0b0
+				if (outputIndex == 63) { outputLast = 0b1 }
+				outputRequest = !outputRequest
+				pending = true
+				if (outputIndex == 63) {
+					outputIndex = 0
+					emitting = false
+				} else { outputIndex++ }
+			} else {
+				if (computing) {
+					var sum = 0
+					for (var index = 0; index < VECTOR_SIZE; index++) { sum = sum + inputs[index] }
+					var mean = sum / VECTOR_SIZE
+					var squaredSum = 0
+					for (var index = 0; index < VECTOR_SIZE; index++) {
+						var centered = inputs[index] - mean
+						squaredSum = squaredSum + centered * centered
+					}
+					var variance = squaredSum / VECTOR_SIZE
+					var normValue = variance + epsilon
+					if (normValue < 0) { normValue = 0 }
+					var inverseStddev = 0
+					if (normValue > 0) {
+						var root = normValue
+						if (normValue > 1) { root = normValue / 2 + 1 }
+						for (var iteration = 0; iteration < 31; iteration++) {
+							var quotient = normValue / root
+							if (root > quotient) { root = (root + quotient) / 2 }
+						}
+						if (root > normValue / root) { root-- }
+						inverseStddev = (32768 + root / 2) / root
+					}
+					for (var index = 0; index < VECTOR_SIZE; index++) {
+						var centered = inputs[index] - mean
+						var normalized = centered * inverseStddev / 128
+						outputs[index] = normalized * gamma[index] / AFFINE_SCALE + beta[index]
+					}
+					computing = false
+					emitting = true
+				} else {
+					if (configurationComplete && inputRequest != inputSeen) {
+						if (inputIndex == 0) { frameError = 0b0 }
+						if (inputLast == 0b1 && inputIndex != 63) { frameError = 0b1 }
+						if (inputIndex == 63 && inputLast != 0b1) { frameError = 0b1 }
+						inputs[inputIndex] = inputData
+						inputSeen = inputRequest
+						if (inputIndex == 63) {
+							inputIndex = 0
+							computing = true
+						} else { inputIndex++ }
+					}
+				}
+			}
+		}
+	}
+}

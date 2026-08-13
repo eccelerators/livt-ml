@@ -24,6 +24,19 @@ component SoftmaxApproxTest
 	}
 
 	@Test
+	fn ComputesOnlyConfiguredActiveValues()
+	{
+		var input: int[8]
+		softmax.ComputeCount(input, 2)
+
+		assert softmax.GetOutput(0) == 128
+		assert softmax.GetOutput(1) == 128
+		assert softmax.GetOutput(2) == 0
+		softmax.ComputeCount(input, 0)
+		assert softmax.GetOutput(0) == 0
+	}
+
+	@Test
 	fn ComputesDominantElement()
 	{
 		var input: int[8] = [6, 3, 0, 0, 0, 0, 0, 0]

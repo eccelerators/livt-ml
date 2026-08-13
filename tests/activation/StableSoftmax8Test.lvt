@@ -1,0 +1,40 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component StableSoftmax8Test
+{
+	dut: StableSoftmax8
+	new() { this.dut = new StableSoftmax8() }
+
+	@Test
+	fn ComputesUniformAndClearsInactiveLanes()
+	{
+		var scores: int[8]
+		this.dut.ComputeCount(scores, 8, 1)
+		assert this.dut.GetOutput(0) == 4096
+		assert this.dut.GetOutput(7) == 4096
+		this.dut.ComputeCount(scores, 2, 1)
+		assert this.dut.GetOutput(0) == 16384
+		assert this.dut.GetOutput(1) == 16384
+		assert this.dut.GetOutput(2) == 0
+	}
+
+	@Test
+	fn IsTranslationInvariantAndSupportsSignedScores()
+	{
+		var first: int[8] = [0, -1, -2, 0, 0, 0, 0, 0]
+		this.dut.ComputeCount(first, 3, 1)
+		var first0 = this.dut.GetOutput(0)
+		var first1 = this.dut.GetOutput(1)
+		var first2 = this.dut.GetOutput(2)
+		var shifted: int[8] = [100, 99, 98, 0, 0, 0, 0, 0]
+		this.dut.ComputeCount(shifted, 3, 1)
+		assert this.dut.GetOutput(0) == first0
+		assert this.dut.GetOutput(1) == first1
+		assert this.dut.GetOutput(2) == first2
+		assert first0 > first1
+		assert first1 > first2
+	}
+}

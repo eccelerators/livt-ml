@@ -1,0 +1,188 @@
+namespace Livt.ML.Convolution
+
+using Livt.ML.Numeric
+
+/**
+ * Resource-shared quantized SAME convolution for one 28x28 uint8 plane and
+ * eight output channels with 5x5 signed-int8 kernels.
+ *
+ * Configuration and frame ports use the Livt.ML toggle handshake. Weights are
+ * loaded output-channel-major. One MAC is scheduled per clock. The complete
+	 * input frame is retained in compact internal storage; one output pixel is
+	 * evaluated by a combinational 5x5 specialization; outputs are streamed in
+ * flattened NCHW order and are never materialized as a second tensor.
+ */
+component QConv2D1x8Kernel5Image28Stream
+{
+	weightRequest: logic
+	weightData: logic[8]
+	weightAcknowledge: logic
+	parameterRequest: logic
+	parameterBias: int
+	parameterMultiplier: int
+	parameterDivisor: int
+	parameterInputZeroPoint: int
+	parameterWeightZeroPoint: int
+	parameterOutputZeroPoint: int
+	parameterAcknowledge: logic
+	inputRequest: logic
+	inputData: byte
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: byte
+	outputLast: logic
+	outputAcknowledge: logic
+	configured: logic
+	frameError: logic
+
+	weightSeen: logic
+	parameterSeen: logic
+	inputSeen: logic
+	weightsLoaded: bool
+	parametersLoaded: bool
+	pending: bool
+	frameLoaded: bool
+	weightChannel: int
+	weightIndex: int
+	parameterChannel: int
+	inputIndex: int
+	outputChannel: int
+	outputRow: int
+	outputColumn: int
+	inputs: byte[784]
+	weights: logic[8, 25, 8]
+	biases: int[8]
+	multipliers: int[8]
+	divisors: int[8]
+	inputZeroPoints: int[8]
+	weightZeroPoints: int[8]
+	outputZeroPoints: int[8]
+
+	new(weightRequest: in logic, weightData: in logic[8], weightAcknowledge: out logic,
+		parameterRequest: in logic, parameterBias: in int,
+		parameterMultiplier: in int, parameterDivisor: in int,
+		parameterInputZeroPoint: in int, parameterWeightZeroPoint: in int,
+		parameterOutputZeroPoint: in int, parameterAcknowledge: out logic,
+		inputRequest: in logic, inputData: in byte, inputLast: in logic,
+		inputAcknowledge: out logic, outputRequest: out logic,
+		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic,
+		configured: out logic, frameError: out logic)
+	{
+		this.weightRequest = weightRequest
+		this.weightData = weightData
+		weightAcknowledge = this.weightAcknowledge
+		this.parameterRequest = parameterRequest
+		this.parameterBias = parameterBias
+		this.parameterMultiplier = parameterMultiplier
+		this.parameterDivisor = parameterDivisor
+		this.parameterInputZeroPoint = parameterInputZeroPoint
+		this.parameterWeightZeroPoint = parameterWeightZeroPoint
+		this.parameterOutputZeroPoint = parameterOutputZeroPoint
+		parameterAcknowledge = this.parameterAcknowledge
+		this.inputRequest = inputRequest
+		this.inputData = inputData
+		this.inputLast = inputLast
+		inputAcknowledge = this.inputAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+		configured = this.configured
+		frameError = this.frameError
+	}
+
+	/** Parallel SAME-padded 5x5 accumulator used by this specialized shape. */
+	public static fn ComputeAccumulator[](
+		inputs: in byte[784], weights: in logic[8, 25, 8],
+		bias: int, inputZeroPoint: int, weightZeroPoint: int,
+		outputChannel: int, outputRow: int, outputColumn: int) int
+	{
+		var accumulator = bias
+		for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
+			for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
+				var inputRow = outputRow + kernelRow - 2
+				var inputColumn = outputColumn + kernelColumn - 2
+				if (inputRow >= 0 && inputRow < 28 && inputColumn >= 0 && inputColumn < 28) {
+					var kernelIndex = kernelRow * 5 + kernelColumn
+					accumulator = QConv2DStreamBase.Accumulate(accumulator,
+						inputs[inputRow * 28 + inputColumn], weights[outputChannel, kernelIndex],
+						inputZeroPoint, weightZeroPoint)
+				}
+			}
+		}
+		return accumulator
+	}
+
+	process Main()
+	{
+		weightAcknowledge = weightSeen
+		parameterAcknowledge = parameterSeen
+		inputAcknowledge = inputSeen
+		configured = 0b0
+		if (weightsLoaded && parametersLoaded) { configured = 0b1 }
+
+		if (!frameLoaded && !pending && weightRequest != weightSeen) {
+			weights[weightChannel, weightIndex] = weightData
+			weightSeen = weightRequest
+			if (weightIndex == 24) {
+				weightIndex = 0
+				if (weightChannel == 7) { weightChannel = 0; weightsLoaded = true }
+				else { weightChannel++ }
+			} else { weightIndex++ }
+		}
+
+		if (!frameLoaded && !pending && parameterRequest != parameterSeen) {
+			biases[parameterChannel] = parameterBias
+			multipliers[parameterChannel] = parameterMultiplier
+			divisors[parameterChannel] = parameterDivisor
+			inputZeroPoints[parameterChannel] = parameterInputZeroPoint
+			weightZeroPoints[parameterChannel] = parameterWeightZeroPoint
+			outputZeroPoints[parameterChannel] = parameterOutputZeroPoint
+			parameterSeen = parameterRequest
+			if (parameterChannel == 7) { parameterChannel = 0; parametersLoaded = true }
+			else { parameterChannel++ }
+		}
+
+		if (!frameLoaded && weightsLoaded && parametersLoaded && inputRequest != inputSeen) {
+			if (inputIndex == 0) { frameError = 0b0 }
+			if (inputLast == 0b1 && inputIndex != 783) { frameError = 0b1 }
+			if (inputIndex == 783 && inputLast != 0b1) { frameError = 0b1 }
+			inputs[inputIndex] = inputData
+			inputSeen = inputRequest
+			if (inputIndex == 783) {
+				inputIndex = 0
+				frameLoaded = true
+				outputChannel = 0
+				outputRow = 0
+				outputColumn = 0
+			} else { inputIndex++ }
+		}
+
+		if (pending) {
+			if (outputAcknowledge == outputRequest) { pending = false }
+		} else {
+			if (frameLoaded) {
+				var candidate = QConv2D1x8Kernel5Image28Stream.ComputeAccumulator(
+					inputs, weights, biases[outputChannel], inputZeroPoints[outputChannel],
+					weightZeroPoints[outputChannel], outputChannel, outputRow, outputColumn)
+				var finished = RequantizeUInt8.ApplyRational(candidate,
+						multipliers[outputChannel], divisors[outputChannel],
+						outputZeroPoints[outputChannel])
+				outputData = finished as byte
+				outputLast = 0b0
+				if (outputChannel == 7 && outputRow == 27 && outputColumn == 27) { outputLast = 0b1 }
+				outputRequest = !outputRequest
+				pending = true
+				if (outputColumn == 27) {
+					outputColumn = 0
+					if (outputRow == 27) {
+						outputRow = 0
+						if (outputChannel == 7) { outputChannel = 0; frameLoaded = false }
+						else { outputChannel++ }
+					} else { outputRow++ }
+				} else { outputColumn++ }
+			}
+		}
+	}
+}

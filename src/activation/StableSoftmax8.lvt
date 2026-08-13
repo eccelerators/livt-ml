@@ -1,0 +1,79 @@
+namespace Livt.ML.Activation
+
+using Livt.Lang.Annotations
+
+/**
+ * Computes a numerically stable softmax over up to eight signed scores.
+ *
+ * The maximum score is subtracted before a bounded exp(-x) lookup. `scoreStep`
+ * defines how many input units correspond to one natural-log unit. Outputs use
+ * Q1.15 scale 32768 and inactive lanes are cleared.
+ */
+component StableSoftmax8
+{
+	public const VECTOR_SIZE: int = 8
+	public const OUTPUT_SCALE: int = 32768
+	const LAST_LUT_INDEX: int = 15
+
+	expNegative: int[16]
+	output: int[8]
+
+	new()
+	{
+		expNegative[0] = 32768
+		expNegative[1] = 12055
+		expNegative[2] = 4435
+		expNegative[3] = 1631
+		expNegative[4] = 600
+		expNegative[5] = 221
+		expNegative[6] = 81
+		expNegative[7] = 30
+		expNegative[8] = 11
+		expNegative[9] = 4
+		expNegative[10] = 1
+		expNegative[11] = 1
+		expNegative[12] = 0
+		expNegative[13] = 0
+		expNegative[14] = 0
+		expNegative[15] = 0
+	}
+
+	/** Computes Q1.15 softmax weights for the first count scores. */
+	@SuppressWarning("variable-divisor")
+	public fn ComputeCount(scores: int[8], count: int, scoreStep: int)
+	{
+		var activeCount = count
+		if (activeCount < 0) { activeCount = 0 }
+		if (activeCount > VECTOR_SIZE) { activeCount = VECTOR_SIZE }
+		for (var index = 0; index < VECTOR_SIZE; index++) { output[index] = 0 }
+		if (activeCount == 0) { return }
+
+		var step = scoreStep
+		if (step <= 0) { step = 1 }
+		var maxScore = scores[0]
+		for (var index = 1; index < activeCount; index++) {
+			if (scores[index] > maxScore) { maxScore = scores[index] }
+		}
+
+		var exponentials: int[8]
+		var sum = 0
+		for (var index = 0; index < activeCount; index++) {
+			var distance = (maxScore - scores[index] + step / 2) / step
+			if (distance > LAST_LUT_INDEX) { distance = LAST_LUT_INDEX }
+			exponentials[index] = expNegative[distance]
+			sum = sum + exponentials[index]
+		}
+		if (sum <= 0) { return }
+
+		for (var index = 0; index < activeCount; index++) {
+			output[index] = exponentials[index] * OUTPUT_SCALE / sum
+		}
+	}
+
+	/** Returns one Q1.15 probability, or zero for an invalid index. */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0 || index >= VECTOR_SIZE) { return 0 }
+		return output[index]
+	}
+}

@@ -1,0 +1,52 @@
+namespace Livt.ML.Linear
+
+/**
+ * Pipelined 64-element dot product with eight signed 16x8 MAC lanes.
+ *
+ * Activations are configured once and must fit signed 16-bit range. Each
+ * Compute call captures one packed row of 64 signed-int8 weights and returns
+ * an int32 result after eight registered groups.
+ */
+component Int8Dot64x8
+{
+	request: logic
+	primitive: Int8Dot64x8Primitive
+
+	new() { primitive = new Int8Dot64x8Primitive() }
+
+	fn Submit(resetValue: logic, configureValue: logic)
+	{
+		state {
+			primitive.clear = resetValue
+			primitive.configure = configureValue
+		}
+		request = !request
+		primitive.request = request
+		while (primitive.acknowledge != request) { state {} }
+	}
+
+	/** Clears the current dot-product accumulator. */
+	public fn Reset()
+	{
+		Submit(0b1, 0b0)
+	}
+
+	/** Configures one signed 16-bit activation; invalid indexes are ignored. */
+	public fn SetActivation(index: int, value: int)
+	{
+		if (index < 0 || index >= 64) { return }
+		state {
+			primitive.index = index as logic[6]
+			primitive.value = value
+		}
+		Submit(0b0, 0b1)
+	}
+
+	/** Computes one 64-element dot product from a packed signed-int8 row. */
+	public fn Compute(weights: logic[512]) int
+	{
+		primitive.weights = weights
+		Submit(0b0, 0b0)
+		return primitive.result
+	}
+}

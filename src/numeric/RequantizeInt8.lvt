@@ -1,0 +1,74 @@
+namespace Livt.ML.Numeric
+
+/**
+ * Requantizes an integer accumulator into signed int8 range.
+ *
+ * Division rounds to nearest with exact ties going to the even result. The
+ * output zero point is added after rounding and the result is saturated to
+ * [-128, 127]. A non-positive divisor returns the clamped output zero point.
+ */
+component RequantizeInt8
+{
+	// Minimum value represented by a signed int8 tensor element.
+	public const MIN_VALUE: int = -128
+	// Maximum value represented by a signed int8 tensor element.
+	public const MAX_VALUE: int = 127
+
+	/**
+	 * Divides value by divisor, adds outputZeroPoint, and clamps to int8.
+	 */
+	public fn Apply(value: int, divisor: int, outputZeroPoint: int) int
+	{
+		if (divisor <= 0) {
+			return this.Clamp(outputZeroPoint)
+		}
+
+		var negative = value < 0
+		var magnitude = value
+
+		if (negative) {
+			magnitude = 0 - value
+		}
+
+		var quotient = magnitude / divisor
+		var remainder = magnitude % divisor
+		var doubledRemainder = remainder * 2
+
+		if (doubledRemainder > divisor) {
+			quotient++
+		}
+
+		if (doubledRemainder == divisor) {
+			var quotientParity = quotient % 2
+
+			if (quotientParity != 0) {
+				quotient++
+			}
+		}
+
+		var rounded = quotient
+
+		if (negative) {
+			rounded = 0 - quotient
+		}
+
+		var shifted = rounded + outputZeroPoint
+		return this.Clamp(shifted)
+	}
+
+	/**
+	 * Clamps value into the signed int8 range.
+	 */
+	fn Clamp(value: int) int
+	{
+		if (value < MIN_VALUE) {
+			return MIN_VALUE
+		}
+
+		if (value > MAX_VALUE) {
+			return MAX_VALUE
+		}
+
+		return value
+	}
+}

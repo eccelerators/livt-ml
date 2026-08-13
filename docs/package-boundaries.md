@@ -5,8 +5,13 @@ Livt.
 
 ## Belongs In Livt.ML
 
-- fixed-size ML linear algebra layers, such as `VecAdd`, `DotProduct`, and
-  `MatrixVectorMultiplication`
+- fixed-size ML linear algebra layers, such as `VecAdd`, `DotProduct`,
+  `MatrixVectorMultiplication`, and quantized linear layers
+- fixed-shape quantized convolution and pooling operators whose parameters are
+  configured by an application rather than embedded in the package
+- bounded streaming engines and their vendor-neutral handshake contracts;
+  model-specific weights remain in the application or generated model wrapper
+- ML-specific quantization contracts and requantization components
 - activation functions and approximations, such as `ReLU`, `SigmoidLUT`,
   `SiLUApprox`, and `SoftmaxApprox`
 - ML normalization layers, such as `RMSNorm`
@@ -32,15 +37,29 @@ Livt.
 
 ## Dependency Direction
 
-`Livt.ML` depends on published `Livt.Math 0.2.0`, but `Livt.Math` should not
-depend on `Livt.ML`.
+`Livt.ML` depends on published `Livt.Math 0.4.0` and uses `Livt.IO 0.2.0` for
+opaque RAM-backed tensor storage.
+`Livt.Math` and `Livt.IO` must not depend on `Livt.ML`.
 
 ```text
 Livt.Math
    ^
    |
 Livt.ML
+
+Livt.IO
+   ^
+   |
+Livt.ML.Storage
 ```
 
 Packages should only depend on `Livt.Math` directly when they use math
 primitives themselves.
+
+## API Stability
+
+Numeric helpers, fixed-shape tensor operators, RAM-backed variants, and
+streaming primitives form the stable inference foundation. `ClassProjection`,
+`ScaledDotProductAttention`, and `TransformerBlock` are experimental
+compositions until an imported language model validates their configuration,
+state, and framing contracts end to end.

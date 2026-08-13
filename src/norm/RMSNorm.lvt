@@ -1,6 +1,5 @@
 namespace Livt.ML.Norm
 
-using Livt.Lang.Annotations
 using Livt.Math.Sqrt
 
 /**
@@ -25,7 +24,6 @@ component RMSNorm
 	/**
 	 * Normalizes input by the integer root mean square and stores the output.
 	 */
-	@SuppressWarning("variable-divisor")
 	public fn Compute(input: int[8])
 	{
 		var sumSq = 0

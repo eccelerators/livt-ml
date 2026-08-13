@@ -1,0 +1,74 @@
+namespace Livt.ML.Tests.Norm
+
+using Livt.ML.Norm
+
+@Test
+component LayerNorm64StreamTest
+{
+	affineRequest: logic
+	affineGamma: int
+	affineBeta: int
+	affineEpsilon: int
+	affineAcknowledge: logic
+	inputRequest: logic
+	inputData: int
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: int
+	outputLast: logic
+	outputAcknowledge: logic
+	configured: logic
+	frameError: logic
+	dut: LayerNorm64Stream
+
+	new()
+	{
+		this.dut = new LayerNorm64Stream(
+			this.affineRequest, this.affineGamma, this.affineBeta,
+			this.affineEpsilon, this.affineAcknowledge,
+			this.inputRequest, this.inputData, this.inputLast, this.inputAcknowledge,
+			this.outputRequest, this.outputData, this.outputLast,
+			this.outputAcknowledge, this.configured, this.frameError)
+	}
+
+	fn SendAffine(gamma: int, beta: int, epsilon: int)
+	{
+		affineGamma = gamma
+		affineBeta = beta
+		affineEpsilon = epsilon
+		affineRequest = !affineRequest
+		while (affineAcknowledge != affineRequest) { state {} }
+	}
+
+	fn SendInput(value: int, last: logic)
+	{
+		inputData = value
+		inputLast = last
+		inputRequest = !inputRequest
+		while (inputAcknowledge != inputRequest) { state {} }
+	}
+
+	@Test
+	fn NormalizesOneCompleteFrame()
+	{
+		for (var index = 0; index < 64; index++) { this.SendAffine(256, 0, 0) }
+		while (configured != 0b1) { state {} }
+		for (var index = 0; index < 64; index++) {
+			var value = 1
+			if (index < 32) { value = -1 }
+			var last = 0b0
+			if (index == 63) { last = 0b1 }
+			this.SendInput(value, last)
+		}
+		for (var index = 0; index < 64; index++) {
+			while (outputRequest == outputAcknowledge) { state {} }
+			if (index < 32) { assert outputData == -256 }
+			else { assert outputData == 256 }
+			if (index == 63) { assert outputLast == 0b1 }
+			else { assert outputLast == 0b0 }
+			outputAcknowledge = outputRequest
+		}
+		assert frameError == 0b0
+	}
+}

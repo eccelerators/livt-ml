@@ -4,6 +4,84 @@
 call order and state handling. They are intentionally small and focus only on
 the package components.
 
+## Quantized Linear Inference
+
+`Int8Linear4x8` and `Int8Linear8x3` store signed-int8 weights in Livt `int`
+fields and retain signed int32 bias-plus-dot-product results. Requantization is
+an explicit separate operation so numeric scale changes remain visible.
+
+```livt
+namespace Example
+
+using Livt.ML.Linear
+using Livt.ML.Numeric
+
+component QuantizedLinearExample
+{
+	layer: Int8Linear4x8
+	requantize: RequantizeInt8
+
+	new()
+	{
+		this.layer = new Int8Linear4x8()
+		this.requantize = new RequantizeInt8()
+	}
+
+	public fn Run(input: int[4]) int
+	{
+		this.layer.ClearParameters()
+		this.layer.SetRowValues(0, 1, -2, 3, -4)
+		this.layer.SetBias(0, 10)
+		this.layer.Compute(input)
+		var accumulator = this.layer.GetAccumulator(0)
+		return this.requantize.Apply(accumulator, 10, 0)
+	}
+}
+```
+
+`RequantizeInt8.Apply` rounds to nearest with exact ties going to the even
+integer, adds the output zero point, and saturates to `[-128, 127]`. Callers
+must document the scale ratio represented by the integer divisor.
+
+## Quantized CNN Inference
+
+The ONNX-style CNN operators store weights and per-channel rational scale
+factors, then retain flattened NCHW outputs for the next layer.
+
+```livt
+using Livt.ML.Convolution
+
+component ConvolutionExample
+{
+	conv: QLinearConv1x8Same5x5
+
+	new()
+	{
+		this.conv = new QLinearConv1x8Same5x5()
+	}
+
+	public fn Run(input: int[784])
+	{
+		this.conv.Clear()
+		this.conv.SetWeight(0, 12, 1)
+		this.conv.SetChannelParameters(0, 0, 1, 1, 0, 0, 0)
+		for (var index = 0; index < 784; index++) {
+			this.conv.SetInput(index, input[index])
+		}
+		this.conv.Compute()
+		var first = this.conv.GetOutput(0)
+	}
+}
+```
+
+Weights and intermediate operators use scalar indexed writes. Intermediate
+operators then use parameterless `Compute()` calls. This is the readable
+reference API, but large mutating functions can still create tensor-sized
+shadow signals in generated VHDL. Model datapaths should use the corresponding
+toggle-handshake `Stream` variants described in
+[`streaming.md`](streaming.md). `ArgMax10` selects the first maximum, matching
+the generated MNIST composition's deterministic class selection.
+
 ## Linear Projection
 
 `Linear8x8` stores eight weight rows. Configure rows first, then call

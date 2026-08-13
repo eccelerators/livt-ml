@@ -1,0 +1,34 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Int8BroadcastMac64x8Test
+{
+	const WEIGHTS_A: logic[512] = 0xfd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd
+	const WEIGHTS_B: logic[512] = 0x00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203ff00010203
+	const EXPECTED: int[64] = [
+		-30, -20, -10, 0, 10, 5, 15, -24,
+		-14, -4, -9, 1, 11, 21, -18, -23,
+		-13, -3, 7, 17, 12, -27, -17, -7,
+		3, -2, 8, 18, -21, -11, -16, -6,
+		4, 14, 24, -30, -20, -10, 0, 10,
+		5, 15, -24, -14, -4, -9, 1, 11,
+		21, -18, -23, -13, -3, 7, 17, 12,
+		-27, -17, -7, 3, -2, 8, 18, -21,
+	]
+	mac: Int8BroadcastMac64x8
+
+	new() { mac = new Int8BroadcastMac64x8() }
+
+	@Test
+	fn AccumulatesTwoPackedRowsWithEightLanes()
+	{
+		mac.Reset()
+		mac.AccumulateRow(7, WEIGHTS_A)
+		mac.AccumulateRow(-3, WEIGHTS_B)
+		for (var index = 0; index < 64; index++) {
+			assert mac.GetResult(index) == EXPECTED[index] as int
+		}
+	}
+}

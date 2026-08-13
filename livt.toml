@@ -1,36 +1,61 @@
 [project]
 name = "Livt.ML"
-version = "0.2.2"
+version = "0.5.0"
 path = "src"
 outdir = "out"
 
 [tests]
 path = "tests"
 components = [
+    "RequantizeUInt8Test",
+    "RequantizeInt8Test",
+    "QLinearCnnOperatorsTest",
+    "StreamingConvolutionTest",
+    "StreamingPoolingTest",
+    "RamPoolingTest",
+    "QLinearMatMul256x10StreamTest",
+    "QLinearMatMul256x10RamTest",
+    "ByteTensorRamTest",
+    "IntegerTensorRamTest",
+    "Int8Linear4x8Test",
+    "Int8Linear8x3Test",
     "VecAddTest",
     "DotProductTest",
     "MatrixVectorMultiplicationTest",
     "Linear8x8Test",
     "ArgMax3Test",
+    "ArgMax10Test",
     "ClassProjectionTest",
     "FixedTokenEmbeddingTest",
+    "TokenEmbedding50257x64StreamTest",
     "ReLUTest",
     "SigmoidLUTTest",
     "SiLUApproxTest",
     "SoftmaxApproxTest",
+    "StableSoftmax8Test",
+    "GeluNewApproxQ8Test",
     "RMSNormTest",
+    "LayerNorm64StreamTest",
+	"LayerNorm64Test",
     "KVCacheTest",
     "ScaledDotProductAttentionTest",
+    "CausalAttentionHead4Context8Test",
     "FeedForwardBlockTest",
     "TransformerBlockTest",
+    "Int8LinearAccumulatorTest",
+    "Int8Mac8Test",
+    "Int8Dot64x8Test",
+    "Int8BroadcastMac64x8Test",
+    "StreamingArgMaxTest",
     "LinearRegressionTest"
 ]
 
 [dependencies]
-Livt.Math = "0.3.2"
+Livt.Math = "0.5.0"
+Livt.IO = "0.3.0"
 
 [build.debug]
-warnings = ["all"]
+warnings = ["all", "no-variable-divisor"]
 
 [build.release]
 warnings = ["all"]

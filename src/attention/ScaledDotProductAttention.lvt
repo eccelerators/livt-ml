@@ -43,9 +43,14 @@ component ScaledDotProductAttention
 	 */
 	public fn Compute(query: int[8])
 	{
+		var activeCount = kvcache.GetSize()
+		if (activeCount == 0) {
+			for (var elem = 0; elem < VECTOR_SIZE; elem++) { output[elem] = 0 }
+			return
+		}
 		var scores: int[8]
 
-		for (var slot = 0; slot < CACHE_SIZE; slot++) {
+		for (var slot = 0; slot < activeCount; slot++) {
 			var dot = 0
 
 			for (var elem = 0; elem < VECTOR_SIZE; elem++) {
@@ -55,12 +60,12 @@ component ScaledDotProductAttention
 			scores[slot] = dot / SCORE_SCALE
 		}
 
-		softmax.Compute(scores)
+		softmax.ComputeCount(scores, activeCount)
 
 		for (var elem = 0; elem < VECTOR_SIZE; elem++) {
 			var weighted = 0
 
-			for (var slot = 0; slot < CACHE_SIZE; slot++) {
+			for (var slot = 0; slot < activeCount; slot++) {
 				weighted = weighted + softmax.GetOutput(slot) * kvcache.GetValueElement(slot, elem)
 			}
 

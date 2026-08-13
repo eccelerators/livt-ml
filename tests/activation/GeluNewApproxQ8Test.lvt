@@ -1,0 +1,28 @@
+namespace Livt.ML.Tests.Activation
+
+using Livt.ML.Activation
+
+@Test
+component GeluNewApproxQ8Test
+{
+	dut: GeluNewApproxQ8
+	new() { this.dut = new GeluNewApproxQ8() }
+
+	@Test
+	fn MatchesPinnedLookupPointsAndTails()
+	{
+		assert this.dut.Apply(-2048) == 0
+		assert this.dut.Apply(-256) == -41
+		assert this.dut.Apply(0) == 0
+		assert this.dut.Apply(256) == 215
+		assert this.dut.Apply(1024) == 1024
+		assert this.dut.Apply(2048) == 2048
+	}
+
+	@Test
+	fn InterpolatesQuarterSteps()
+	{
+		assert this.dut.Apply(32) == 19
+		assert this.dut.Apply(-32) == -13
+	}
+}

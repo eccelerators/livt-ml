@@ -1,0 +1,38 @@
+namespace Livt.ML.Tests.Attention
+
+using Livt.ML.Attention
+
+@Test
+component CausalAttentionHead4Context8Test
+{
+	dut: CausalAttentionHead4Context8
+	new() { this.dut = new CausalAttentionHead4Context8() }
+
+	@Test
+	fn AppliesCausalMaskAndUniformAttention()
+	{
+		for (var token = 0; token < 8; token++) {
+			for (var element = 0; element < 4; element++) {
+				var value = 0
+				if (element == 0) { value = (token + 1) * 8 }
+				this.dut.SetElement(token, element, 0, 0, value)
+			}
+		}
+		this.dut.Compute(1)
+		assert this.dut.GetOutput(0, 0) == 8
+		assert this.dut.GetOutput(1, 0) == 12
+		assert this.dut.GetOutput(3, 0) == 20
+		assert this.dut.GetOutput(7, 0) == 36
+		assert this.dut.GetOutput(7, 1) == 0
+	}
+
+	@Test
+	fn RejectsInvalidCoordinates()
+	{
+		this.dut.SetElement(-1, 0, 1, 1, 100)
+		this.dut.SetElement(0, 4, 1, 1, 100)
+		assert this.dut.GetOutput(-1, 0) == 0
+		assert this.dut.GetOutput(8, 0) == 0
+		assert this.dut.GetOutput(0, 4) == 0
+	}
+}

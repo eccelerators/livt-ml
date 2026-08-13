@@ -1,0 +1,35 @@
+namespace Livt.ML.Linear
+
+using Livt.Math.Arithmetic
+
+/**
+ * Storage-free signed-int8 linear-output accumulator with int32 accumulation.
+ * Callers stream one activation/weight pair at a time, allowing weights to
+ * reside in constants, Livt.IO RAM, or an external memory controller.
+ */
+component Int8LinearAccumulator
+{
+	mac: MacInt32
+	inputZeroPoint: int
+	weightZeroPoint: int
+
+	new() { this.mac = new MacInt32() }
+
+	/** Starts one output with its bias and quantization zero points. */
+	public fn Begin(bias: int, inputZeroPointValue: int, weightZeroPointValue: int)
+	{
+		this.mac.Reset()
+		this.mac.Add(bias)
+		inputZeroPoint = inputZeroPointValue
+		weightZeroPoint = weightZeroPointValue
+	}
+
+	/** Adds one centered activation-by-weight product. */
+	public fn Accumulate(activation: int, weight: int)
+	{
+		this.mac.Accumulate(activation - inputZeroPoint, weight - weightZeroPoint)
+	}
+
+	/** Returns the signed int32 accumulator. */
+	public fn GetAccumulator() int { return this.mac.GetResult() }
+}

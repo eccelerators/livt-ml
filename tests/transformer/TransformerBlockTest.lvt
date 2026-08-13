@@ -34,7 +34,7 @@ component TransformerBlockTest
 
 		block.Compute(input)
 
-		assert block.GetOutput(0) == 3
+		assert block.GetOutput(0) == 7
 		assert block.GetOutput(1) == 0
 	}
 

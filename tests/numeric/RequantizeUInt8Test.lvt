@@ -1,0 +1,44 @@
+namespace Livt.ML.Tests.Numeric
+
+using Livt.ML.Numeric
+
+/**
+ * Verifies unsigned rational requantization and saturation behavior.
+ */
+@Test
+component RequantizeUInt8Test
+{
+	/**
+	 * Rounds exact half values to the nearest even integer.
+	 */
+	@Test
+	fn RoundsTiesToEven()
+	{
+		assert RequantizeUInt8.ApplyRational(5, 1, 2, 0) == 2
+		assert RequantizeUInt8.ApplyRational(7, 1, 2, 0) == 4
+		assert RequantizeUInt8.ApplyRational(-5, 1, 2, 112) == 110
+		assert RequantizeUInt8.ApplyRational(-7, 1, 2, 112) == 108
+	}
+
+	/**
+	 * Handles split multiplication and clamps both uint8 boundaries.
+	 */
+	@Test
+	fn SplitsLargeProductsAndClamps()
+	{
+		assert RequantizeUInt8.ApplyRational(1000000, 1964, 900715, 0) == 255
+		assert RequantizeUInt8.ApplyRational(-1000000, 1964, 900715, 112) == 0
+		assert RequantizeUInt8.ApplyRational(1000, 29, 29867, 112) == 113
+	}
+
+	/**
+	 * Invalid scale parameters return the clamped output zero point.
+	 */
+	@Test
+	fn HandlesInvalidScaleParameters()
+	{
+		assert RequantizeUInt8.ApplyRational(10, -1, 2, 300) == 255
+		assert RequantizeUInt8.ApplyRational(10, 1, 0, -4) == 0
+		assert RequantizeUInt8.Clamp(127) == 127
+	}
+}

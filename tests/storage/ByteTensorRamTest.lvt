@@ -1,0 +1,76 @@
+namespace Livt.ML.Tests.Storage
+
+using Livt.ML.Storage
+
+@Test
+component ByteTensorRamTest
+{
+	small: ByteTensorRam2048
+	medium: ByteTensorRam4096
+	large: ByteTensorRam8192
+
+	new()
+	{
+		this.small = new ByteTensorRam2048(256)
+		this.medium = new ByteTensorRam4096(3136)
+		this.large = new ByteTensorRam8192(6272)
+	}
+
+	@Test
+	fn PreservesLogicalAndBankBoundaries()
+	{
+		this.small.Write(0, 0x11)
+		this.small.Write(255, 0x22)
+		this.small.Write(256, 0xff)
+		assert this.small.Read(0) == 0x11
+		assert this.small.Read(255) == 0x22
+		assert this.small.Read(256) == 0x00
+
+		this.medium.Write(2047, 0x33)
+		this.medium.Write(2048, 0x44)
+		this.medium.Write(3135, 0x55)
+		assert this.medium.Read(2047) == 0x33
+		assert this.medium.Read(2048) == 0x44
+		assert this.medium.Read(3135) == 0x55
+		assert this.medium.Read(3136) == 0x00
+
+		this.large.Write(4095, 0x66)
+		this.large.Write(4096, 0x77)
+		this.large.Write(6143, 0x88)
+		this.large.Write(6144, 0x99)
+		this.large.Write(6271, 0xaa)
+		assert this.large.Read(4095) == 0x66
+		assert this.large.Read(4096) == 0x77
+		assert this.large.Read(6143) == 0x88
+		assert this.large.Read(6144) == 0x99
+		assert this.large.Read(6271) == 0xaa
+		assert this.large.Read(-1) == 0x00
+		assert this.large.Read(6272) == 0x00
+	}
+
+	@Test
+	fn SupportsRepeatedWrites()
+	{
+		this.small.Write(10, 0x12)
+		assert this.small.Read(10) == 0x12
+		this.small.Write(10, 0xfe)
+		assert this.small.Read(10) == 0xfe
+	}
+
+	@Test
+	fn MaterializesArithmeticWorkingSet()
+	{
+		var cache: byte[4]
+		this.small.Write(20, 0x01)
+		this.small.Write(21, 0x7f)
+		this.small.Write(22, 0x80)
+		this.small.Write(23, 0xff)
+		for (var index = 0; index < 4; index++) {
+			cache[index] = this.small.Read(20 + index)
+		}
+		assert cache[0] == 0x01
+		assert cache[1] == 0x7f
+		assert cache[2] == 0x80
+		assert cache[3] == 0xff
+	}
+}

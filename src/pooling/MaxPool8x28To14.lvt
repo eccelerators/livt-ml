@@ -1,0 +1,69 @@
+namespace Livt.ML.Pooling
+
+/**
+ * Applies a 2x2 stride-two max pool to eight 28x28 uint8 activation planes.
+ */
+component MaxPool8x28To14
+{
+	public const INPUT_SIZE: int = 6272
+	public const OUTPUT_SIZE: int = 1568
+
+	inputValues: int[6272]
+	output: int[1568]
+
+	/**
+	 * Stores one flattened NCHW input value and ignores an invalid index.
+	 */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+
+		inputValues[index] = value
+	}
+
+	/**
+	 * Computes eight row-major 14x14 output planes.
+	 */
+	public fn Compute()
+	{
+		for (var channel = 0; channel < 8; channel++) {
+			for (var row = 0; row < 14; row++) {
+				for (var column = 0; column < 14; column++) {
+					var maxValue = 0
+
+					for (var poolRow = 0; poolRow < 2; poolRow++) {
+						for (var poolColumn = 0; poolColumn < 2; poolColumn++) {
+							state {
+								var inputRow = row * 2 + poolRow
+								var inputColumn = column * 2 + poolColumn
+								var inputIndex = channel * 784 + inputRow * 28 + inputColumn
+								var value = inputValues[inputIndex]
+
+								if (value > maxValue) {
+									maxValue = value
+								}
+							}
+						}
+					}
+
+					state {
+						var outputIndex = channel * 196 + row * 14 + column
+						output[outputIndex] = maxValue
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns one flattened NCHW output value, or zero for an invalid index.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+
+		return output[index]
+	}
+}

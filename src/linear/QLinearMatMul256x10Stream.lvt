@@ -1,0 +1,167 @@
+namespace Livt.ML.Linear
+
+using Livt.ML.Numeric
+
+/**
+ * Streams a loaded ONNX per-column QLinearMatMul from 256 uint8 inputs to ten outputs.
+ *
+ * Weights are loaded output-column-major as 2,560 signed two's-complement
+ * `logic[8]` values. Ten scale and zero-point records follow the same
+ * output-column order. Each record repeats the scalar activation zero point;
+ * weight and output zero points may vary by column.
+ * Both loaders and the activation/output paths use toggle handshakes. The
+ * compact weight representation and process implementation avoid tensor-sized
+ * public-function shadow signals.
+ *
+ * The datapath consumes one activation and updates ten accumulators in
+ * parallel. `frameError` is set when `inputLast` does not identify activation
+ * 255 and is cleared at the start of the next frame.
+ */
+component QLinearMatMul256x10Stream
+{
+	weightRequest: logic
+	weightData: logic[8]
+	weightAcknowledge: logic
+	scaleRequest: logic
+	scaleMultiplier: int
+	scaleDivisor: int
+	scaleInputZeroPoint: int
+	scaleWeightZeroPoint: int
+	scaleOutputZeroPoint: int
+	scaleAcknowledge: logic
+	inputRequest: logic
+	inputData: byte
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: byte
+	outputAccumulator: int
+	outputLast: logic
+	outputAcknowledge: logic
+	configured: logic
+	frameError: logic
+	weightSeen: logic
+	scaleSeen: logic
+	inputSeen: logic
+	pending: bool
+	emitting: bool
+	weightsLoaded: bool
+	scalesLoaded: bool
+	weightColumn: int
+	weightRow: int
+	scaleColumn: int
+	inputIndex: int
+	outputColumn: int
+	weights: logic[10, 256, 8]
+	multipliers: int[10]
+	divisors: int[10]
+	inputZeroPoint: int
+	weightZeroPoints: int[10]
+	outputZeroPoints: int[10]
+	accumulators: int[10]
+
+	new(weightRequest: in logic, weightData: in logic[8], weightAcknowledge: out logic,
+		scaleRequest: in logic, scaleMultiplier: in int, scaleDivisor: in int,
+		scaleInputZeroPoint: in int, scaleWeightZeroPoint: in int,
+		scaleOutputZeroPoint: in int, scaleAcknowledge: out logic,
+		inputRequest: in logic, inputData: in byte, inputLast: in logic,
+		inputAcknowledge: out logic, outputRequest: out logic, outputData: out byte,
+		outputAccumulator: out int, outputLast: out logic, outputAcknowledge: in logic,
+		configured: out logic, frameError: out logic)
+	{
+		this.weightRequest = weightRequest
+		this.weightData = weightData
+		weightAcknowledge = this.weightAcknowledge
+		this.scaleRequest = scaleRequest
+		this.scaleMultiplier = scaleMultiplier
+		this.scaleDivisor = scaleDivisor
+		this.scaleInputZeroPoint = scaleInputZeroPoint
+		this.scaleWeightZeroPoint = scaleWeightZeroPoint
+		this.scaleOutputZeroPoint = scaleOutputZeroPoint
+		scaleAcknowledge = this.scaleAcknowledge
+		this.inputRequest = inputRequest
+		this.inputData = inputData
+		this.inputLast = inputLast
+		inputAcknowledge = this.inputAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputAccumulator = this.outputAccumulator
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+		configured = this.configured
+		frameError = this.frameError
+	}
+
+	process Main()
+	{
+		weightAcknowledge = weightSeen
+		scaleAcknowledge = scaleSeen
+		inputAcknowledge = inputSeen
+		configured = 0b0
+		if (weightsLoaded && scalesLoaded) { configured = 0b1 }
+
+		if (!emitting && !pending && weightRequest != weightSeen) {
+			weights[weightColumn, weightRow] = weightData
+			weightSeen = weightRequest
+			if (weightRow == 255) {
+				weightRow = 0
+				if (weightColumn == 9) {
+					weightColumn = 0
+					weightsLoaded = true
+				} else { weightColumn++ }
+			} else { weightRow++ }
+		}
+
+		if (!emitting && !pending && scaleRequest != scaleSeen) {
+			multipliers[scaleColumn] = scaleMultiplier
+			divisors[scaleColumn] = scaleDivisor
+			inputZeroPoint = scaleInputZeroPoint
+			weightZeroPoints[scaleColumn] = scaleWeightZeroPoint
+			outputZeroPoints[scaleColumn] = scaleOutputZeroPoint
+			scaleSeen = scaleRequest
+			if (scaleColumn == 9) {
+				scaleColumn = 0
+				scalesLoaded = true
+			} else { scaleColumn++ }
+		}
+
+		if (pending) {
+			if (outputAcknowledge == outputRequest) { pending = false }
+		} else {
+			if (emitting) {
+				outputAccumulator = accumulators[outputColumn]
+				outputData = RequantizeUInt8.ApplyRational(
+					accumulators[outputColumn], multipliers[outputColumn],
+					divisors[outputColumn], outputZeroPoints[outputColumn]) as byte
+				outputLast = 0b0
+				if (outputColumn == 9) { outputLast = 0b1 }
+				outputRequest = !outputRequest
+				pending = true
+				if (outputColumn == 9) {
+					outputColumn = 0
+					emitting = false
+				} else { outputColumn++ }
+			} else {
+				if (weightsLoaded && scalesLoaded && inputRequest != inputSeen) {
+					if (inputIndex == 0) { frameError = 0b0 }
+					if (inputLast == 0b1 && inputIndex != 255) { frameError = 0b1 }
+					if (inputIndex == 255 && inputLast != 0b1) { frameError = 0b1 }
+
+					for (var column = 0; column < 10; column++) {
+						var centeredInput = (inputData as int) - inputZeroPoint
+						var centeredWeight = (weights[column, inputIndex] as int) - weightZeroPoints[column]
+						var product = centeredInput * centeredWeight
+						if (inputIndex == 0) {
+							accumulators[column] = product
+						} else { accumulators[column] = accumulators[column] + product }
+					}
+					inputSeen = inputRequest
+					if (inputIndex == 255) {
+						inputIndex = 0
+						emitting = true
+					} else { inputIndex++ }
+				}
+			}
+		}
+	}
+}

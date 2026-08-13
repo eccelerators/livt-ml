@@ -1,7 +1,7 @@
 namespace Livt.ML.Classifier
 
 /**
- * Small deterministic 8-element state projection to three class logits.
+ * Experimental deterministic 8-element state projection to three class logits.
  *
  * This is intentionally fixed-size and simple for early FPGA classifier
  * wrappers. Later trained projections can grow beside this component without

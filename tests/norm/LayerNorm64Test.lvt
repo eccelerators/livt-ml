@@ -1,0 +1,20 @@
+namespace Livt.ML.Tests.Norm
+
+using Livt.ML.Norm
+
+/** Regression for identity initialization and compiler issue #283. */
+@Test
+component LayerNorm64Test
+{
+	norm: LayerNorm64
+
+	new() { norm = new LayerNorm64() }
+
+	@Test
+	fn ConstructorInitializationTerminates()
+	{
+		for (var index = 0; index < 64; index++) { norm.SetInput(index, 7) }
+		norm.Compute(1)
+		for (var index = 0; index < 64; index++) { assert norm.GetOutput(index) == 0 }
+	}
+}

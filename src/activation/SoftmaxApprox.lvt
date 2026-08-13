@@ -1,7 +1,5 @@
 namespace Livt.ML.Activation
 
-using Livt.Lang.Annotations
-
 /**
  * Computes an 8-element integer softmax approximation with scaled outputs.
  */
@@ -43,12 +41,26 @@ component SoftmaxApprox
 	/**
 	 * Computes scaled softmax probabilities after clamping logits to [0, 15].
 	 */
-	@SuppressWarning("variable-divisor")
 	public fn Compute(input: int[8])
 	{
+		this.ComputeCount(input, VECTOR_SIZE)
+	}
+
+	/**
+	 * Computes softmax over the first count values and clears inactive outputs.
+	 */
+	public fn ComputeCount(input: int[8], count: int)
+	{
+		var activeCount = count
+		if (activeCount < 0) { activeCount = 0 }
+		if (activeCount > VECTOR_SIZE) { activeCount = VECTOR_SIZE }
+
+		for (var i = 0; i < VECTOR_SIZE; i++) { output[i] = 0 }
+		if (activeCount == 0) { return }
+
 		var sumExp = 0
 
-		for (var i = 0; i < VECTOR_SIZE; i++) {
+		for (var i = 0; i < activeCount; i++) {
 			var clampedA = input[i]
 
 			if (clampedA < 0) {
@@ -66,7 +78,7 @@ component SoftmaxApprox
 			sumExp = 1
 		}
 
-		for (var i = 0; i < VECTOR_SIZE; i++) {
+		for (var i = 0; i < activeCount; i++) {
 			var clampedB = input[i]
 
 			if (clampedB < 0) {

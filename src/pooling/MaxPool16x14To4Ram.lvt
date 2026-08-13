@@ -1,0 +1,56 @@
+namespace Livt.ML.Pooling
+
+using Livt.ML.Storage
+
+/** RAM-backed non-streaming 3x3 stride-three max pool for sixteen 14x14 planes. */
+component MaxPool16x14To4Ram
+{
+	public const INPUT_SIZE: int = 3136
+	public const OUTPUT_SIZE: int = 256
+	inputValues: ByteTensorRam4096
+	outputValues: ByteTensorRam2048
+
+	new()
+	{
+		this.inputValues = new ByteTensorRam4096(INPUT_SIZE)
+		this.outputValues = new ByteTensorRam2048(OUTPUT_SIZE)
+	}
+
+	/** Stores one flattened NCHW input value and ignores an invalid index. */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+		this.inputValues.Write(index, value as byte)
+	}
+
+	/** Computes sixteen row-major 4x4 output planes. */
+	public fn Compute()
+	{
+		for (var channel = 0; channel < 16; channel++) {
+			for (var row = 0; row < 4; row++) {
+				for (var column = 0; column < 4; column++) {
+					var maxValue: byte = 0x00
+					for (var poolRow = 0; poolRow < 3; poolRow++) {
+						for (var poolColumn = 0; poolColumn < 3; poolColumn++) {
+							var inputRow = row * 3 + poolRow
+							var inputColumn = column * 3 + poolColumn
+							var inputIndex = channel * 196 + inputRow * 14 + inputColumn
+							var value = this.inputValues.Read(inputIndex)
+							if (value > maxValue) { maxValue = value }
+						}
+					}
+					this.outputValues.Write(channel * 16 + row * 4 + column, maxValue)
+				}
+			}
+		}
+	}
+
+	/** Returns one flattened NCHW output value, or zero for an invalid index. */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+		return this.outputValues.Read(index) as int
+	}
+}

@@ -1,0 +1,72 @@
+namespace Livt.ML.Numeric
+
+/**
+ * Provides ONNX-compatible rational requantization into unsigned int8 range.
+ *
+ * The multiplier and divisor must be non-negative, and their product must fit
+ * in a signed Livt int. Division rounds to nearest with exact ties going to
+ * the even result. Invalid scale parameters return the clamped zero point.
+ */
+class RequantizeUInt8
+{
+	/**
+	 * Computes round(value * multiplier / divisor) plus outputZeroPoint.
+	 */
+	public static inline fn ApplyRational(
+		value: int,
+		multiplier: int,
+		divisor: int,
+		outputZeroPoint: int) int
+	{
+		if (multiplier < 0) { return RequantizeUInt8.Clamp(outputZeroPoint) }
+		if (divisor <= 0) { return RequantizeUInt8.Clamp(outputZeroPoint) }
+
+		var negative = value < 0
+		var magnitude = value
+
+		if (negative) {
+			magnitude = 0 - value
+		}
+
+		// Splitting the value before multiplication avoids int32 overflow.
+		var whole = (magnitude / divisor) * multiplier
+		var remainder = magnitude % divisor
+		var remainderProduct = remainder * multiplier
+		var fraction = remainderProduct / divisor
+		var fractionRemainder = remainderProduct % divisor
+		var roundedMagnitude = whole + fraction
+		var doubledRemainder = fractionRemainder * 2
+
+		if (doubledRemainder > divisor) {
+			roundedMagnitude++
+		}
+
+		if (doubledRemainder == divisor) {
+			var parity = roundedMagnitude % 2
+
+			if (parity != 0) {
+				roundedMagnitude++
+			}
+		}
+
+		var rounded = roundedMagnitude
+
+		if (negative) {
+			rounded = 0 - roundedMagnitude
+		}
+
+		var shifted = rounded + outputZeroPoint
+		return RequantizeUInt8.Clamp(shifted)
+	}
+
+	/**
+	 * Clamps one integer to the ONNX uint8 tensor range.
+	 */
+	public static inline fn Clamp(value: int) int
+	{
+		if (value < 0) { return 0 }
+		if (value > 255) { return 255 }
+
+		return value
+	}
+}

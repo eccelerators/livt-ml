@@ -1,0 +1,33 @@
+namespace Livt.ML.Tests.Classifier
+
+using Livt.ML.Classifier
+
+@Test
+component StreamingArgMaxTest
+{
+	dut: StreamingArgMax
+	new() { this.dut = new StreamingArgMax() }
+
+	@Test
+	fn SelectsBestWithoutStoringTheStream()
+	{
+		this.dut.Reset()
+		assert !this.dut.HasValue()
+		this.dut.Accept(100, -9)
+		this.dut.Accept(50256, 12)
+		this.dut.Accept(7, 11)
+		assert this.dut.HasValue()
+		assert this.dut.GetIndex() == 50256
+		assert this.dut.GetValue() == 12
+	}
+
+	@Test
+	fn LowestIndexWinsTiesRegardlessOfOrder()
+	{
+		this.dut.Reset()
+		this.dut.Accept(9, 42)
+		this.dut.Accept(3, 42)
+		this.dut.Accept(7, 42)
+		assert this.dut.GetIndex() == 3
+	}
+}

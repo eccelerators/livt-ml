@@ -1,0 +1,62 @@
+namespace Livt.ML.Tests.Embedding
+
+using Livt.ML.Embedding
+
+@Test
+component TokenEmbedding50257x64StreamTest
+{
+	tokenRequest: logic
+	tokenIndex: int
+	tokenAcknowledge: logic
+	memoryRequest: logic
+	memoryAddress: int
+	memoryData: int
+	memoryAcknowledge: logic
+	outputRequest: logic
+	outputData: int
+	outputLast: logic
+	outputAcknowledge: logic
+	invalidToken: logic
+	dut: TokenEmbedding50257x64Stream
+
+	new()
+	{
+		this.dut = new TokenEmbedding50257x64Stream(
+			this.tokenRequest, this.tokenIndex, this.tokenAcknowledge,
+			this.memoryRequest, this.memoryAddress, this.memoryData,
+			this.memoryAcknowledge, this.outputRequest, this.outputData,
+			this.outputLast, this.outputAcknowledge, this.invalidToken)
+	}
+
+	fn SendToken(token: int)
+	{
+		tokenIndex = token
+		tokenRequest = !tokenRequest
+		while (tokenAcknowledge != tokenRequest) { state {} }
+	}
+
+	@Test
+	fn StreamsSixtyFourConsecutiveAddresses()
+	{
+		this.SendToken(7)
+		for (var element = 0; element < 64; element++) {
+			while (memoryRequest == memoryAcknowledge) { state {} }
+			assert memoryAddress == 448 + element
+			memoryData = element - 32
+			memoryAcknowledge = memoryRequest
+			while (outputRequest == outputAcknowledge) { state {} }
+			assert outputData == element - 32
+			if (element == 63) { assert outputLast == 0b1 }
+			else { assert outputLast == 0b0 }
+			outputAcknowledge = outputRequest
+		}
+		assert invalidToken == 0b0
+	}
+
+	@Test
+	fn RejectsTokenOutsideVocabulary()
+	{
+		this.SendToken(50257)
+		assert invalidToken == 0b1
+	}
+}

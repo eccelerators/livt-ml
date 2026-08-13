@@ -1,0 +1,109 @@
+namespace Livt.ML.Linear
+
+/**
+ * Applies three signed-int8 weight rows to an eight-element input vector.
+ *
+ * Inputs and weights are represented in Livt `int` values constrained to the
+ * signed int8 range by the caller. Biases and stored results use signed int32
+ * accumulator semantics and are not saturated to int8.
+ */
+component Int8Linear8x3
+{
+	// Number of input elements consumed by Compute.
+	public const INPUT_SIZE: int = 8
+	// Number of accumulator outputs produced by Compute.
+	public const OUTPUT_SIZE: int = 3
+
+	weights: int[3, 8]
+	biases: int[3]
+	accumulators: int[3]
+
+	/**
+	 * Clears all weights, biases, and stored accumulator outputs.
+	 */
+	public fn ClearParameters()
+	{
+		for (var row = 0; row < OUTPUT_SIZE; row++) {
+			biases[row] = 0
+			accumulators[row] = 0
+
+			for (var column = 0; column < INPUT_SIZE; column++) {
+				weights[row, column] = 0
+			}
+		}
+	}
+
+	/**
+	 * Sets one eight-element weight row and ignores an invalid row index.
+	 */
+	public fn SetRowValues(
+		row: int,
+		w0: int, w1: int, w2: int, w3: int,
+		w4: int, w5: int, w6: int, w7: int)
+	{
+		if (row < 0) { return }
+		if (row >= OUTPUT_SIZE) { return }
+
+		weights[row, 0] = w0
+		weights[row, 1] = w1
+		weights[row, 2] = w2
+		weights[row, 3] = w3
+		weights[row, 4] = w4
+		weights[row, 5] = w5
+		weights[row, 6] = w6
+		weights[row, 7] = w7
+	}
+
+	/**
+	 * Sets one int32 accumulator bias and ignores an invalid row index.
+	 */
+	public fn SetBias(row: int, value: int)
+	{
+		if (row < 0) { return }
+		if (row >= OUTPUT_SIZE) { return }
+
+		biases[row] = value
+	}
+
+	/**
+	 * Computes three accumulators from an eight-element input vector.
+	 */
+	public fn Compute(input: int[8])
+	{
+		this.ComputeValues(
+			input[0], input[1], input[2], input[3],
+			input[4], input[5], input[6], input[7])
+	}
+
+	/**
+	 * Computes three accumulators without requiring caller-side array staging.
+	 */
+	public fn ComputeValues(
+		x0: int, x1: int, x2: int, x3: int,
+		x4: int, x5: int, x6: int, x7: int)
+	{
+		for (var row = 0; row < OUTPUT_SIZE; row++) {
+			var accumulator = biases[row]
+			accumulator = accumulator + x0 * weights[row, 0]
+			accumulator = accumulator + x1 * weights[row, 1]
+			accumulator = accumulator + x2 * weights[row, 2]
+			accumulator = accumulator + x3 * weights[row, 3]
+			accumulator = accumulator + x4 * weights[row, 4]
+			accumulator = accumulator + x5 * weights[row, 5]
+			accumulator = accumulator + x6 * weights[row, 6]
+			accumulator = accumulator + x7 * weights[row, 7]
+			accumulators[row] = accumulator
+		}
+	}
+
+	/**
+	 * Returns one stored accumulator, or zero for an invalid row index.
+	 */
+	public fn GetAccumulator(row: int) int
+	{
+		if (row < 0) { return 0 }
+		if (row >= OUTPUT_SIZE) { return 0 }
+
+		return accumulators[row]
+	}
+}

@@ -1,0 +1,51 @@
+namespace Livt.ML.Tests.Storage
+
+using Livt.ML.Storage
+
+@Test
+component IntegerTensorRamTest
+{
+	activations: Int16TensorRam2048
+	accumulators: Int32TensorRam2048
+
+	new()
+	{
+		activations = new Int16TensorRam2048(512)
+		accumulators = new Int32TensorRam2048(2048)
+	}
+
+	@Test
+	fn PreservesSignedValuesAndLogicalBounds()
+	{
+		activations.Write(0, -32768)
+		activations.Write(1, -984)
+		activations.Write(511, 32767)
+		activations.Write(512, 123)
+		assert activations.Read(0) == -32768
+		assert activations.Read(1) == -984
+		assert activations.Read(511) == 32767
+		assert activations.Read(512) == 0
+
+		accumulators.Write(0, -2147483647)
+		accumulators.Write(1310, 381238)
+		accumulators.Write(2047, 2147483647)
+		assert accumulators.Read(0) == -2147483647
+		assert accumulators.Read(1310) == 381238
+		assert accumulators.Read(2047) == 2147483647
+		assert accumulators.Read(-1) == 0
+	}
+
+	@Test
+	fn SupportsOverwriteWithoutTensorCopies()
+	{
+		activations.Write(64, 3914)
+		assert activations.Read(64) == 3914
+		activations.Write(64, -2423)
+		assert activations.Read(64) == -2423
+
+		accumulators.Write(256, 342466)
+		assert accumulators.Read(256) == 342466
+		accumulators.Write(256, 381238)
+		assert accumulators.Read(256) == 381238
+	}
+}

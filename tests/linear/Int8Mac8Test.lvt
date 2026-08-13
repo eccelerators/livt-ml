@@ -1,0 +1,16 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Int8Mac8Test
+{
+	@Test
+	fn AccumulatesEightSignedWeights()
+	{
+		var result = Int8Mac8.Accumulate(17,
+			1, 2, 3, 4, 5, 6, 7, 8,
+			0x01, 0xff, 0x02, 0xfe, 0x03, 0xfd, 0x04, 0xfc)
+		assert result == 7
+	}
+}

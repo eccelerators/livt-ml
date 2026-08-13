@@ -1,0 +1,145 @@
+namespace Livt.ML.Convolution
+
+using Livt.ML.Numeric
+
+/**
+ * Applies an ONNX QLinearConv from one 28x28 plane to eight 28x28 planes.
+ *
+ * The kernel is 5x5 with stride one and SAME_UPPER padding. Inputs and stored
+ * outputs represent uint8 values in Livt ints; weights represent signed int8;
+ * biases and accumulators use signed int32 semantics.
+ */
+component QLinearConv1x8Same5x5
+{
+	public const INPUT_SIZE: int = 784
+	public const OUTPUT_SIZE: int = 6272
+	public const CHANNELS: int = 8
+	public const KERNEL_SIZE: int = 25
+
+	weights: int[8, 25]
+	biases: int[8]
+	multipliers: int[8]
+	divisors: int[8]
+	inputZeroPoints: int[8]
+	weightZeroPoints: int[8]
+	outputZeroPoints: int[8]
+	inputValues: int[784]
+	output: int[6272]
+
+	/**
+	 * Clears all learned parameters and output activations.
+	 */
+	public fn Clear()
+	{
+		for (var channel = 0; channel < CHANNELS; channel++) {
+			biases[channel] = 0
+			multipliers[channel] = 0
+			divisors[channel] = 1
+			inputZeroPoints[channel] = 0
+			weightZeroPoints[channel] = 0
+			outputZeroPoints[channel] = 0
+
+			for (var index = 0; index < KERNEL_SIZE; index++) {
+				weights[channel, index] = 0
+			}
+		}
+
+		for (var index = 0; index < OUTPUT_SIZE; index++) {
+			output[index] = 0
+		}
+	}
+
+	/**
+	 * Stores one flattened uint8 input value and ignores an invalid index.
+	 */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+		inputValues[index] = value
+	}
+
+	/**
+	 * Stores one signed-int8 kernel weight and ignores an invalid index.
+	 */
+	public fn SetWeight(channel: int, index: int, value: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= CHANNELS) { return }
+		if (index < 0) { return }
+		if (index >= KERNEL_SIZE) { return }
+
+		weights[channel, index] = value
+	}
+
+	/**
+	 * Stores bias, rational scale, and tensor zero points for one channel.
+	 */
+	public fn SetChannelParameters(
+		channel: int, bias: int, multiplier: int, divisor: int,
+		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= CHANNELS) { return }
+
+		biases[channel] = bias
+		multipliers[channel] = multiplier
+		divisors[channel] = divisor
+		inputZeroPoints[channel] = inputZeroPoint
+		weightZeroPoints[channel] = weightZeroPoint
+		outputZeroPoints[channel] = outputZeroPoint
+	}
+
+	/**
+	 * Computes eight quantized output planes from one row-major input plane.
+	 */
+	public fn Compute()
+	{
+		for (var channel = 0; channel < CHANNELS; channel++) {
+			for (var row = 0; row < 28; row++) {
+				for (var column = 0; column < 28; column++) {
+					var accumulator = biases[channel]
+
+					for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
+						state {
+							var inputRow = row + kernelRow - 2
+							for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
+								var inputColumn = column + kernelColumn - 2
+
+								if (inputRow >= 0 && inputRow < 28 && inputColumn >= 0 && inputColumn < 28) {
+									var inputIndex = inputRow * 28 + inputColumn
+									var inputValue = inputValues[inputIndex]
+
+									if (inputValue != inputZeroPoints[channel]) {
+										var weightIndex = kernelRow * 5 + kernelColumn
+										var centeredInput = inputValue - inputZeroPoints[channel]
+										var centeredWeight = weights[channel, weightIndex] - weightZeroPoints[channel]
+										var product = centeredInput * centeredWeight
+										accumulator = accumulator + product
+									}
+								}
+							}
+						}
+					}
+
+					state {
+						var outputIndex = channel * 784 + row * 28 + column
+						output[outputIndex] = RequantizeUInt8.ApplyRational(
+						accumulator, multipliers[channel], divisors[channel], outputZeroPoints[channel])
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns one flattened NCHW output value, or zero for an invalid index.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+
+		return output[index]
+	}
+}

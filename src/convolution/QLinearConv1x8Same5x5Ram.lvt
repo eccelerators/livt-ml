@@ -1,0 +1,126 @@
+namespace Livt.ML.Convolution
+
+using Livt.ML.Numeric
+using Livt.ML.Storage
+
+/** RAM-backed non-streaming QLinearConv from one 28x28 plane to eight planes. */
+component QLinearConv1x8Same5x5Ram
+{
+	public const INPUT_SIZE: int = 784
+	public const OUTPUT_SIZE: int = 6272
+	public const CHANNELS: int = 8
+	public const KERNEL_SIZE: int = 25
+	inputValues: ByteTensorRam2048
+	weights: ByteTensorRam2048
+	outputValues: ByteTensorRam8192
+	biases: int[8]
+	multipliers: int[8]
+	divisors: int[8]
+	inputZeroPoints: int[8]
+	weightZeroPoints: int[8]
+	outputZeroPoints: int[8]
+
+	new()
+	{
+		this.inputValues = new ByteTensorRam2048(INPUT_SIZE)
+		this.weights = new ByteTensorRam2048(200)
+		this.outputValues = new ByteTensorRam8192(OUTPUT_SIZE)
+	}
+
+	/** Stores one flattened uint8 input value and ignores an invalid index. */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+		this.inputValues.Write(index, value as byte)
+	}
+
+	/** Clears all learned parameters and output activations. */
+	public fn Clear()
+	{
+		for (var index = 0; index < 200; index++) { this.weights.Write(index, 0x00) }
+		for (var index = 0; index < OUTPUT_SIZE; index++) { this.outputValues.Write(index, 0x00) }
+		for (var channel = 0; channel < CHANNELS; channel++) {
+			biases[channel] = 0
+			multipliers[channel] = 0
+			divisors[channel] = 1
+			inputZeroPoints[channel] = 0
+			weightZeroPoints[channel] = 0
+			outputZeroPoints[channel] = 0
+		}
+	}
+
+	/** Stores one signed-int8 kernel weight and ignores an invalid index. */
+	public fn SetWeight(channel: int, index: int, value: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= CHANNELS) { return }
+		if (index < 0) { return }
+		if (index >= KERNEL_SIZE) { return }
+		this.weights.Write(channel * 25 + index, value as byte)
+	}
+
+	/** Stores bias, rational scale, and tensor zero points for one channel. */
+	public fn SetChannelParameters(
+		channel: int, bias: int, multiplier: int, divisor: int,
+		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= CHANNELS) { return }
+		biases[channel] = bias
+		multipliers[channel] = multiplier
+		divisors[channel] = divisor
+		inputZeroPoints[channel] = inputZeroPoint
+		weightZeroPoints[channel] = weightZeroPoint
+		outputZeroPoints[channel] = outputZeroPoint
+	}
+
+	/** Computes eight quantized output planes from one row-major input plane. */
+	public fn Compute()
+	{
+		// Materialize each RAM value once for the arithmetic phase. Persistent
+		// tensor storage remains RAM-backed, while the inner convolution loop
+		// avoids repeatedly invoking a multi-cycle RAM access path.
+		var inputCache: byte[784]
+		var kernelCache: logic[25,8]
+		for (var index = 0; index < INPUT_SIZE; index++) {
+			inputCache[index] = this.inputValues.Read(index)
+		}
+		for (var channel = 0; channel < CHANNELS; channel++) {
+			for (var index = 0; index < KERNEL_SIZE; index++) {
+				kernelCache[index] = this.weights.Read(channel * 25 + index)
+			}
+			for (var row = 0; row < 28; row++) {
+				for (var column = 0; column < 28; column++) {
+					var accumulator = biases[channel]
+					for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
+						var inputRow = row + kernelRow - 2
+						for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
+							var inputColumn = column + kernelColumn - 2
+							if (inputRow >= 0 && inputRow < 28 && inputColumn >= 0 && inputColumn < 28) {
+								var inputValue = inputCache[inputRow * 28 + inputColumn] as int
+								if (inputValue != inputZeroPoints[channel]) {
+									var weightBits: logic[8] = kernelCache[kernelRow * 5 + kernelColumn]
+									var centeredInput = inputValue - inputZeroPoints[channel]
+									var centeredWeight = (weightBits as int) - weightZeroPoints[channel]
+									accumulator = accumulator + centeredInput * centeredWeight
+								}
+							}
+						}
+					}
+					var quantized = RequantizeUInt8.ApplyRational(
+						accumulator, multipliers[channel], divisors[channel], outputZeroPoints[channel])
+					this.outputValues.Write(channel * 784 + row * 28 + column, quantized as byte)
+				}
+			}
+		}
+	}
+
+	/** Returns one flattened NCHW output value, or zero for an invalid index. */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+		return this.outputValues.Read(index) as int
+	}
+}

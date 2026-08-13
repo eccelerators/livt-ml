@@ -25,6 +25,19 @@ have been folded into `Livt.ML` or deliberately left elsewhere.
 | Component | Reason |
 | --- | --- |
 | `Livt.ML.Linear.Linear8x8` | reusable dense projection for small fixed-size models |
+| `Livt.ML.Linear.Int8Linear4x8` | first-layer int8 projection with int32 accumulation for tiny imported models |
+| `Livt.ML.Linear.Int8Linear8x3` | int8 three-class projection with int32 accumulation for tiny imported models |
+| `Livt.ML.Numeric.RequantizeInt8` | explicit ties-to-even int32-to-int8 scale transition |
+| `Livt.ML.Numeric.RequantizeUInt8` | rational ties-to-even uint8 scale transitions for imported ONNX graphs |
+| `Livt.ML.Convolution.QLinearConv1x8Same5x5` | first fixed quantized CNN layer required by the MNIST vertical slice |
+| `Livt.ML.Convolution.QLinearConv8x16Same5x5` | second fixed quantized CNN layer required by the MNIST vertical slice |
+| `Livt.ML.Pooling.MaxPool8x28To14` | fixed 2x2 pooling for the imported CNN |
+| `Livt.ML.Pooling.MaxPool16x14To4` | fixed 3x3 pooling for the imported CNN |
+| `Livt.ML.Linear.QLinearMatMul256x10` | per-column quantized ten-class projection |
+| `Livt.ML.Pooling.MaxPool8x28To14Stream` | line-buffered replacement proving the streaming inference contract |
+| `Livt.ML.Pooling.MaxPool16x14To4Stream` | bounded-storage stream pool with ONNX floor behavior |
+| `Livt.ML.Linear.QLinearMatMul256x10Stream` | compact signed-weight loader and streamed dense inference |
+| `Livt.ML.Classifier.ArgMax10` | deterministic ten-class selection |
 | `Livt.ML.Transformer.FeedForwardBlock` | reusable two-layer FFN block for later transformer work |
 
 ## Migrated To Livt.Math

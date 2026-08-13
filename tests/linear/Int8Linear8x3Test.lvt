@@ -1,0 +1,51 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Int8Linear8x3Test
+{
+	layer: Int8Linear8x3
+
+	new()
+	{
+		layer = new Int8Linear8x3()
+	}
+
+	@Test
+	fn ComputesSignedWeightsAndBiases()
+	{
+		layer.ClearParameters()
+		layer.SetRowValues(0, 1, -1, 2, -2, 3, -3, 4, -4)
+		layer.SetBias(0, 9)
+
+		var input: int[8] = [1, 2, 3, 4, 5, 6, 7, 8]
+		layer.Compute(input)
+
+		assert layer.GetAccumulator(0) == -1
+		assert layer.GetAccumulator(1) == 0
+	}
+
+	@Test
+	fn SupportsScalarComputeWithoutArrayStaging()
+	{
+		layer.ClearParameters()
+		layer.SetRowValues(2, 1, 1, 1, 1, 1, 1, 1, 1)
+		layer.SetBias(2, -4)
+		layer.ComputeValues(1, 2, 3, 4, 5, 6, 7, 8)
+
+		assert layer.GetAccumulator(2) == 32
+	}
+
+	@Test
+	fn IgnoresInvalidRowsAndGetters()
+	{
+		layer.ClearParameters()
+		layer.SetRowValues(99, 1, 1, 1, 1, 1, 1, 1, 1)
+		layer.SetBias(-1, 5)
+		layer.ComputeValues(1, 1, 1, 1, 1, 1, 1, 1)
+
+		assert layer.GetAccumulator(-1) == 0
+		assert layer.GetAccumulator(3) == 0
+	}
+}

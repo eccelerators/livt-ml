@@ -1,0 +1,79 @@
+namespace Livt.ML.Tests.Convolution
+
+using Livt.ML.Pooling
+using Livt.ML.Linear
+
+/**
+ * Verifies the fixed CNN operators used by the ONNX MNIST integration.
+ */
+@Test
+component QLinearCnnOperatorsTest
+{
+	pool1: MaxPool8x28To14
+	pool2: MaxPool16x14To4
+	dense: QLinearMatMul256x10
+
+	/**
+	 * Creates each reusable fixed-shape operator.
+	 */
+	new()
+	{
+		this.pool1 = new MaxPool8x28To14()
+		this.pool2 = new MaxPool16x14To4()
+		this.dense = new QLinearMatMul256x10()
+	}
+
+	/**
+	 * Selects maxima from complete 2x2 stride-two windows.
+	 */
+	@Test
+	fn PoolsFirstActivationMap()
+	{
+		this.pool1.SetInput(0, 1)
+		this.pool1.SetInput(1, 9)
+		this.pool1.SetInput(28, 3)
+		this.pool1.SetInput(29, 4)
+		this.pool1.Compute()
+
+		assert this.pool1.GetOutput(0) == 9
+		assert this.pool1.GetOutput(1) == 0
+		assert this.pool1.GetOutput(-1) == 0
+		assert this.pool1.GetOutput(1568) == 0
+	}
+
+	/**
+	 * Selects maxima from complete 3x3 stride-three windows.
+	 */
+	@Test
+	fn PoolsSecondActivationMap()
+	{
+		this.pool2.SetInput(0, 1)
+		this.pool2.SetInput(1, 2)
+		this.pool2.SetInput(30, 11)
+		this.pool2.Compute()
+
+		assert this.pool2.GetOutput(0) == 11
+		assert this.pool2.GetOutput(1) == 0
+		assert this.pool2.GetOutput(-1) == 0
+		assert this.pool2.GetOutput(256) == 0
+	}
+
+	/**
+	 * Computes accumulators and per-column quantized dense outputs.
+	 */
+	@Test
+	fn ComputesDenseProjection()
+	{
+		this.dense.Clear()
+		this.dense.SetWeight(0, 0, 2)
+		this.dense.SetColumnParameters(0, 1, 1, 0, 0, 112)
+		this.dense.SetInput(0, 3)
+		this.dense.Compute()
+
+		assert this.dense.GetAccumulator(0) == 6
+		assert this.dense.GetOutput(0) == 118
+		assert this.dense.GetOutput(1) == 0
+		assert this.dense.GetAccumulator(-1) == 0
+		assert this.dense.GetOutput(10) == 0
+	}
+}

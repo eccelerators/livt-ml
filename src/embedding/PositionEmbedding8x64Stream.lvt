@@ -1,0 +1,22 @@
+namespace Livt.ML.Embedding
+
+/** Context-eight position-table specialization of Embedding64Stream. */
+component PositionEmbedding8x64Stream
+{
+	public const POSITION_COUNT: int = 8
+
+	stream: Embedding64Stream
+
+	new(
+		positionRequest: in logic, positionIndex: in int,
+		positionAcknowledge: out logic, memoryRequest: out logic,
+		memoryAddress: out int, memoryData: in int, memoryAcknowledge: in logic,
+		outputRequest: out logic, outputData: out int, outputLast: out logic,
+		outputAcknowledge: in logic, invalidPosition: out logic)
+	{
+		this.stream = new Embedding64Stream(
+			POSITION_COUNT, positionRequest, positionIndex, positionAcknowledge,
+			memoryRequest, memoryAddress, memoryData, memoryAcknowledge,
+			outputRequest, outputData, outputLast, outputAcknowledge, invalidPosition)
+	}
+}

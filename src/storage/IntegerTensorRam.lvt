@@ -1,0 +1,72 @@
+namespace Livt.ML.Storage
+
+using Livt.IO
+
+/**
+ * Logical signed 16-bit tensor backed by one Livt.IO RAM.
+ *
+ * Values retain their two's-complement representation. Invalid writes are
+ * ignored and invalid reads return zero. Reads inherit the registered-address
+ * timing of `Livt.IO.Ram16`.
+ */
+component Int16TensorRam2048
+{
+	public const CAPACITY: int = 2048
+	ram: Ram16
+	logicalSize: int
+
+	new(logicalSize: int)
+	{
+		ram = new Ram16()
+		this.logicalSize = logicalSize
+	}
+
+	/** Writes one signed 16-bit value when index is in the logical range. */
+	public fn Write(index: int, value: int)
+	{
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return }
+		ram.Write(index, value as logic[16])
+	}
+
+	/** Reads one sign-extended value, or zero when index is invalid. */
+	public fn Read(index: int) int
+	{
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return 0 }
+		var bits: logic[16] = ram.Read(index)
+		return bits as int
+	}
+}
+
+/**
+ * Logical signed 32-bit tensor backed by one Livt.IO RAM.
+ *
+ * This storage is intended for accumulators and other values that cannot be
+ * narrowed to Q8.8 or signed int16. Invalid accesses are handled safely.
+ */
+component Int32TensorRam2048
+{
+	public const CAPACITY: int = 2048
+	ram: Ram32
+	logicalSize: int
+
+	new(logicalSize: int)
+	{
+		ram = new Ram32()
+		this.logicalSize = logicalSize
+	}
+
+	/** Writes one signed 32-bit value when index is in the logical range. */
+	public fn Write(index: int, value: int)
+	{
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return }
+		ram.Write(index, value as logic[32])
+	}
+
+	/** Reads one signed value, or zero when index is invalid. */
+	public fn Read(index: int) int
+	{
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return 0 }
+		var bits: logic[32] = ram.Read(index)
+		return bits as int
+	}
+}

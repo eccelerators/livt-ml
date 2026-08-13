@@ -1,0 +1,65 @@
+namespace Livt.ML.Attention
+
+using Livt.ML.Activation
+
+/**
+ * Reference causal scaled-dot-product attention for one GPT-Neo head.
+ *
+ * The fixed head width is four and context is eight. Dot products are divided
+ * by sqrt(4)=2 exactly. Q1.15 softmax weights are applied to stored integer
+ * values. Sixteen heads may reuse this component sequentially.
+ */
+component CausalAttentionHead4Context8
+{
+	public const CONTEXT_LENGTH: int = 8
+	public const HEAD_WIDTH: int = 4
+
+	queries: int[8, 4]
+	keys: int[8, 4]
+	values: int[8, 4]
+	output: int[8, 4]
+	softmax: StableSoftmax8
+
+	new() { this.softmax = new StableSoftmax8() }
+
+	/** Stores one query, key, and value element. */
+	public fn SetElement(token: int, element: int, query: int, key: int, value: int)
+	{
+		if (token < 0 || token >= CONTEXT_LENGTH) { return }
+		if (element < 0 || element >= HEAD_WIDTH) { return }
+		queries[token, element] = query
+		keys[token, element] = key
+		values[token, element] = value
+	}
+
+	/** Computes every causal output using scoreStep units per natural-log unit. */
+	public fn Compute(scoreStep: int)
+	{
+		for (var token = 0; token < CONTEXT_LENGTH; token++) {
+			var scores: int[8]
+			for (var source = 0; source <= token; source++) {
+				var dot = 0
+				for (var element = 0; element < HEAD_WIDTH; element++) {
+					dot = dot + queries[token, element] * keys[source, element]
+				}
+				scores[source] = dot / 2
+			}
+			softmax.ComputeCount(scores, token + 1, scoreStep)
+			for (var element = 0; element < HEAD_WIDTH; element++) {
+				var weighted = 0
+				for (var source = 0; source <= token; source++) {
+					weighted = weighted + softmax.GetOutput(source) * values[source, element]
+				}
+				output[token, element] = weighted / StableSoftmax8.OUTPUT_SCALE
+			}
+		}
+	}
+
+	/** Returns one output element, or zero for invalid coordinates. */
+	public fn GetOutput(token: int, element: int) int
+	{
+		if (token < 0 || token >= CONTEXT_LENGTH) { return 0 }
+		if (element < 0 || element >= HEAD_WIDTH) { return 0 }
+		return output[token, element]
+	}
+}

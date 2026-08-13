@@ -1,0 +1,103 @@
+namespace Livt.ML.Embedding
+
+/**
+ * Streams one 64-value embedding row from an external scalar memory service.
+ *
+ * The component converts a valid entry index into 64 consecutive flat memory
+ * addresses and forwards returned values with toggle handshakes. It stores no
+ * embedding table and is therefore suitable for ROM, Livt.IO RAM, or an
+ * external-memory controller.
+ */
+component Embedding64Stream
+{
+	public const VECTOR_SIZE: int = 64
+
+	entryRequest: logic
+	entryIndex: int
+	entryAcknowledge: logic
+	memoryRequest: logic
+	memoryAddress: int
+	memoryData: int
+	memoryAcknowledge: logic
+	outputRequest: logic
+	outputData: int
+	outputLast: logic
+	outputAcknowledge: logic
+	invalidEntry: logic
+	entrySeen: logic
+	elementIndex: int
+	currentEntry: int
+	entryCount: int
+	waitingMemory: bool
+	pendingOutput: bool
+	active: bool
+
+	new(
+		entryCount: int,
+		entryRequest: in logic, entryIndex: in int, entryAcknowledge: out logic,
+		memoryRequest: out logic, memoryAddress: out int, memoryData: in int,
+		memoryAcknowledge: in logic, outputRequest: out logic,
+		outputData: out int, outputLast: out logic, outputAcknowledge: in logic,
+		invalidEntry: out logic)
+	{
+		this.entryCount = entryCount
+		this.entryRequest = entryRequest
+		this.entryIndex = entryIndex
+		entryAcknowledge = this.entryAcknowledge
+		memoryRequest = this.memoryRequest
+		memoryAddress = this.memoryAddress
+		this.memoryData = memoryData
+		this.memoryAcknowledge = memoryAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+		invalidEntry = this.invalidEntry
+	}
+
+	process Main()
+	{
+		entryAcknowledge = entrySeen
+
+		if (pendingOutput) {
+			if (outputAcknowledge == outputRequest) {
+				pendingOutput = false
+				if (elementIndex == 63) {
+					elementIndex = 0
+					active = false
+				} else {
+					elementIndex++
+					memoryAddress = currentEntry * VECTOR_SIZE + elementIndex
+					memoryRequest = !memoryRequest
+					waitingMemory = true
+				}
+			}
+		} else {
+			if (waitingMemory) {
+				if (memoryAcknowledge == memoryRequest) {
+					outputData = memoryData
+					outputLast = 0b0
+					if (elementIndex == 63) { outputLast = 0b1 }
+					outputRequest = !outputRequest
+					waitingMemory = false
+					pendingOutput = true
+				}
+			} else {
+				if (!active && entryRequest != entrySeen) {
+					entrySeen = entryRequest
+					invalidEntry = 0b0
+					if (entryIndex < 0 || entryIndex >= entryCount) {
+						invalidEntry = 0b1
+					} else {
+						currentEntry = entryIndex
+						elementIndex = 0
+						memoryAddress = entryIndex * VECTOR_SIZE
+						memoryRequest = !memoryRequest
+						waitingMemory = true
+						active = true
+					}
+				}
+			}
+		}
+	}
+}

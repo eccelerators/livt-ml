@@ -1,0 +1,14 @@
+namespace Livt.ML.Linear
+
+/** Portable pipelined primitive that broadcasts one activation over 64 int8 weights. */
+@Opaque
+component Int8BroadcastMac64x8Primitive
+{
+	public request: in logic
+	public clear: in logic
+	public activation: in int
+	public weights: in logic[512]
+	public resultIndex: in logic[6]
+	public acknowledge: out logic
+	public result: out int
+}

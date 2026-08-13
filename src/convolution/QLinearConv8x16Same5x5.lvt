@@ -1,0 +1,147 @@
+namespace Livt.ML.Convolution
+
+using Livt.ML.Numeric
+
+/**
+ * Applies an ONNX QLinearConv from eight 14x14 planes to sixteen planes.
+ *
+ * The kernel is 5x5 with stride one and SAME_UPPER padding. Each configured
+ * output kernel contains eight input-channel kernels in channel-major order.
+ */
+component QLinearConv8x16Same5x5
+{
+	public const INPUT_SIZE: int = 1568
+	public const OUTPUT_SIZE: int = 3136
+	public const OUTPUT_CHANNELS: int = 16
+	public const WEIGHTS_PER_OUTPUT: int = 200
+
+	inputValues: int[1568]
+	weights: int[16, 200]
+	biases: int[16]
+	multipliers: int[16]
+	divisors: int[16]
+	inputZeroPoints: int[16]
+	weightZeroPoints: int[16]
+	outputZeroPoints: int[16]
+	output: int[3136]
+
+	/**
+	 * Stores one flattened NCHW input value and ignores an invalid index.
+	 */
+	public fn SetInput(index: int, value: int)
+	{
+		if (index < 0) { return }
+		if (index >= INPUT_SIZE) { return }
+
+		inputValues[index] = value
+	}
+
+	/**
+	 * Clears all learned parameters and output activations.
+	 */
+	public fn Clear()
+	{
+		for (var channel = 0; channel < OUTPUT_CHANNELS; channel++) {
+			biases[channel] = 0
+			multipliers[channel] = 0
+			divisors[channel] = 1
+			inputZeroPoints[channel] = 0
+			weightZeroPoints[channel] = 0
+			outputZeroPoints[channel] = 0
+
+			for (var index = 0; index < WEIGHTS_PER_OUTPUT; index++) {
+				weights[channel, index] = 0
+			}
+		}
+
+		for (var index = 0; index < OUTPUT_SIZE; index++) {
+			output[index] = 0
+		}
+	}
+
+	/**
+	 * Stores one signed-int8 kernel weight and ignores an invalid index.
+	 */
+	public fn SetWeight(channel: int, index: int, value: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= OUTPUT_CHANNELS) { return }
+		if (index < 0) { return }
+		if (index >= WEIGHTS_PER_OUTPUT) { return }
+
+		weights[channel, index] = value
+	}
+
+	/**
+	 * Stores bias, rational scale, and tensor zero points for one channel.
+	 */
+	public fn SetChannelParameters(
+		channel: int, bias: int, multiplier: int, divisor: int,
+		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
+	{
+		if (channel < 0) { return }
+		if (channel >= OUTPUT_CHANNELS) { return }
+
+		biases[channel] = bias
+		multipliers[channel] = multiplier
+		divisors[channel] = divisor
+		inputZeroPoints[channel] = inputZeroPoint
+		weightZeroPoints[channel] = weightZeroPoint
+		outputZeroPoints[channel] = outputZeroPoint
+	}
+
+	/**
+	 * Computes sixteen quantized output planes from eight NCHW input planes.
+	 */
+	public fn Compute()
+	{
+		for (var outputChannel = 0; outputChannel < OUTPUT_CHANNELS; outputChannel++) {
+			for (var row = 0; row < 14; row++) {
+				for (var column = 0; column < 14; column++) {
+					var accumulator = biases[outputChannel]
+
+					for (var inputChannel = 0; inputChannel < 8; inputChannel++) {
+						for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
+							state {
+								var inputRow = row + kernelRow - 2
+								for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
+									var inputColumn = column + kernelColumn - 2
+
+									if (inputRow >= 0 && inputRow < 14 && inputColumn >= 0 && inputColumn < 14) {
+										var inputIndex = inputChannel * 196 + inputRow * 14 + inputColumn
+										var inputValue = inputValues[inputIndex]
+
+										if (inputValue != inputZeroPoints[outputChannel]) {
+											var weightIndex = inputChannel * 25 + kernelRow * 5 + kernelColumn
+											var centeredInput = inputValue - inputZeroPoints[outputChannel]
+											var centeredWeight = weights[outputChannel, weightIndex] - weightZeroPoints[outputChannel]
+											var product = centeredInput * centeredWeight
+											accumulator = accumulator + product
+										}
+									}
+								}
+							}
+						}
+					}
+
+					state {
+						var outputIndex = outputChannel * 196 + row * 14 + column
+						output[outputIndex] = RequantizeUInt8.ApplyRational(
+						accumulator, multipliers[outputChannel], divisors[outputChannel], outputZeroPoints[outputChannel])
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns one flattened NCHW output value, or zero for an invalid index.
+	 */
+	public fn GetOutput(index: int) int
+	{
+		if (index < 0) { return 0 }
+		if (index >= OUTPUT_SIZE) { return 0 }
+
+		return output[index]
+	}
+}

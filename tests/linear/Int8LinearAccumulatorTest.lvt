@@ -1,0 +1,22 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Int8LinearAccumulatorTest
+{
+	dut: Int8LinearAccumulator
+	new() { this.dut = new Int8LinearAccumulator() }
+
+	@Test
+	fn CentersValuesAndPreservesInt32Range()
+	{
+		this.dut.Begin(100, 2, -3)
+		this.dut.Accumulate(4, 5)
+		this.dut.Accumulate(0, -5)
+		assert this.dut.GetAccumulator() == 120
+		this.dut.Begin(0, 0, 0)
+		this.dut.Accumulate(1000, 1000)
+		assert this.dut.GetAccumulator() == 1000000
+	}
+}

@@ -6,7 +6,8 @@ using Livt.ML.Linear
 using Livt.ML.Norm
 
 /**
- * Fixed 8-element transformer-style block with attention and residual paths.
+ * Experimental fixed 8-element transformer-style composition with attention
+ * and residual paths. This is not yet a configurable production transformer.
  */
 component TransformerBlock
 {

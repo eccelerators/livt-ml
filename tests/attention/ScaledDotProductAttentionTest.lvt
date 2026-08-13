@@ -35,9 +35,9 @@ component ScaledDotProductAttentionTest
 		attn.Write(key, val)
 		attn.Compute(query)
 
-		assert attn.GetOutput(0) == 9
-		assert attn.GetOutput(1) == 19
-		assert attn.GetOutput(2) == 29
+		assert attn.GetOutput(0) == 10
+		assert attn.GetOutput(1) == 20
+		assert attn.GetOutput(2) == 30
 	}
 
 	@Test
@@ -55,8 +55,8 @@ component ScaledDotProductAttentionTest
 		attn.Write(key1, val1)
 		attn.Compute(query)
 
-		assert attn.GetOutput(0) == 1
-		assert attn.GetOutput(1) == 2
+		assert attn.GetOutput(0) == 4
+		assert attn.GetOutput(1) == 8
 		assert attn.GetOutput(2) == 0
 	}
 

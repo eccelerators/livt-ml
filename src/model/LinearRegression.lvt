@@ -1,7 +1,5 @@
 namespace Livt.ML.Model
 
-using Livt.Lang.Annotations
-
 /**
  * Fits a small integer linear regression model with fixed-point slope.
  */
@@ -18,7 +16,6 @@ component LinearRegression
 	/**
 	 * Fits y = a*x + b from n samples, clearing coefficients on invalid input.
 	 */
-	@SuppressWarning("variable-divisor")
 	public fn Fit(x: int[32], y: int[32], n: int)
 	{
 		aFixed = 0

@@ -1,0 +1,22 @@
+namespace Livt.ML.Convolution
+
+/**
+ * Shared numeric building block for specialized quantized Conv2D streams.
+ *
+ * Scheduling, tensor shape, and storage stay in the specialized component;
+ * this class centralizes the ONNX uint8-by-int8 zero-point MAC contract.
+ * Specialized components apply their configured requantization afterwards.
+ */
+class QConv2DStreamBase
+{
+	/** Adds one centered uint8-by-int8 product to an accumulator. */
+	public static fn Accumulate[](
+		accumulator: int, activation: byte, weight: logic[8],
+		inputZeroPoint: int, weightZeroPoint: int) int
+	{
+		var centeredInput = (activation as int) - inputZeroPoint
+		var centeredWeight = (weight as int) - weightZeroPoint
+		var product = centeredInput * centeredWeight
+		return accumulator + product
+	}
+}

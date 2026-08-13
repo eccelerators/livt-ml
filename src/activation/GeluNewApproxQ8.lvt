@@ -1,0 +1,67 @@
+namespace Livt.ML.Activation
+
+/**
+ * Approximates GPT-Neo gelu_new for Q8.8 values.
+ *
+ * A 0.25-spaced lookup covers [-4, 4] and linear interpolation covers values
+ * between entries. More-negative values return zero and more-positive values
+ * pass through, matching GELU's saturated tails.
+ */
+component GeluNewApproxQ8
+{
+	public const SCALE: int = 256
+	const STEP: int = 64
+	const LAST_INDEX: int = 32
+
+	lut: int[33]
+
+	new()
+	{
+		lut[0] = 0
+		lut[1] = 0
+		lut[2] = 0
+		lut[3] = 0
+		lut[4] = -1
+		lut[5] = -2
+		lut[6] = -4
+		lut[7] = -7
+		lut[8] = -12
+		lut[9] = -18
+		lut[10] = -26
+		lut[11] = -34
+		lut[12] = -41
+		lut[13] = -44
+		lut[14] = -39
+		lut[15] = -26
+		lut[16] = 0
+		lut[17] = 38
+		lut[18] = 89
+		lut[19] = 148
+		lut[20] = 215
+		lut[21] = 286
+		lut[22] = 358
+		lut[23] = 430
+		lut[24] = 500
+		lut[25] = 569
+		lut[26] = 636
+		lut[27] = 702
+		lut[28] = 767
+		lut[29] = 832
+		lut[30] = 896
+		lut[31] = 960
+		lut[32] = 1024
+	}
+
+	/** Applies the Q8.8 GELU-new approximation. */
+	public fn Apply(input: int) int
+	{
+		if (input <= -1024) { return 0 }
+		if (input >= 1024) { return input }
+		var shifted = input + 1024
+		var index = shifted / STEP
+		var remainder = shifted % STEP
+		var lower = lut[index]
+		var upper = lut[index + 1]
+		return lower + (upper - lower) * remainder / STEP
+	}
+}

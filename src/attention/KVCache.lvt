@@ -43,6 +43,8 @@ component KVCache
 	 */
 	public fn GetKeyElement(slot: int, elem: int) int
 	{
+		if (slot < 0 || slot >= size) { return 0 }
+		if (elem < 0 || elem >= VECTOR_SIZE) { return 0 }
 		var physSlot = (head + slot) % CACHE_SIZE
 
 		return keys[physSlot, elem]
@@ -53,6 +55,8 @@ component KVCache
 	 */
 	public fn GetValueElement(slot: int, elem: int) int
 	{
+		if (slot < 0 || slot >= size) { return 0 }
+		if (elem < 0 || elem >= VECTOR_SIZE) { return 0 }
 		var physSlot = (head + slot) % CACHE_SIZE
 
 		return vals[physSlot, elem]

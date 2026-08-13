@@ -1,0 +1,60 @@
+namespace Livt.ML.Tests.Pooling
+
+using Livt.ML.Pooling
+
+@Test
+component RamPoolingTest
+{
+	pool1: MaxPool8x28To14Ram
+	pool2: MaxPool16x14To4Ram
+
+	new()
+	{
+		this.pool1 = new MaxPool8x28To14Ram()
+		this.pool2 = new MaxPool16x14To4Ram()
+	}
+
+	@Test
+	fn PoolsEveryTwoByTwoOutput()
+	{
+		for (var channel = 0; channel < 8; channel++) {
+			for (var row = 0; row < 28; row++) {
+				for (var column = 0; column < 28; column++) {
+					this.pool1.SetInput(channel * 784 + row * 28 + column, column)
+				}
+			}
+		}
+		this.pool1.Compute()
+		for (var channel = 0; channel < 8; channel++) {
+			for (var row = 0; row < 14; row++) {
+				for (var column = 0; column < 14; column++) {
+					assert this.pool1.GetOutput(channel * 196 + row * 14 + column) == column * 2 + 1
+				}
+			}
+		}
+		assert this.pool1.GetOutput(-1) == 0
+		assert this.pool1.GetOutput(1568) == 0
+	}
+
+	@Test
+	fn PoolsEveryThreeByThreeOutput()
+	{
+		for (var channel = 0; channel < 16; channel++) {
+			for (var row = 0; row < 14; row++) {
+				for (var column = 0; column < 14; column++) {
+					this.pool2.SetInput(channel * 196 + row * 14 + column, column)
+				}
+			}
+		}
+		this.pool2.Compute()
+		for (var channel = 0; channel < 16; channel++) {
+			for (var row = 0; row < 4; row++) {
+				for (var column = 0; column < 4; column++) {
+					assert this.pool2.GetOutput(channel * 16 + row * 4 + column) == column * 3 + 2
+				}
+			}
+		}
+		assert this.pool2.GetOutput(-1) == 0
+		assert this.pool2.GetOutput(256) == 0
+	}
+}

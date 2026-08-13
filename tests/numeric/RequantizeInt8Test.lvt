@@ -1,0 +1,40 @@
+namespace Livt.ML.Tests.Numeric
+
+using Livt.ML.Numeric
+
+@Test
+component RequantizeInt8Test
+{
+	requantize: RequantizeInt8
+
+	new()
+	{
+		requantize = new RequantizeInt8()
+	}
+
+	@Test
+	fn RoundsNearestWithTiesToEven()
+	{
+		assert requantize.Apply(14, 10, 0) == 1
+		assert requantize.Apply(15, 10, 0) == 2
+		assert requantize.Apply(25, 10, 0) == 2
+		assert requantize.Apply(26, 10, 0) == 3
+		assert requantize.Apply(-15, 10, 0) == -2
+		assert requantize.Apply(-25, 10, 0) == -2
+	}
+
+	@Test
+	fn AppliesZeroPointAndSaturates()
+	{
+		assert requantize.Apply(10, 10, 5) == 6
+		assert requantize.Apply(10000, 10, 0) == RequantizeInt8.MAX_VALUE
+		assert requantize.Apply(-10000, 10, 0) == RequantizeInt8.MIN_VALUE
+	}
+
+	@Test
+	fn HandlesInvalidDivisorDeterministically()
+	{
+		assert requantize.Apply(100, 0, 7) == 7
+		assert requantize.Apply(100, -1, 200) == RequantizeInt8.MAX_VALUE
+	}
+}

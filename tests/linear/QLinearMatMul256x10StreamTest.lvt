@@ -1,0 +1,118 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+/**
+ * Verifies loading, signed weights, accumulation, scaling, and output framing.
+ */
+@Test
+component QLinearMatMul256x10StreamTest
+{
+	weightRequest: logic
+	weightData: logic[8]
+	weightAcknowledge: logic
+	scaleRequest: logic
+	scaleMultiplier: int
+	scaleDivisor: int
+	scaleInputZeroPoint: int
+	scaleWeightZeroPoint: int
+	scaleOutputZeroPoint: int
+	scaleAcknowledge: logic
+	inputRequest: logic
+	inputData: byte
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: byte
+	outputAccumulator: int
+	outputLast: logic
+	outputAcknowledge: logic
+	configured: logic
+	frameError: logic
+	dut: QLinearMatMul256x10Stream
+
+	new()
+	{
+		this.dut = new QLinearMatMul256x10Stream(
+			this.weightRequest, this.weightData, this.weightAcknowledge,
+			this.scaleRequest, this.scaleMultiplier, this.scaleDivisor,
+			this.scaleInputZeroPoint, this.scaleWeightZeroPoint,
+			this.scaleOutputZeroPoint, this.scaleAcknowledge,
+			this.inputRequest, this.inputData, this.inputLast, this.inputAcknowledge,
+			this.outputRequest, this.outputData, this.outputAccumulator,
+			this.outputLast, this.outputAcknowledge, this.configured, this.frameError)
+	}
+
+	fn SendWeight(value: int)
+	{
+		weightData = value as logic[8]
+		weightRequest = !weightRequest
+		while (weightAcknowledge != weightRequest) { state {} }
+	}
+
+	fn SendScale(
+		multiplier: int, divisor: int,
+		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
+	{
+		scaleMultiplier = multiplier
+		scaleDivisor = divisor
+		scaleInputZeroPoint = inputZeroPoint
+		scaleWeightZeroPoint = weightZeroPoint
+		scaleOutputZeroPoint = outputZeroPoint
+		scaleRequest = !scaleRequest
+		while (scaleAcknowledge != scaleRequest) { state {} }
+	}
+
+	fn SendInput(value: byte, last: logic)
+	{
+		inputData = value
+		inputLast = last
+		inputRequest = !inputRequest
+		while (inputAcknowledge != inputRequest) { state {} }
+	}
+
+	@Test
+	fn ComputesLoadedProjection()
+	{
+		for (var column = 0; column < 10; column++) {
+			for (var row = 0; row < 256; row++) {
+				var weight = 0
+				if (column == 0 && row == 0) { weight = 2 }
+				if (column == 1 && row == 0) { weight = -2 }
+				this.SendWeight(weight)
+			}
+		}
+		for (var column = 0; column < 10; column++) {
+			if (column == 1) { this.SendScale(1, 1, 1, -1, 112) }
+			else { this.SendScale(1, 1, 1, 0, 112) }
+		}
+		while (configured != 0b1) { state {} }
+
+		for (var row = 0; row < 256; row++) {
+			var value = 0x01
+			if (row == 0) { value = 0x03 }
+			var last = 0b0
+			if (row == 255) { last = 0b1 }
+			this.SendInput(value, last)
+		}
+
+		for (var column = 0; column < 10; column++) {
+			while (outputRequest == outputAcknowledge) { state {} }
+			if (column == 0) {
+				assert outputAccumulator == 4
+				assert outputData == 0x74
+			} else {
+				if (column == 1) {
+					assert outputAccumulator == -2
+					assert outputData == 0x6e
+				} else {
+					assert outputAccumulator == 0
+					assert outputData == 0x70
+				}
+			}
+			if (column == 9) { assert outputLast == 0b1 } else { assert outputLast == 0b0 }
+			outputAcknowledge = outputRequest
+		}
+		assert frameError == 0b0
+	}
+}

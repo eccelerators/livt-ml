@@ -1,0 +1,95 @@
+namespace Livt.ML.Pooling
+
+/**
+ * Streams a 3x3 stride-three max pool over sixteen 14x14 uint8 NCHW planes.
+ *
+ * The port protocol is the same toggle handshake as
+ * `MaxPool8x28To14Stream`. ONNX floor sizing ignores input rows and columns
+ * twelve and thirteen. `outputLast` therefore identifies the 256th output,
+ * which occurs before the final ignored input values are accepted.
+ *
+ * The implementation keeps four partial window maxima instead of complete
+ * input and output tensors.
+ */
+component MaxPool16x14To4Stream
+{
+	inputRequest: logic
+	inputData: byte
+	inputLast: logic
+	inputAcknowledge: logic
+	outputRequest: logic
+	outputData: byte
+	outputLast: logic
+	outputAcknowledge: logic
+	inputSeen: logic
+	pending: bool
+	channel: int
+	row: int
+	column: int
+	rowInWindow: int
+	columnInWindow: int
+	windowColumn: int
+	windowMaximum: byte[4]
+
+	new(inputRequest: in logic, inputData: in byte, inputLast: in logic,
+		inputAcknowledge: out logic, outputRequest: out logic,
+		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic)
+	{
+		this.inputRequest = inputRequest
+		this.inputData = inputData
+		this.inputLast = inputLast
+		inputAcknowledge = this.inputAcknowledge
+		outputRequest = this.outputRequest
+		outputData = this.outputData
+		outputLast = this.outputLast
+		this.outputAcknowledge = outputAcknowledge
+	}
+
+	process Main()
+	{
+		inputAcknowledge = inputSeen
+
+		if (pending) {
+			if (outputAcknowledge == outputRequest) { pending = false }
+		} else {
+			if (inputRequest != inputSeen) {
+				if (row < 12 && column < 12) {
+					var candidateMaximum = windowMaximum[windowColumn]
+					if (rowInWindow == 0 && columnInWindow == 0) { candidateMaximum = inputData }
+					if (inputData > candidateMaximum) { candidateMaximum = inputData }
+					windowMaximum[windowColumn] = candidateMaximum
+
+					if (rowInWindow == 2 && columnInWindow == 2) {
+						outputData = candidateMaximum
+						outputLast = 0b0
+						if (channel == 15 && row == 11 && column == 11) { outputLast = 0b1 }
+						outputRequest = !outputRequest
+						pending = true
+					}
+
+					if (columnInWindow == 2) {
+						columnInWindow = 0
+						windowColumn++
+					} else { columnInWindow++ }
+				}
+
+				inputSeen = inputRequest
+				if (column == 13) {
+					column = 0
+					columnInWindow = 0
+					windowColumn = 0
+					if (row == 13) {
+						row = 0
+						rowInWindow = 0
+						if (channel == 15) { channel = 0 } else { channel++ }
+					} else {
+						if (row < 11) {
+							if (rowInWindow == 2) { rowInWindow = 0 } else { rowInWindow++ }
+						}
+						row++
+					}
+				} else { column++ }
+			}
+		}
+	}
+}

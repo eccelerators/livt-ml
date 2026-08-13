@@ -36,6 +36,10 @@ component KVCacheTest
 		assert cache.GetKeyElement(0, 7) == 8
 		assert cache.GetValueElement(0, 0) == 10
 		assert cache.GetValueElement(0, 7) == 80
+		assert cache.GetKeyElement(-1, 0) == 0
+		assert cache.GetKeyElement(1, 0) == 0
+		assert cache.GetValueElement(0, -1) == 0
+		assert cache.GetValueElement(0, 8) == 0
 	}
 
 	@Test

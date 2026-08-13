@@ -1,0 +1,42 @@
+namespace Livt.ML.Tests.Classifier
+
+using Livt.ML.Classifier
+
+/**
+ * Verifies ten-class maximum selection and deterministic ties.
+ */
+@Test
+component ArgMax10Test
+{
+	argmax: ArgMax10
+
+	/**
+	 * Creates the classifier helper.
+	 */
+	new()
+	{
+		this.argmax = new ArgMax10()
+	}
+
+	/**
+	 * Selects a maximum at the final position.
+	 */
+	@Test
+	fn SelectsFinalMaximum()
+	{
+		var values: int[10] = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+		this.argmax.Compute(values)
+		assert this.argmax.GetClass() == 9
+	}
+
+	/**
+	 * Keeps the first index when maximum values tie.
+	 */
+	@Test
+	fn KeepsFirstTie()
+	{
+		var values: int[10] = [0, 7, 1, 7, 2, 3, 4, 5, 6, 0]
+		this.argmax.Compute(values)
+		assert this.argmax.GetClass() == 1
+	}
+}

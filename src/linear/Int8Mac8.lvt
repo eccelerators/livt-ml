@@ -1,0 +1,26 @@
+namespace Livt.ML.Linear
+
+/**
+ * Context-free eight-lane signed-int8 multiply-accumulate building block.
+ *
+ * This is useful when an external memory supplies one 64-bit weight word per
+ * cycle. Activations remain `int` so callers can retain a wider quantized
+ * representation; each `logic[8]` weight is interpreted as two's complement.
+ */
+class Int8Mac8
+{
+	/** Adds eight activation-by-signed-byte products to an int32 accumulator. */
+	public static fn Accumulate[](
+		accumulator: int,
+		activation0: int, activation1: int, activation2: int, activation3: int,
+		activation4: int, activation5: int, activation6: int, activation7: int,
+		weight0: logic[8], weight1: logic[8], weight2: logic[8], weight3: logic[8],
+		weight4: logic[8], weight5: logic[8], weight6: logic[8], weight7: logic[8]) int
+	{
+		return accumulator +
+			activation0 * (weight0 as int) + activation1 * (weight1 as int) +
+			activation2 * (weight2 as int) + activation3 * (weight3 as int) +
+			activation4 * (weight4 as int) + activation5 * (weight5 as int) +
+			activation6 * (weight6 as int) + activation7 * (weight7 as int)
+	}
+}

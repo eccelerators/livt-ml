@@ -1,0 +1,107 @@
+namespace Livt.ML.Tests.Pooling
+
+using Livt.ML.Pooling
+
+/**
+ * Exercises every input and output position of both fixed-shape stream pools.
+ */
+@Test
+component StreamingPoolingTest
+{
+	input1Request: logic
+	input1Data: byte
+	input1Last: logic
+	input1Acknowledge: logic
+	output1Request: logic
+	output1Data: byte
+	output1Last: logic
+	output1Acknowledge: logic
+
+	input2Request: logic
+	input2Data: byte
+	input2Last: logic
+	input2Acknowledge: logic
+	output2Request: logic
+	output2Data: byte
+	output2Last: logic
+	output2Acknowledge: logic
+
+	pool1: MaxPool8x28To14Stream
+	pool2: MaxPool16x14To4Stream
+
+	new()
+	{
+		this.pool1 = new MaxPool8x28To14Stream(
+			this.input1Request, this.input1Data, this.input1Last, this.input1Acknowledge,
+			this.output1Request, this.output1Data, this.output1Last, this.output1Acknowledge)
+		this.pool2 = new MaxPool16x14To4Stream(
+			this.input2Request, this.input2Data, this.input2Last, this.input2Acknowledge,
+			this.output2Request, this.output2Data, this.output2Last, this.output2Acknowledge)
+	}
+
+	fn SendPool1(data: byte, last: logic)
+	{
+		input1Data = data
+		input1Last = last
+		input1Request = !input1Request
+		while (input1Acknowledge != input1Request) { state {} }
+	}
+
+	fn SendPool2(data: byte, last: logic)
+	{
+		input2Data = data
+		input2Last = last
+		input2Request = !input2Request
+		while (input2Acknowledge != input2Request) { state {} }
+	}
+
+	@Test
+	fn PoolsCompleteTwoByTwoTensor()
+	{
+		var outputCount = 0
+		for (var channel = 0; channel < 8; channel++) {
+			for (var row = 0; row < 28; row++) {
+				for (var column = 0; column < 28; column++) {
+					var last = 0b0
+					if (channel == 7 && row == 27 && column == 27) { last = 0b1 }
+					this.SendPool1(column as byte, last)
+
+					if (output1Request != output1Acknowledge) {
+						assert output1Data == column as byte
+						assert output1Last == last
+						output1Acknowledge = output1Request
+						outputCount++
+					}
+				}
+			}
+		}
+		assert outputCount == 1568
+	}
+
+	@Test
+	fn PoolsCompleteThreeByThreeTensor()
+	{
+		var outputCount = 0
+		for (var channel = 0; channel < 16; channel++) {
+			for (var row = 0; row < 14; row++) {
+				for (var column = 0; column < 14; column++) {
+					var last = 0b0
+					if (channel == 15 && row == 13 && column == 13) { last = 0b1 }
+					this.SendPool2(column as byte, last)
+
+					if (output2Request != output2Acknowledge) {
+						assert output2Data == column as byte
+						if (outputCount == 255) {
+							assert output2Last == 0b1
+						} else {
+							assert output2Last == 0b0
+						}
+						output2Acknowledge = output2Request
+						outputCount++
+					}
+				}
+			}
+		}
+		assert outputCount == 256
+	}
+}

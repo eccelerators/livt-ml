@@ -1,0 +1,23 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component Int8Dot64x8Test
+{
+	const WEIGHTS: logic[512] = 0xfd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd
+	dot: Int8Dot64x8
+
+	new() { dot = new Int8Dot64x8() }
+
+	@Test
+	fn ComputesSignedDotProductInEightRegisteredGroups()
+	{
+		for (var index = 0; index < 64; index++) {
+			dot.SetActivation(index, index - 32)
+		}
+		assert dot.Compute(WEIGHTS) == 159
+		dot.Reset()
+		assert dot.Compute(WEIGHTS) == 159
+	}
+}

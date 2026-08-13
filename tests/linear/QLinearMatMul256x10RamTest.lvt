@@ -1,0 +1,40 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+@Test
+component QLinearMatMul256x10RamTest
+{
+	dense: QLinearMatMul256x10Ram
+
+	new()
+	{
+		this.dense = new QLinearMatMul256x10Ram()
+	}
+
+	@Test
+	fn ComputesSignedWeightsAndRepeatedInference()
+	{
+		this.dense.Clear()
+		this.dense.SetWeight(0, 0, 2)
+		this.dense.SetWeight(1, 0, -2)
+		for (var column = 0; column < 10; column++) {
+			this.dense.SetColumnParameters(column, 1, 1, 0, 0, 112)
+		}
+		this.dense.SetColumnParameters(0, 1, 1, 1, 0, 112)
+		this.dense.SetColumnParameters(1, 1, 1, 0, -1, 112)
+		this.dense.SetInput(0, 3)
+		this.dense.Compute()
+		assert this.dense.GetAccumulator(0) == 4
+		assert this.dense.GetOutput(0) == 116
+		assert this.dense.GetAccumulator(1) == -3
+		assert this.dense.GetOutput(1) == 109
+
+		this.dense.SetInput(0, 4)
+		this.dense.Compute()
+		assert this.dense.GetAccumulator(0) == 6
+		assert this.dense.GetOutput(0) == 118
+		assert this.dense.GetAccumulator(1) == -4
+		assert this.dense.GetOutput(1) == 108
+	}
+}

@@ -1,0 +1,192 @@
+namespace Livt.ML.Tests.Convolution
+
+using Livt.ML.Convolution
+
+/** Verifies specialized stream framing, signed weights, padding, and reuse. */
+@Test
+component StreamingConvolutionTest
+{
+	c1WeightRequest: logic
+	c1WeightData: logic[8]
+	c1WeightAcknowledge: logic
+	c1ParameterRequest: logic
+	c1ParameterBias: int
+	c1ParameterMultiplier: int
+	c1ParameterDivisor: int
+	c1ParameterInputZeroPoint: int
+	c1ParameterWeightZeroPoint: int
+	c1ParameterOutputZeroPoint: int
+	c1ParameterAcknowledge: logic
+	c1InputRequest: logic
+	c1InputData: byte
+	c1InputLast: logic
+	c1InputAcknowledge: logic
+	c1OutputRequest: logic
+	c1OutputData: byte
+	c1OutputLast: logic
+	c1OutputAcknowledge: logic
+	c1Configured: logic
+	c1FrameError: logic
+
+	c2WeightRequest: logic
+	c2WeightData: logic[8]
+	c2WeightAcknowledge: logic
+	c2ParameterRequest: logic
+	c2ParameterBias: int
+	c2ParameterMultiplier: int
+	c2ParameterDivisor: int
+	c2ParameterInputZeroPoint: int
+	c2ParameterWeightZeroPoint: int
+	c2ParameterOutputZeroPoint: int
+	c2ParameterAcknowledge: logic
+	c2InputRequest: logic
+	c2InputData: byte
+	c2InputLast: logic
+	c2InputAcknowledge: logic
+	c2OutputRequest: logic
+	c2OutputData: byte
+	c2OutputLast: logic
+	c2OutputAcknowledge: logic
+	c2Configured: logic
+	c2FrameError: logic
+
+	conv1: QConv2D1x8Kernel5Image28Stream
+	conv2: QConv2D8x16Kernel5Image14Stream
+
+	new()
+	{
+		this.conv1 = new QConv2D1x8Kernel5Image28Stream(
+			this.c1WeightRequest, this.c1WeightData, this.c1WeightAcknowledge,
+			this.c1ParameterRequest, this.c1ParameterBias, this.c1ParameterMultiplier,
+			this.c1ParameterDivisor, this.c1ParameterInputZeroPoint,
+			this.c1ParameterWeightZeroPoint, this.c1ParameterOutputZeroPoint,
+			this.c1ParameterAcknowledge, this.c1InputRequest, this.c1InputData,
+			this.c1InputLast, this.c1InputAcknowledge, this.c1OutputRequest,
+			this.c1OutputData, this.c1OutputLast, this.c1OutputAcknowledge,
+			this.c1Configured, this.c1FrameError)
+		this.conv2 = new QConv2D8x16Kernel5Image14Stream(
+			this.c2WeightRequest, this.c2WeightData, this.c2WeightAcknowledge,
+			this.c2ParameterRequest, this.c2ParameterBias, this.c2ParameterMultiplier,
+			this.c2ParameterDivisor, this.c2ParameterInputZeroPoint,
+			this.c2ParameterWeightZeroPoint, this.c2ParameterOutputZeroPoint,
+			this.c2ParameterAcknowledge, this.c2InputRequest, this.c2InputData,
+			this.c2InputLast, this.c2InputAcknowledge, this.c2OutputRequest,
+			this.c2OutputData, this.c2OutputLast, this.c2OutputAcknowledge,
+			this.c2Configured, this.c2FrameError)
+	}
+
+	fn SendC1Weight(value: int)
+	{
+		c1WeightData = value as logic[8]
+		c1WeightRequest = !c1WeightRequest
+		while (c1WeightAcknowledge != c1WeightRequest) { state {} }
+	}
+
+	fn SendC1Parameter(bias: int, outputZeroPoint: int)
+	{
+		c1ParameterBias = bias
+		c1ParameterMultiplier = 1
+		c1ParameterDivisor = 1
+		c1ParameterInputZeroPoint = 0
+		c1ParameterWeightZeroPoint = 0
+		c1ParameterOutputZeroPoint = outputZeroPoint
+		c1ParameterRequest = !c1ParameterRequest
+		while (c1ParameterAcknowledge != c1ParameterRequest) { state {} }
+	}
+
+	fn SendC1Input(value: byte, last: logic)
+	{
+		c1InputData = value
+		c1InputLast = last
+		c1InputRequest = !c1InputRequest
+		while (c1InputAcknowledge != c1InputRequest) { state {} }
+	}
+
+	fn SendC2Weight(value: int)
+	{
+		c2WeightData = value as logic[8]
+		c2WeightRequest = !c2WeightRequest
+		while (c2WeightAcknowledge != c2WeightRequest) { state {} }
+	}
+
+	fn SendC2Parameter()
+	{
+		c2ParameterBias = 0
+		c2ParameterMultiplier = 1
+		c2ParameterDivisor = 1
+		c2ParameterInputZeroPoint = 0
+		c2ParameterWeightZeroPoint = 0
+		c2ParameterOutputZeroPoint = 0
+		c2ParameterRequest = !c2ParameterRequest
+		while (c2ParameterAcknowledge != c2ParameterRequest) { state {} }
+	}
+
+	fn SendC2Input(value: byte, last: logic)
+	{
+		c2InputData = value
+		c2InputLast = last
+		c2InputRequest = !c2InputRequest
+		while (c2InputAcknowledge != c2InputRequest) { state {} }
+	}
+
+	@Test
+	fn ComputesFirstSpecializedShape()
+	{
+		for (var channel = 0; channel < 8; channel++) {
+			for (var index = 0; index < 25; index++) {
+				var weight = 0
+				if (channel == 0 && index == 12) { weight = 2 }
+				this.SendC1Weight(weight)
+			}
+			if (channel == 0) { this.SendC1Parameter(-1, 7) }
+			else { this.SendC1Parameter(0, 0) }
+		}
+		while (c1Configured != 0b1) { state {} }
+		for (var index = 0; index < 784; index++) {
+			var value = 0x00
+			if (index == 0) { value = 0x03 }
+			var last = 0b0
+			if (index == 783) { last = 0b1 }
+			this.SendC1Input(value, last)
+		}
+		for (var index = 0; index < 6272; index++) {
+			while (c1OutputRequest == c1OutputAcknowledge) { state {} }
+			if (index == 0) { assert c1OutputData == 0x0c }
+			if (index == 1) { assert c1OutputData == 0x06 }
+			if (index == 6271) { assert c1OutputLast == 0b1 }
+			else { assert c1OutputLast == 0b0 }
+			c1OutputAcknowledge = c1OutputRequest
+		}
+		assert c1FrameError == 0b0
+	}
+
+	@Test
+	fn ComputesSecondSpecializedShape()
+	{
+		for (var channel = 0; channel < 16; channel++) {
+			for (var index = 0; index < 200; index++) {
+				var weight = 0
+				if (channel == 0 && index == 12) { weight = 2 }
+				this.SendC2Weight(weight)
+			}
+			this.SendC2Parameter()
+		}
+		while (c2Configured != 0b1) { state {} }
+		for (var index = 0; index < 1568; index++) {
+			var value = 0x00
+			if (index == 0) { value = 0x03 }
+			var last = 0b0
+			if (index == 1567) { last = 0b1 }
+			this.SendC2Input(value, last)
+		}
+		for (var index = 0; index < 3136; index++) {
+			while (c2OutputRequest == c2OutputAcknowledge) { state {} }
+			if (index == 0) { assert c2OutputData == 0x06 }
+			if (index > 0) { assert c2OutputData == 0x00 }
+			if (index == 3135) { assert c2OutputLast == 0b1 }
+			else { assert c2OutputLast == 0b0 }
+			c2OutputAcknowledge = c2OutputRequest
+		}
+		assert c2FrameError == 0b0
+	}
+}
