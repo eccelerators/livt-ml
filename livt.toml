@@ -1,6 +1,6 @@
 [project]
 name = "Livt.ML"
-version = "0.5.0"
+version = "1.0.0"
 path = "src"
 outdir = "out"
 
@@ -36,7 +36,7 @@ components = [
     "GeluNewApproxQ8Test",
     "RMSNormTest",
     "LayerNorm64StreamTest",
-	"LayerNorm64Test",
+    "LayerNorm64Test",
     "KVCacheTest",
     "ScaledDotProductAttentionTest",
     "CausalAttentionHead4Context8Test",
@@ -51,8 +51,8 @@ components = [
 ]
 
 [dependencies]
-Livt.Math = "0.5.0"
-Livt.IO = "0.3.0"
+Livt.Math = "1.0.0"
+Livt.IO = "1.0.0"
 
 [build.debug]
 warnings = ["all", "no-variable-divisor"]
