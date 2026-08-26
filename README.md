@@ -13,11 +13,11 @@ inspect.
 
 ```toml
 [dependencies]
-"Livt.ML" = "0.3.0"
+"Livt.ML" = "1.0.1"
 ```
 
-`Livt.ML` depends on `Livt.Math 0.4.0` for reusable arithmetic primitives such
-as integer square root and on `Livt.IO 0.2.0` for RAM-backed tensor storage.
+`Livt.ML` depends on `Livt.Math 1.0.0` for reusable arithmetic primitives such
+as integer square root and on `Livt.IO 1.0.1` for RAM-backed tensor storage.
 
 ## 📚 API Overview
 
@@ -51,6 +51,9 @@ as integer square root and on `Livt.IO 0.2.0` for RAM-backed tensor storage.
 | `Livt.ML.Linear` | `Int8Mac8` | Context-free eight-lane signed-int8 MAC for memory-fed datapaths |
 | `Livt.ML.Linear` | `Int8BroadcastMac64x8` | Pipelined 64-output matrix-row accumulator using eight signed 16x8 lanes |
 | `Livt.ML.Linear` | `Int8Dot64x8` | Pipelined 64-element dot product using eight signed 16x8 lanes |
+| `Livt.ML.Storage` | `ByteTensorRam2048` | Byte tensor storage backed by one Livt.IO RAM bank |
+| `Livt.ML.Storage` | `ByteTensorRam4096` | Byte tensor storage backed by two Livt.IO RAM banks |
+| `Livt.ML.Storage` | `ByteTensorRam8192` | Byte tensor storage backed by four Livt.IO RAM banks |
 | `Livt.ML.Storage` | `Int16TensorRam2048` | Signed 16-bit activation tensor backed by Livt.IO RAM |
 | `Livt.ML.Storage` | `Int32TensorRam2048` | Signed 32-bit accumulator tensor backed by Livt.IO RAM |
 | `Livt.ML.Activation` | `ReLU` | Stateless integer ReLU |
@@ -190,7 +193,7 @@ implementation notes belong in `docs/`.
 
 ## 🚀 Outlook
 
-`Livt.ML` 0.3.0 is a broad fixed-size package. Future work should add more
+`Livt.ML` 1.0.1 is a broad fixed-size package. Future work should add more
 hardware-optimized variants, shared fixed-point helpers through `Livt.Math`,
 and stronger model-weight loading patterns.
 

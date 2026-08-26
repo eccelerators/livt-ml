@@ -1,6 +1,6 @@
 [project]
 name = "Livt.ML"
-version = "1.0.0"
+version = "1.0.1"
 path = "src"
 outdir = "out"
 
@@ -52,7 +52,7 @@ components = [
 
 [dependencies]
 Livt.Math = "1.0.0"
-Livt.IO = "1.0.0"
+Livt.IO = "1.0.1"
 
 [build.debug]
 warnings = ["all", "no-variable-divisor"]
