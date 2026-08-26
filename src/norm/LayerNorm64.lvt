@@ -1,6 +1,7 @@
 namespace Livt.ML.Norm
 
 using Livt.Math.FixedPoint
+using Livt.ML.Storage
 
 /**
  * Applies true learned LayerNorm to a fixed 64-value vector.
@@ -14,41 +15,44 @@ component LayerNorm64
 {
 	public const VECTOR_SIZE: int = 64
 	public const AFFINE_SCALE: int = 256
-	input: int[64]
-	gamma: int[64]
-	beta: int[64]
-	output: int[64]
+	const INPUT_OFFSET: int = 0
+	const GAMMA_OFFSET: int = 64
+	const BETA_OFFSET: int = 128
+	const OUTPUT_OFFSET: int = 192
+	const STORAGE_SIZE: int = 256
+	storage: Int32TensorRam2048
+	gammaConfigured: bool[64]
 	reciprocalSqrt: ReciprocalSqrtQ15
 
 	new()
 	{
+		storage = new Int32TensorRam2048(STORAGE_SIZE)
 		reciprocalSqrt = new ReciprocalSqrtQ15()
-		for (var index = 0; index < VECTOR_SIZE; index++) { 
-			gamma[index] = AFFINE_SCALE 
-		}
 	}
 
 	/** Stores one input element and ignores invalid indexes. */
 	public fn SetInput(index: int, value: int)
 	{
 		if (index < 0 || index >= VECTOR_SIZE) { return }
-		input[index] = value
+		storage.Write(INPUT_OFFSET + index, value)
 	}
 
 	/** Stores one Q8.8 learned gamma and beta pair. */
 	public fn SetAffine(index: int, gammaValue: int, betaValue: int)
 	{
 		if (index < 0 || index >= VECTOR_SIZE) { return }
-		gamma[index] = gammaValue
-		beta[index] = betaValue
+		storage.Write(GAMMA_OFFSET + index, gammaValue)
+		storage.Write(BETA_OFFSET + index, betaValue)
+		gammaConfigured[index] = true
 	}
 
 	/** Copies complete Q8.8 gamma and beta vectors. */
 	public fn SetAffineValues(gammaValues: int[64], betaValues: int[64])
 	{
 		for (var index = 0; index < VECTOR_SIZE; index++) {
-			gamma[index] = gammaValues[index]
-			beta[index] = betaValues[index]
+			storage.Write(GAMMA_OFFSET + index, gammaValues[index])
+			storage.Write(BETA_OFFSET + index, betaValues[index])
+			gammaConfigured[index] = true
 		}
 	}
 
@@ -56,11 +60,15 @@ component LayerNorm64
 	public fn Compute(epsilon: int)
 	{
 		var sum = 0
-		for (var index = 0; index < VECTOR_SIZE; index++) { sum = sum + input[index] }
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			var inputValue = storage.Read(INPUT_OFFSET + index)
+			sum = sum + inputValue
+		}
 		var mean = sum / VECTOR_SIZE
 		var squaredSum = 0
 		for (var index = 0; index < VECTOR_SIZE; index++) {
-			var centered = input[index] - mean
+			var inputValue = storage.Read(INPUT_OFFSET + index)
+			var centered = inputValue - mean
 			squaredSum = squaredSum + centered * centered
 		}
 		var variance = squaredSum / VECTOR_SIZE
@@ -69,16 +77,25 @@ component LayerNorm64
 		var inverseStddev = reciprocalSqrt.Compute(variance + boundedEpsilon)
 
 		for (var index = 0; index < VECTOR_SIZE; index++) {
-			var centered = input[index] - mean
+			var inputValue = storage.Read(INPUT_OFFSET + index)
+			var gammaValue = AFFINE_SCALE
+			if (gammaConfigured[index]) {
+				gammaValue = storage.Read(GAMMA_OFFSET + index)
+			}
+			var betaValue = storage.Read(BETA_OFFSET + index)
+			var centered = inputValue - mean
 			var normalized = centered * inverseStddev / 128
-			output[index] = normalized * gamma[index] / AFFINE_SCALE + beta[index]
+			var outputValue = normalized * gammaValue / AFFINE_SCALE + betaValue
+			storage.Write(OUTPUT_OFFSET + index, outputValue)
 		}
 	}
 
 	/** Copies one complete vector, computes LayerNorm, and stores the outputs. */
 	public fn ComputeValues(values: int[64], epsilon: int)
 	{
-		for (var index = 0; index < VECTOR_SIZE; index++) { input[index] = values[index] }
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			storage.Write(INPUT_OFFSET + index, values[index])
+		}
 		this.Compute(epsilon)
 	}
 
@@ -86,6 +103,6 @@ component LayerNorm64
 	public fn GetOutput(index: int) int
 	{
 		if (index < 0 || index >= VECTOR_SIZE) { return 0 }
-		return output[index]
+		return storage.Read(OUTPUT_OFFSET + index)
 	}
 }
