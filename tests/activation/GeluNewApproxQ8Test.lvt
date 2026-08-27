@@ -25,4 +25,14 @@ component GeluNewApproxQ8Test
 		assert this.dut.Apply(32) == 19
 		assert this.dut.Apply(-32) == -13
 	}
+
+	/** Preserves signed division's truncation toward zero on descending LUT intervals. */
+	@Test
+	fn TruncatesNegativeInterpolationTowardZero()
+	{
+		assert this.dut.Apply(-767) == -1
+		assert this.dut.Apply(-736) == -1
+		assert this.dut.Apply(-703) == -2
+		assert this.dut.Apply(-639) == -4
+	}
 }

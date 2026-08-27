@@ -64,6 +64,14 @@ component GeluNewApproxQ8
 		var upper = lut[index + 1]
 		var interpolation = (upper - lower) * remainder
 		state {}
-		return lower + (interpolation >> 6)
+		// Signed division truncates toward zero, whereas an arithmetic right
+		// shift rounds negative values toward minus infinity. Correct the shifted
+		// quotient when discarded negative bits are non-zero so this retains the
+		// original `/ STEP` numerical behavior without inferring a divider.
+		var interpolationQuotient = interpolation >> 6
+		if (interpolation < 0 && (interpolation & 63) != 0) {
+			interpolationQuotient++
+		}
+		return lower + interpolationQuotient
 	}
 }
