@@ -1,6 +1,6 @@
 namespace Livt.ML.Activation
 
-using Livt.Lang.Annotations
+using Livt.Math.Arithmetic
 
 /**
  * Computes a numerically stable softmax over up to eight signed scores.
@@ -17,6 +17,7 @@ component StableSoftmax8
 
 	expNegative: int[16]
 	output: int[8]
+	divider: UnsignedDivideInt32
 
 	new()
 	{
@@ -36,10 +37,10 @@ component StableSoftmax8
 		expNegative[13] = 0
 		expNegative[14] = 0
 		expNegative[15] = 0
+		this.divider = new UnsignedDivideInt32()
 	}
 
 	/** Computes Q1.15 softmax weights for the first count scores. */
-	@SuppressWarning("variable-divisor")
 	public fn ComputeCount(scores: int[8], count: int, scoreStep: int)
 	{
 		var activeCount = count
@@ -58,7 +59,7 @@ component StableSoftmax8
 		var exponentials: int[8]
 		var sum = 0
 		for (var index = 0; index < activeCount; index++) {
-			var distance = (maxScore - scores[index] + step / 2) / step
+			var distance = this.divider.Compute(maxScore - scores[index] + (step >> 1), step)
 			if (distance > LAST_LUT_INDEX) { distance = LAST_LUT_INDEX }
 			exponentials[index] = expNegative[distance]
 			sum = sum + exponentials[index]
@@ -66,7 +67,7 @@ component StableSoftmax8
 		if (sum <= 0) { return }
 
 		for (var index = 0; index < activeCount; index++) {
-			output[index] = exponentials[index] * OUTPUT_SCALE / sum
+			output[index] = this.divider.Compute(exponentials[index] * OUTPUT_SCALE, sum)
 		}
 	}
 

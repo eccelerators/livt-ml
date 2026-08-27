@@ -84,8 +84,12 @@ component LayerNorm64
 			}
 			var betaValue = storage.Read(BETA_OFFSET + index)
 			var centered = inputValue - mean
-			var normalized = centered * inverseStddev / 128
-			var outputValue = normalized * gammaValue / AFFINE_SCALE + betaValue
+			var normalizationProduct = centered * inverseStddev
+			state {}
+			var normalized = normalizationProduct / 128
+			var affineProduct = normalized * gammaValue
+			state {}
+			var outputValue = affineProduct / AFFINE_SCALE + betaValue
 			storage.Write(OUTPUT_OFFSET + index, outputValue)
 		}
 	}

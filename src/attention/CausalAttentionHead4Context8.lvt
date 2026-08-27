@@ -40,7 +40,9 @@ component CausalAttentionHead4Context8
 			for (var source = 0; source <= token; source++) {
 				var dot = 0
 				for (var element = 0; element < HEAD_WIDTH; element++) {
-					dot = dot + queries[token, element] * keys[source, element]
+					var dotProduct = queries[token, element] * keys[source, element]
+					state {}
+					dot = dot + dotProduct
 				}
 				scores[source] = dot / 2
 			}
@@ -48,7 +50,9 @@ component CausalAttentionHead4Context8
 			for (var element = 0; element < HEAD_WIDTH; element++) {
 				var weighted = 0
 				for (var source = 0; source <= token; source++) {
-					weighted = weighted + softmax.GetOutput(source) * values[source, element]
+					var weightedProduct = softmax.GetOutput(source) * values[source, element]
+					state {}
+					weighted = weighted + weightedProduct
 				}
 				output[token, element] = weighted / StableSoftmax8.OUTPUT_SCALE
 			}
