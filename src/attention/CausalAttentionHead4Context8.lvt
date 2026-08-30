@@ -1,5 +1,6 @@
 namespace Livt.ML.Attention
 
+using Livt.IO
 using Livt.ML.Activation
 
 /**
@@ -14,22 +15,44 @@ component CausalAttentionHead4Context8
 	public const CONTEXT_LENGTH: int = 8
 	public const HEAD_WIDTH: int = 4
 
-	queries: int[8, 4]
-	keys: int[8, 4]
-	values: int[8, 4]
-	output: int[8, 4]
+	queries: DistributedRam32x32
+	keys: DistributedRam32x32
+	values: DistributedRam32x32
+	output: DistributedRam32x32
 	softmax: StableSoftmax8
 
-	new() { this.softmax = new StableSoftmax8() }
+	new()
+	{
+		this.queries = new DistributedRam32x32()
+		this.keys = new DistributedRam32x32()
+		this.values = new DistributedRam32x32()
+		this.output = new DistributedRam32x32()
+		this.softmax = new StableSoftmax8()
+	}
 
 	/** Stores one query, key, and value element. */
 	public fn SetElement(token: int, element: int, query: int, key: int, value: int)
 	{
 		if (token < 0 || token >= CONTEXT_LENGTH) { return }
 		if (element < 0 || element >= HEAD_WIDTH) { return }
-		queries[token, element] = query
-		keys[token, element] = key
-		values[token, element] = value
+		var address = token * HEAD_WIDTH + element
+		state {
+			this.queries.address = address as logic[5]
+			this.queries.write_data = query as logic[32]
+			this.queries.write_enable = 0b1
+			this.keys.address = address as logic[5]
+			this.keys.write_data = key as logic[32]
+			this.keys.write_enable = 0b1
+			this.values.address = address as logic[5]
+			this.values.write_data = value as logic[32]
+			this.values.write_enable = 0b1
+		}
+		state {
+			this.queries.write_enable = 0b0
+			this.keys.write_enable = 0b0
+			this.values.write_enable = 0b0
+		}
+		state {}
 	}
 
 	/** Computes every causal output using scoreStep units per natural-log unit. */
@@ -40,7 +63,15 @@ component CausalAttentionHead4Context8
 			for (var source = 0; source <= token; source++) {
 				var dot = 0
 				for (var element = 0; element < HEAD_WIDTH; element++) {
-					var dotProduct = queries[token, element] * keys[source, element]
+					state {
+						this.queries.address = (token * HEAD_WIDTH + element) as logic[5]
+						this.keys.address = (source * HEAD_WIDTH + element) as logic[5]
+					}
+					state {}
+					state {}
+					var queryValue = this.queries.read_data as int
+					var keyValue = this.keys.read_data as int
+					var dotProduct = queryValue * keyValue
 					state {}
 					dot = dot + dotProduct
 				}
@@ -50,11 +81,24 @@ component CausalAttentionHead4Context8
 			for (var element = 0; element < HEAD_WIDTH; element++) {
 				var weighted = 0
 				for (var source = 0; source <= token; source++) {
-					var weightedProduct = softmax.GetOutput(source) * values[source, element]
+					state {
+						this.values.address = (source * HEAD_WIDTH + element) as logic[5]
+					}
+					state {}
+					state {}
+					var value = this.values.read_data as int
+					var weightedProduct = softmax.GetOutput(source) * value
 					state {}
 					weighted = weighted + weightedProduct
 				}
-				output[token, element] = weighted / StableSoftmax8.OUTPUT_SCALE
+				var result = weighted / StableSoftmax8.OUTPUT_SCALE
+				state {
+					this.output.address = (token * HEAD_WIDTH + element) as logic[5]
+					this.output.write_data = result as logic[32]
+					this.output.write_enable = 0b1
+				}
+				state { this.output.write_enable = 0b0 }
+				state {}
 			}
 		}
 	}
@@ -64,6 +108,9 @@ component CausalAttentionHead4Context8
 	{
 		if (token < 0 || token >= CONTEXT_LENGTH) { return 0 }
 		if (element < 0 || element >= HEAD_WIDTH) { return 0 }
-		return output[token, element]
+		state { this.output.address = (token * HEAD_WIDTH + element) as logic[5] }
+		state {}
+		state {}
+		return this.output.read_data as int
 	}
 }
