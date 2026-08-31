@@ -68,7 +68,6 @@ component CausalAttentionHead4Context8
 						this.keys.address = (source * HEAD_WIDTH + element) as logic[5]
 					}
 					state {}
-					state {}
 					var queryValue = this.queries.read_data as int
 					var keyValue = this.keys.read_data as int
 					var dotProduct = queryValue * keyValue
@@ -84,7 +83,6 @@ component CausalAttentionHead4Context8
 					state {
 						this.values.address = (source * HEAD_WIDTH + element) as logic[5]
 					}
-					state {}
 					state {}
 					var value = this.values.read_data as int
 					var weightedProduct = softmax.GetOutput(source) * value
@@ -109,7 +107,6 @@ component CausalAttentionHead4Context8
 		if (token < 0 || token >= CONTEXT_LENGTH) { return 0 }
 		if (element < 0 || element >= HEAD_WIDTH) { return 0 }
 		state { this.output.address = (token * HEAD_WIDTH + element) as logic[5] }
-		state {}
 		state {}
 		return this.output.read_data as int
 	}
