@@ -37,8 +37,9 @@ Livt.
 
 ## Dependency Direction
 
-`Livt.ML` depends on published `Livt.Math 0.4.0` and uses `Livt.IO 0.2.0` for
-opaque RAM-backed tensor storage.
+`Livt.ML` depends on `Livt.Math` and uses `Livt.IO` for generic RAM-backed tensor
+storage. The scheduled tensor and asynchronous attention APIs have distinct
+timing contracts; implementation-intent hints stay in Livt.IO.
 `Livt.Math` and `Livt.IO` must not depend on `Livt.ML`.
 
 ```text

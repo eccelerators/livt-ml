@@ -17,4 +17,30 @@ component LayerNorm64Test
 		norm.Compute(1)
 		for (var index = 0; index < 64; index++) { assert norm.GetOutput(index) == 0 }
 	}
+
+	@Test
+	fn PreservesDefaultsAroundConfiguredAffineElements()
+	{
+		for (var index = 0; index < 64; index++) {
+			var value = 1
+			if (index < 32) { value = -1 }
+			norm.SetInput(index, value)
+		}
+		norm.SetAffine(0, 512, 7)
+		norm.SetAffine(63, 128, -3)
+		for (var pass = 0; pass < 2; pass++) {
+			if (pass == 1) { norm.SetAffine(0, 256, -9) }
+			norm.Compute(0)
+			for (var index = 0; index < 64; index++) {
+				var expected = 256
+				if (index < 32) { expected = -256 }
+				if (index == 0) {
+					expected = -505
+					if (pass == 1) { expected = -265 }
+				}
+				if (index == 63) { expected = 125 }
+				assert norm.GetOutput(index) == expected
+			}
+		}
+	}
 }

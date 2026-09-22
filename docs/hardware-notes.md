@@ -63,15 +63,22 @@ signals and about 62 MB RSS; its instrumented golden run completes in roughly
 ## RAM-Backed Reference Variants
 
 The `Ram` variants preserve the software-like configure, compute, and getter
-lifecycle while storing large byte tensors in `Livt.IO.Ram`. Livt.IO remains
-the owner of the opaque RAM primitive and registered-read timing; Livt.ML owns
+lifecycle while storing large byte tensors in `Livt.IO.BlockRam<byte, 2048>`.
+Livt.IO owns the pure-Livt synchronous storage and scheduled Read/Write contract;
+Livt.ML owns
 logical tensor length, banking, and ML operator schedules.
 
 `ByteTensorRam2048`, `ByteTensorRam4096`, and `ByteTensorRam8192` provide one,
-two, or four physical banks with a caller-selected logical byte length. Invalid
+two, or four 2048-byte stores with a caller-selected logical byte length. Invalid
 writes are ignored and invalid reads return zero. Signed int8 weights retain
 their two's-complement bits in byte RAM and are converted to signed `int` only
-at the multiplication boundary.
+at the multiplication boundary. Valid cells must be written before reading;
+reset retains cells rather than zero-filling them. Block is a synthesis hint,
+not a guarantee of physical allocation.
+
+`CausalAttentionHead4Context8` uses inherited `AsynchronousDistributedRam32x32`
+stores for queries, keys, values and output. Commands and read observations are
+wired combinationally to the canonical ports; there is no compatibility adapter.
 
 This design reduces whole-array function shadows but serializes accesses
 through registered single-port RAM and scheduled wrapper calls. It is primarily
@@ -85,12 +92,14 @@ set. This avoids invoking a registered RAM accessor in every inner MAC loop;
 VHDL behavior of that boundary. The copy is an explicit compute-phase cache,
 not a second persistent tensor API.
 
-For the generated MNIST classifier, RAM storage reduces GHDL elaboration from
+Before the generic memory migration, the generated MNIST classifier's RAM
+storage reduced GHDL elaboration from
 2,532,800 to 504,969 simple signals and maximum RSS from about 923 MB to 200 MB.
 The complete sequential CNN still exceeds ten minutes in GHDL, whereas the
 full-shape streaming pooling fixture takes about 8.9 seconds. Consequently the
 RAM variants should be selected for reference-style usability under memory
-pressure; streaming variants should be selected for throughput.
+pressure; streaming variants should be selected for throughput. These historical
+measurements have not been repeated for the generic memory implementation.
 
 ## Suggested Future Optimizations
 

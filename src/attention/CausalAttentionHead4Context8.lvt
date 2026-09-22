@@ -12,50 +12,77 @@ using Livt.ML.Activation
  */
 component CausalAttentionHead4Context8
 {
+	// Fixed attention geometry.
 	public const CONTEXT_LENGTH: int = 8
 	public const HEAD_WIDTH: int = 4
 
-	queries: DistributedRam32x32
-	keys: DistributedRam32x32
-	values: DistributedRam32x32
-	output: DistributedRam32x32
+	// Independent asynchronous vector stores and score normalization.
+	queries: AsynchronousDistributedRam32x32
+	keys: AsynchronousDistributedRam32x32
+	values: AsynchronousDistributedRam32x32
+	output: AsynchronousDistributedRam32x32
 	softmax: StableSoftmax8
 
+	// Live RAM boundary; scheduled methods own commands, reads stay combinational.
+	queriesAddress: logic[5]
+	queriesWriteEnable: bool
+	queriesWriteData: logic[32]
+	queriesReadData: logic[32]
+	keysAddress: logic[5]
+	keysWriteEnable: bool
+	keysWriteData: logic[32]
+	keysReadData: logic[32]
+	valuesAddress: logic[5]
+	valuesWriteEnable: bool
+	valuesWriteData: logic[32]
+	valuesReadData: logic[32]
+	outputAddress: logic[5]
+	outputWriteEnable: bool
+	outputWriteData: logic[32]
+	outputReadData: logic[32]
+
+	/**
+	 * Creates independent stores; SetElement initializes cells before Compute.
+	 */
 	new()
 	{
-		this.queries = new DistributedRam32x32()
-		this.keys = new DistributedRam32x32()
-		this.values = new DistributedRam32x32()
-		this.output = new DistributedRam32x32()
+		this.queries = new AsynchronousDistributedRam32x32()
+		this.keys = new AsynchronousDistributedRam32x32()
+		this.values = new AsynchronousDistributedRam32x32()
+		this.output = new AsynchronousDistributedRam32x32()
 		this.softmax = new StableSoftmax8()
 	}
 
-	/** Stores one query, key, and value element. */
+	/**
+	 * Stores one query, key, and value element.
+	 */
 	public fn SetElement(token: int, element: int, query: int, key: int, value: int)
 	{
 		if (token < 0 || token >= CONTEXT_LENGTH) { return }
 		if (element < 0 || element >= HEAD_WIDTH) { return }
 		var address = token * HEAD_WIDTH + element
 		state {
-			this.queries.address = address as logic[5]
-			this.queries.write_data = query as logic[32]
-			this.queries.write_enable = 0b1
-			this.keys.address = address as logic[5]
-			this.keys.write_data = key as logic[32]
-			this.keys.write_enable = 0b1
-			this.values.address = address as logic[5]
-			this.values.write_data = value as logic[32]
-			this.values.write_enable = 0b1
+			queriesAddress = address as logic[5]
+			queriesWriteData = query as logic[32]
+			queriesWriteEnable = true
+			keysAddress = address as logic[5]
+			keysWriteData = key as logic[32]
+			keysWriteEnable = true
+			valuesAddress = address as logic[5]
+			valuesWriteData = value as logic[32]
+			valuesWriteEnable = true
 		}
 		state {
-			this.queries.write_enable = 0b0
-			this.keys.write_enable = 0b0
-			this.values.write_enable = 0b0
+			queriesWriteEnable = false
+			keysWriteEnable = false
+			valuesWriteEnable = false
 		}
 		state {}
 	}
 
-	/** Computes every causal output using scoreStep units per natural-log unit. */
+	/**
+	 * Computes every causal output using scoreStep units per natural-log unit.
+	 */
 	public fn Compute(scoreStep: int)
 	{
 		for (var token = 0; token < CONTEXT_LENGTH; token++) {
@@ -64,12 +91,12 @@ component CausalAttentionHead4Context8
 				var dot = 0
 				for (var element = 0; element < HEAD_WIDTH; element++) {
 					state {
-						this.queries.address = (token * HEAD_WIDTH + element) as logic[5]
-						this.keys.address = (source * HEAD_WIDTH + element) as logic[5]
+						queriesAddress = (token * HEAD_WIDTH + element) as logic[5]
+						keysAddress = (source * HEAD_WIDTH + element) as logic[5]
 					}
 					state {}
-					var queryValue = this.queries.read_data as int
-					var keyValue = this.keys.read_data as int
+					var queryValue = queriesReadData as int
+					var keyValue = keysReadData as int
 					var dotProduct = queryValue * keyValue
 					state {}
 					dot = dot + dotProduct
@@ -81,33 +108,58 @@ component CausalAttentionHead4Context8
 				var weighted = 0
 				for (var source = 0; source <= token; source++) {
 					state {
-						this.values.address = (source * HEAD_WIDTH + element) as logic[5]
+						valuesAddress = (source * HEAD_WIDTH + element) as logic[5]
 					}
 					state {}
-					var value = this.values.read_data as int
+					var value = valuesReadData as int
 					var weightedProduct = softmax.GetOutput(source) * value
 					state {}
 					weighted = weighted + weightedProduct
 				}
 				var result = weighted / StableSoftmax8.OUTPUT_SCALE
 				state {
-					this.output.address = (token * HEAD_WIDTH + element) as logic[5]
-					this.output.write_data = result as logic[32]
-					this.output.write_enable = 0b1
+					outputAddress = (token * HEAD_WIDTH + element) as logic[5]
+					outputWriteData = result as logic[32]
+					outputWriteEnable = true
 				}
-				state { this.output.write_enable = 0b0 }
+				state { outputWriteEnable = false }
 				state {}
 			}
 		}
 	}
 
-	/** Returns one output element, or zero for invalid coordinates. */
+	/**
+	 * Returns one output element, or zero for invalid coordinates.
+	 */
 	public fn GetOutput(token: int, element: int) int
 	{
 		if (token < 0 || token >= CONTEXT_LENGTH) { return 0 }
 		if (element < 0 || element >= HEAD_WIDTH) { return 0 }
-		state { this.output.address = (token * HEAD_WIDTH + element) as logic[5] }
+		state { outputAddress = (token * HEAD_WIDTH + element) as logic[5] }
 		state {}
-		return this.output.read_data as int
+		return outputReadData as int
+	}
+
+	/**
+	 * Connects inherited RAM ports without implicit scheduled field observations.
+	 */
+	process MemoryPorts[]()
+	{
+		this.queries.address = queriesAddress
+		this.queries.writeEnable = queriesWriteEnable
+		this.queries.writeData = queriesWriteData
+		queriesReadData = this.queries.readData
+		this.keys.address = keysAddress
+		this.keys.writeEnable = keysWriteEnable
+		this.keys.writeData = keysWriteData
+		keysReadData = this.keys.readData
+		this.values.address = valuesAddress
+		this.values.writeEnable = valuesWriteEnable
+		this.values.writeData = valuesWriteData
+		valuesReadData = this.values.readData
+		this.output.address = outputAddress
+		this.output.writeEnable = outputWriteEnable
+		this.output.writeData = outputWriteData
+		outputReadData = this.output.readData
 	}
 }

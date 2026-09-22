@@ -6,36 +6,48 @@ using Livt.IO
  * Logical byte tensor backed by one 2,048-byte Livt.IO RAM.
  *
  * `logicalSize` must be in 1..2048. Invalid writes are ignored and invalid
- * reads return zero. Reads inherit Livt.IO.Ram's registered-address timing.
+ * reads return zero. Access is scheduled; valid cells must be written before reading.
  */
 component ByteTensorRam2048
 {
+	// Logical bounds may span multiple independent physical stores.
 	public const CAPACITY: int = 2048
-	ram0: Ram
+
+	// Scheduled block-style byte banks; unwritten payloads are unspecified.
+	ram0: BlockRam<byte, 2048>
+
+	// Caller-selected valid prefix of the banked storage.
 	logicalSize: int
 
+	/**
+	 * Constructs the stores and records the logical bounds without clearing cells.
+	 */
 	new(logicalSize: int)
 	{
-		this.ram0 = new Ram()
+		this.ram0 = new BlockRam<byte, 2048>()
 		this.logicalSize = logicalSize
 	}
 
-	/** Writes one byte and ignores an index outside the logical capacity. */
+	/**
+	 * Writes one byte and ignores an index outside the logical capacity.
+	 */
 	public fn Write(index: int, value: byte)
 	{
 		if (index < 0) { return }
 		if (index >= logicalSize) { return }
 		if (index >= CAPACITY) { return }
-		this.ram0.WriteByte(index, value)
+		this.ram0.Write(index, value)
 	}
 
-	/** Reads one byte, or zero for an index outside the logical capacity. */
+	/**
+	 * Reads one byte, or zero for an index outside the logical capacity.
+	 */
 	public fn Read(index: int) byte
 	{
 		if (index < 0) { return 0x00 }
 		if (index >= logicalSize) { return 0x00 }
 		if (index >= CAPACITY) { return 0x00 }
-		return this.ram0.ReadByte(index)
+		return this.ram0.Read(index)
 	}
 }
 
@@ -43,43 +55,55 @@ component ByteTensorRam2048
  * Logical byte tensor backed by two banked Livt.IO RAMs.
  *
  * `logicalSize` must be in 1..4096. Invalid writes are ignored and invalid
- * reads return zero. Reads inherit Livt.IO.Ram's registered-address timing.
+ * reads return zero. Access is scheduled; valid cells must be written before reading.
  */
 component ByteTensorRam4096
 {
+	// Logical bounds may span multiple independent physical stores.
 	public const CAPACITY: int = 4096
-	ram0: Ram
-	ram1: Ram
+
+	// Scheduled block-style byte banks; unwritten payloads are unspecified.
+	ram0: BlockRam<byte, 2048>
+	ram1: BlockRam<byte, 2048>
+
+	// Caller-selected valid prefix of the banked storage.
 	logicalSize: int
 
+	/**
+	 * Constructs the stores and records the logical bounds without clearing cells.
+	 */
 	new(logicalSize: int)
 	{
-		this.ram0 = new Ram()
-		this.ram1 = new Ram()
+		this.ram0 = new BlockRam<byte, 2048>()
+		this.ram1 = new BlockRam<byte, 2048>()
 		this.logicalSize = logicalSize
 	}
 
-	/** Writes one byte and ignores an index outside the logical capacity. */
+	/**
+	 * Writes one byte and ignores an index outside the logical capacity.
+	 */
 	public fn Write(index: int, value: byte)
 	{
 		if (index < 0) { return }
 		if (index >= logicalSize) { return }
 		if (index >= CAPACITY) { return }
 		if (index < 2048) {
-			this.ram0.WriteByte(index, value)
+			this.ram0.Write(index, value)
 		} else {
-			this.ram1.WriteByte(index - 2048, value)
+			this.ram1.Write(index - 2048, value)
 		}
 	}
 
-	/** Reads one byte, or zero for an index outside the logical capacity. */
+	/**
+	 * Reads one byte, or zero for an index outside the logical capacity.
+	 */
 	public fn Read(index: int) byte
 	{
 		if (index < 0) { return 0x00 }
 		if (index >= logicalSize) { return 0x00 }
 		if (index >= CAPACITY) { return 0x00 }
-		if (index < 2048) { return this.ram0.ReadByte(index) }
-		return this.ram1.ReadByte(index - 2048)
+		if (index < 2048) { return this.ram0.Read(index) }
+		return this.ram1.Read(index - 2048)
 	}
 }
 
@@ -87,56 +111,68 @@ component ByteTensorRam4096
  * Logical byte tensor backed by four banked Livt.IO RAMs.
  *
  * `logicalSize` must be in 1..8192. Invalid writes are ignored and invalid
- * reads return zero. Reads inherit Livt.IO.Ram's registered-address timing.
+ * reads return zero. Access is scheduled; valid cells must be written before reading.
  */
 component ByteTensorRam8192
 {
+	// Logical bounds may span multiple independent physical stores.
 	public const CAPACITY: int = 8192
-	ram0: Ram
-	ram1: Ram
-	ram2: Ram
-	ram3: Ram
+
+	// Scheduled block-style byte banks; unwritten payloads are unspecified.
+	ram0: BlockRam<byte, 2048>
+	ram1: BlockRam<byte, 2048>
+	ram2: BlockRam<byte, 2048>
+	ram3: BlockRam<byte, 2048>
+
+	// Caller-selected valid prefix of the banked storage.
 	logicalSize: int
 
+	/**
+	 * Constructs the stores and records the logical bounds without clearing cells.
+	 */
 	new(logicalSize: int)
 	{
-		this.ram0 = new Ram()
-		this.ram1 = new Ram()
-		this.ram2 = new Ram()
-		this.ram3 = new Ram()
+		this.ram0 = new BlockRam<byte, 2048>()
+		this.ram1 = new BlockRam<byte, 2048>()
+		this.ram2 = new BlockRam<byte, 2048>()
+		this.ram3 = new BlockRam<byte, 2048>()
 		this.logicalSize = logicalSize
 	}
 
-	/** Writes one byte and ignores an index outside the logical capacity. */
+	/**
+	 * Writes one byte and ignores an index outside the logical capacity.
+	 */
 	public fn Write(index: int, value: byte)
 	{
 		if (index < 0) { return }
 		if (index >= logicalSize) { return }
 		if (index >= CAPACITY) { return }
 		if (index < 2048) {
-			this.ram0.WriteByte(index, value)
+			this.ram0.Write(index, value)
 		} else {
 			if (index < 4096) {
-				this.ram1.WriteByte(index - 2048, value)
+				this.ram1.Write(index - 2048, value)
 			} else {
 				if (index < 6144) {
-					this.ram2.WriteByte(index - 4096, value)
+					this.ram2.Write(index - 4096, value)
 				} else {
-					this.ram3.WriteByte(index - 6144, value)
+					this.ram3.Write(index - 6144, value)
 				}
 			}
 		}
 	}
 
-	/** Reads one byte, or zero for an index outside the logical capacity. */
+	/**
+	 * Reads one byte, or zero for an index outside the logical capacity.
+	 */
 	public fn Read(index: int) byte
 	{
 		if (index < 0) { return 0x00 }
 		if (index >= logicalSize) { return 0x00 }
 		if (index >= CAPACITY) { return 0x00 }
-		if (index < 2048) { return this.ram0.ReadByte(index) }
-		if (index < 4096) { return this.ram1.ReadByte(index - 2048) }
-		if (index < 6144) { return this.ram2.ReadByte(index - 4096) }
-		return this.ram3.ReadByte(index - 6144)
+		if (index < 2048) { return this.ram0.Read(index) }
+		if (index < 4096) { return this.ram1.Read(index - 2048) }
+		if (index < 6144) { return this.ram2.Read(index - 4096) }
+		return this.ram3.Read(index - 6144)
 	}
 }

@@ -6,8 +6,8 @@ using Livt.IO
  * Logical signed 16-bit tensor backed by one Livt.IO RAM.
  *
  * Values retain their two's-complement representation. Invalid writes are
- * ignored and invalid reads return zero. Reads inherit the registered-address
- * timing of `Livt.IO.Ram16`.
+ * ignored and invalid reads return zero. Access uses scheduled `Livt.IO.Ram16`
+ * transactions; valid cells must be written before reading.
  */
 component Int16TensorRam2048
 {

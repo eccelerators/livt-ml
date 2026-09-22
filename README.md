@@ -16,8 +16,12 @@ inspect.
 "Livt.ML" = "1.0.1"
 ```
 
-`Livt.ML` depends on `Livt.Math 1.0.0` for reusable arithmetic primitives such
-as integer square root and on `Livt.IO 1.0.1` for RAM-backed tensor storage.
+`Livt.ML` uses `Livt.Math` for reusable arithmetic primitives such as integer
+square root and `Livt.IO` for RAM-backed tensor storage. Current memory sources
+target the generic Livt.IO development API: byte tensors use scheduled
+`BlockRam<byte, 2048>` banks, and causal attention uses
+`AsynchronousDistributedRam32x32`. Verify these source changes with coherent
+workspace dependency snapshots; published dependency pins are unchanged.
 
 ## 📚 API Overview
 

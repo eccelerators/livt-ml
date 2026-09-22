@@ -16,6 +16,8 @@ component QLinearMatMul256x10RamTest
 	fn ComputesSignedWeightsAndRepeatedInference()
 	{
 		this.dense.Clear()
+		// RAM payloads are unspecified until written; initialize the whole vector.
+		for (var row = 0; row < 256; row++) { this.dense.SetInput(row, 0) }
 		this.dense.SetWeight(0, 0, 2)
 		this.dense.SetWeight(1, 0, -2)
 		for (var column = 0; column < 10; column++) {

@@ -9,7 +9,8 @@ using Livt.ML.Storage
  * Inputs use a caller-defined integer scale. The normalized intermediate,
  * output, gamma, and beta use Q8.8 scale 256. `epsilon` is expressed in squared
  * input units and should be derived when the activation scale is fixed. Callers
- * must bound inputs so the sum of 64 centered squares fits int32.
+ * must bound inputs so the sum of 64 centered squares fits int32. Unconfigured
+ * affine elements use gamma 256 and beta zero without reading unwritten RAM.
  */
 component LayerNorm64
 {
@@ -79,10 +80,11 @@ component LayerNorm64
 		for (var index = 0; index < VECTOR_SIZE; index++) {
 			var inputValue = storage.Read(INPUT_OFFSET + index)
 			var gammaValue = AFFINE_SCALE
+			var betaValue = 0
 			if (gammaConfigured[index]) {
 				gammaValue = storage.Read(GAMMA_OFFSET + index)
+				betaValue = storage.Read(BETA_OFFSET + index)
 			}
-			var betaValue = storage.Read(BETA_OFFSET + index)
 			var centered = inputValue - mean
 			var normalizationProduct = centered * inverseStddev
 			state {}

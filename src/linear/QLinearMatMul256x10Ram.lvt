@@ -3,7 +3,10 @@ namespace Livt.ML.Linear
 using Livt.ML.Numeric
 using Livt.ML.Storage
 
-/** RAM-backed non-streaming ONNX per-column QLinearMatMul reference. */
+/**
+ * RAM-backed non-streaming ONNX per-column QLinearMatMul reference.
+ * Initialize all inputs before Compute; Clear preserves the input vector.
+ */
 component QLinearMatMul256x10Ram
 {
 	public const INPUT_SIZE: int = 256
