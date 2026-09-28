@@ -1,0 +1,7 @@
+namespace Livt.ML.Transformer
+/** Read-only integer activation/position tables. Caller validates lengths and masks. */
+interface IFixedTransformerTables {
+ fn Gelu(value: int) int
+ fn Exponent(delta: int) int
+ fn Bucket(relativePosition: int) int
+}

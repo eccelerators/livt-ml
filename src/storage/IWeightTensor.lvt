@@ -1,0 +1,9 @@
+namespace Livt.ML.Storage
+/** One serialized owner; selection changes the tensor used by Read. */
+interface IWeightTensor {
+ fn Select(tensor: int) bool
+ fn Rows() int
+ fn Columns() int
+ fn Read(index: int) int
+ fn Failed() bool
+}

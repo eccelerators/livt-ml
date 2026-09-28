@@ -1,0 +1,14 @@
+namespace Livt.ML.Transformer
+/** Serialized tensor operations. All storage addresses count int32 words, not bytes.
+ * False invalidates the request: destinations may contain partial results.
+ * Providers and source spans must remain stable until an operation completes.
+ */
+interface ITransformerKernels {
+ fn Embed(tensor: int, tokens: int, target: int, length: int, width: int) bool
+ fn Norm(tensor: int, source: int, target: int, length: int, width: int) bool
+ fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool
+ fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+              length: int, heads: int, width: int) bool
+ fn Gate(a: int, b: int, target: int, count: int) bool
+ fn Add(a: int, b: int, target: int, count: int) bool
+}

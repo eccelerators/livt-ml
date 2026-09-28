@@ -1,0 +1,8 @@
+namespace Livt.ML.Storage
+/** Immutable descriptors. Addresses are byte (packed codes) and word (scales). */
+interface ITensorCatalog {
+ fn Rows(tensor: int) int
+ fn Columns(tensor: int) int
+ fn WeightByteAddress(tensor: int) int
+ fn ScaleWordAddress(tensor: int) int
+}

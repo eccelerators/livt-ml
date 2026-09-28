@@ -210,3 +210,27 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 Version 1.3.0-dev adds streamed INT4 projection, fixed-point RMSNorm, masked
 softmax and lookup activation with explicit formats and injected storage.
 See [contracts](docs/FixedPointOperators.md). Existing operator semantics are unchanged.
+
+## Generic fixed-point transformer operations (1.4.0-dev)
+
+`ITransformerKernels` and `FixedTransformerKernels` provide serialized embedding,
+affine RMS normalization, matrix projection, unscaled masked attention with
+relative position bias, table-driven activation/gating and residual addition.
+Token/vector bounds, fixed-point formats, epsilon, external `IRam<int>` storage,
+weights and activation tables are generic parameters. One worker can serve every
+layer. This is a serial correctness implementation, not a throughput or FPGA
+resource guarantee.
+
+`QuantizedTensorWeights` selects immutable `ITensorCatalog` records and reads
+low-nibble-first packed INT4 codes and unsigned scale words from external memory.
+Addresses count int32 words except catalog packed-code addresses, which count
+bytes. It handles unaligned byte offsets and flattened groups crossing matrix
+rows. Invalid selection/reads latch a failure until a successful selection.
+
+A kernel returns false on invalid dimensions, ranges, values or provider failure;
+its destination may then contain partial writes and must be discarded. Input and
+model spans must remain stable for the call. The memory provider must expose
+contiguous valid ranges. Only residual addition permits exact input/output aliasing;
+partial overlap is rejected. The caller owns serialization and result validity.
+`FixedTransformerKernelsTest` covers a different Q8 format and shape from FLAN-T5,
+including the deliberate lack of probability-sum correction.
