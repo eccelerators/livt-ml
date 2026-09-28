@@ -2,6 +2,7 @@ namespace Livt.ML.Transformer
 using Livt.IO
 using Livt.ML.Storage
 using Livt.Math.Arithmetic
+using Livt.ML.Classifier
 
 /** Serial correctness implementation over external memory; one instance serves all layers.
  * Unscaled attention, affine RMSNorm, separately rounded GELU/gate and residuals.
@@ -9,7 +10,7 @@ using Livt.Math.Arithmetic
  */
 component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
  FRACTION: int, PROB_FRACTION: int, EPSILON: int,
- WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>> : ITransformerKernels {
+ WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>> : IIncrementalTransformerKernels {
  static assert MAX_TOKENS > 0 && MAX_TOKENS <= 1024, "invalid token capacity"
  static assert MAX_WIDTH > 0 && MAX_WIDTH <= 65536, "invalid vector capacity"
  static assert BITS >= 2 && BITS <= 30, "invalid activation width"
@@ -23,6 +24,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
  tables: TABLES
  memory: MEMORY
  math: WideArithmetic<BITS>
+ argmax: StreamingArgMax
  scores: int[MAX_TOKENS]
  probabilities: int[MAX_TOKENS]
  new(weights: WEIGHTS, tables: TABLES, memory: MEMORY) {
@@ -30,6 +32,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
   this.tables = tables
   this.memory = memory
   math = new WideArithmetic<BITS>()
+  argmax = new StreamingArgMax()
  }
  fn ValueValid(x: int) bool { return x >= -LIMIT && x <= LIMIT }
  fn Span(base: int, count: int) bool {
@@ -193,5 +196,98 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
    }
   }
   return true
+ }
+
+ override fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+                             length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool {
+  if (!Shape(length, width) || position < 0 || position >= MAX_TOKENS || tensor < -1) { return false }
+  if (heads <= 0 || heads > MAX_WIDTH / width) { return false }
+  var features = heads * width
+  var count = length * features
+  if (!Span(q, features) || !Span(k, count) || !Span(v, count) || !Span(target, features) || !Span(masks, length)) { return false }
+  if (Overlap(q, features, target, features) || Overlap(k, count, target, features) ||
+      Overlap(v, count, target, features) || Overlap(masks, length, target, features)) { return false }
+  if (tensor >= 0) {
+   if (!Span(buckets, 2 * MAX_TOKENS - 1)) { return false }
+   if (Overlap(buckets, 2 * MAX_TOKENS - 1, target, features)) { return false }
+   if (!weights.Select(tensor) || weights.Columns() != heads) { return false }
+  }
+  var any = false
+  for (var i = 0; i < length; i++) {
+   if ((!causal || i <= position) && memory.Read(masks + i) != 0) { any = true }
+  }
+  if (!any) { return false }
+  for (var h = 0; h < heads; h++) {
+   var maximum = -LIMIT
+   for (var j = 0; j < length; j++) {
+    scores[j] = 0
+    if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+     var sum: logic[64] = 0
+     for (var d = 0; d < width; d++) {
+      var x = memory.Read(q + h * width + d)
+      var y = memory.Read(k + j * features + h * width + d)
+      if (!ValueValid(x) || !ValueValid(y)) { return false }
+      sum = math.Add(sum, math.Multiply(x as logic[64], y as logic[64]))
+     }
+     var score = Round(sum, FRACTION)
+     if (tensor >= 0) {
+      var bucket = memory.Read(buckets + j - position + MAX_TOKENS - 1)
+      if (bucket < 0 || bucket >= weights.Rows()) { return false }
+      var bias = weights.Read(bucket * heads + h)
+      if (weights.Failed() || !ValueValid(bias)) { return false }
+      score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
+     }
+     scores[j] = score
+     if (score > maximum) { maximum = score }
+    }
+   }
+   var denominator: logic[64] = 0
+   for (var j = 0; j < length; j++) {
+    var exponent = 0
+    if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+     exponent = tables.Exponent(maximum - scores[j])
+     if (exponent < 0) { return false }
+    }
+    probabilities[j] = exponent
+    denominator = math.Add(denominator, exponent as logic[64])
+   }
+   if (denominator == 0) { return false }
+   for (var j = 0; j < length; j++) {
+    var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
+    probabilities[j] = math.DivideEven(numerator, denominator) as int
+    if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) { return false }
+   }
+   for (var d = 0; d < width; d++) {
+    var contextSum: logic[64] = 0
+    for (var j = 0; j < length; j++) {
+     if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+      var value = memory.Read(v + j * features + h * width + d)
+      if (!ValueValid(value)) { return false }
+      contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
+     }
+    }
+    memory.Write(target + h * width + d, Round(contextSum, PROB_FRACTION))
+   }
+  }
+  return true
+ }
+ override fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int {
+  if (rows <= 0 || rows > 65536 || columns <= 0 || columns > MAX_WIDTH) { return -1 }
+  if (!Span(source, columns) || !weights.Select(tensor)) { return -1 }
+  if (weights.Rows() != rows || weights.Columns() != columns) { return -1 }
+  // No rows-by-columns int multiplication can overflow at these bounds.
+  if (rows > 2147483647 / columns) { return -1 }
+  argmax.Reset()
+  for (var row = 0; row < rows; row++) {
+   var sum: logic[64] = 0
+   for (var c = 0; c < columns; c++) {
+    var x = memory.Read(source + c)
+    var w = weights.Read(row * columns + c)
+    if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) { return -1 }
+    sum = math.Add(sum, math.Multiply(x as logic[64], w as logic[64]))
+   }
+   argmax.Accept(row, Round(sum, FRACTION))
+  }
+  return argmax.GetIndex()
  }
 }

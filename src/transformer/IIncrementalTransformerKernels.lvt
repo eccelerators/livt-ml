@@ -1,0 +1,12 @@
+namespace Livt.ML.Transformer
+/** Extends existing kernels without changing the encoder interface.
+ * CachedAttention consumes one query and token-major K/V with distinct length.
+ * A negative-one bias tensor disables learned bias (cross attention).
+ * Buckets are word entries for relative distances -(MAX_TOKENS-1)..+(MAX_TOKENS-1).
+ * ProjectArgMax streams rounded/clipped logits; lowest row wins ties; -1 is error.
+ */
+interface IIncrementalTransformerKernels : ITransformerKernels {
+ fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+                    length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool
+ fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int
+}

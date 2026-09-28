@@ -234,3 +234,23 @@ contiguous valid ranges. Only residual addition permits exact input/output alias
 partial overlap is rejected. The caller owns serialization and result validity.
 `FixedTransformerKernelsTest` covers a different Q8 format and shape from FLAN-T5,
 including the deliberate lack of probability-sum correction.
+
+## Incremental transformer operations (1.4.1-dev)
+
+`IIncrementalTransformerKernels` extends the existing encoder interface with
+single-query `CachedAttention` and `ProjectArgMax`; existing implementations of
+`ITransformerKernels` need no changes. `FixedTransformerKernels` implements both
+through interface inheritance and reuses its arithmetic and provider instances.
+
+Cached attention takes an independent K/V length, query position, causal flag,
+key mask and optional bias tensor. A bias ID of -1 disables bias. Bucket entries
+are int32 words covering relative distances `-(MAX_TOKENS-1)..MAX_TOKENS-1`.
+Masked/future K/V entries are not read. Scratch scores for excluded keys are
+unspecified; their probabilities and contribution to context are zero.
+
+Streaming projection supports up to 65,536 output rows independently of the
+maximum vector width. It rounds and clips every complete dot product before
+feeding `StreamingArgMax`, preserves lowest-index ties, and returns -1 on error.
+It allocates no output-logit tensor. Tests cover a full 32,128-row scan, clipping
+that creates a tie, poisoned masked/future cache entries, Q8 and existing kernel
+contracts. Model cache addresses and lifecycle policy stay in application code.

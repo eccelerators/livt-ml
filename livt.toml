@@ -1,12 +1,13 @@
 [project]
 name = "Livt.ML"
-version = "1.4.0-dev"
+version = "1.4.1-dev"
 path = "src"
 outdir = "out"
 
 [tests]
 path = "tests"
 components = [
+    "IncrementalTransformerKernelsTest",
     "FixedTransformerKernelsTest",
     "RequantizeUInt8Test",
     "RequantizeInt8Test",

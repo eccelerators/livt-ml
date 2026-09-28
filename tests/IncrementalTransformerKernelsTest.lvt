@@ -1,0 +1,65 @@
+namespace Livt.ML.Tests
+using Livt.IO
+using Livt.ML.Storage
+using Livt.ML.Transformer
+component IncrementalWeights : IWeightTensor {
+ selected: int
+ override fn Select(tensor: int) bool { selected = tensor
+  return tensor >= 0 && tensor <= 2 }
+ override fn Rows() int { if (selected == 0) { return 4 }
+  if (selected == 1) { return 32128 }
+  return 3 }
+ override fn Columns() int { return 1 }
+ override fn Read(index: int) int {
+  if (selected == 0) { return 0 }
+  if (selected == 1) { if (index >= 32126) { return 512 }
+   return -256 }
+  if (index == 0) { return -256 }
+  if (index == 1) { return 16384 }
+  return 32767
+ }
+ override fn Failed() bool { return false }
+}
+@Test
+component IncrementalTransformerKernelsTest {
+ ram: Ram<int, 128>
+ weights: IncrementalWeights
+ tables: SmallTransformerTables
+ kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>
+ new() { ram = new Ram<int, 128>()
+  weights = new IncrementalWeights()
+  tables = new SmallTransformerTables()
+  kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
+ }
+ @Test fn CausalDoesNotReadFutureAndCrossMasks() {
+  ram.Write(0, 0)
+  ram.Write(8, 0)
+  ram.Write(9, 2147483647)
+  ram.Write(10, 2147483647)
+  ram.Write(16, 768)
+  ram.Write(17, 2147483647)
+  ram.Write(18, 2147483647)
+  for (var i = 0; i < 3; i++) { ram.Write(32 + i, 1) }
+  for (var i = 0; i < 7; i++) { ram.Write(40 + i, 0) }
+  assert kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 0, true, 40)
+  assert ram.Read(24) == 768
+  ram.Write(9, 0)
+  ram.Write(17, 256)
+  ram.Write(34, 0)
+  assert kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
+  assert ram.Read(24) == 512
+  ram.Write(32, 0)
+  ram.Write(33, 0)
+  assert !kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
+  assert ram.Read(24) == 512
+  assert !kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 4, true, 40)
+ }
+ @Test fn EntireVocabularyLowestTieAndClippedLogits() {
+  ram.Write(0, 256)
+  assert kernels.ProjectArgMax(1, 0, 32128, 1) == 32126
+  ram.Write(0, 32767)
+  assert kernels.ProjectArgMax(2, 0, 3, 1) == 1
+  assert kernels.ProjectArgMax(2, 0, 4, 1) == -1
+  assert kernels.ProjectArgMax(2, 128, 3, 1) == -1
+ }
+}
