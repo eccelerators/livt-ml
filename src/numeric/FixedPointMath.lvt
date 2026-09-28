@@ -1,0 +1,52 @@
+namespace Livt.ML.Numeric
+using Livt.Math.Arithmetic
+
+/** Signed symmetric fixed point, with explicit ties-even operator boundaries. */
+component FixedPointMath<BITS: int = 24, FRACTION: int = 12, SCALE_FRACTION: int = 20>
+{
+ static assert BITS >= 2 && BITS <= 30, "activation bits must be 2..30"
+ static assert FRACTION >= 0 && FRACTION < BITS, "fraction must fit activation"
+ static assert SCALE_FRACTION >= FRACTION && SCALE_FRACTION - FRACTION <= 30, "invalid scale shift"
+ public const LIMIT: int = (1 << (BITS - 1)) - 1
+ public const ONE: int = 1 << FRACTION
+ math: WideArithmetic<BITS>
+ failed: bool
+ new() { math = new WideArithmetic<BITS>() }
+ /** All 16 two's-complement nibble codes are decoded, including -8. */
+ public fn SignedNibble(packed: byte, high: bool) int
+ {
+  var code = (packed as int) & 15
+  if (high) { code = ((packed as int) >> 4) & 15 }
+  if (code >= 8) { code = code - 16 }
+  return code
+ }
+ /** Reconstruct each weight before the MAC. Out-of-range weights are errors. */
+ public fn Weight(code: int, scale: logic[32]) int
+ {
+  failed = code < -8 || code > 7
+  if (failed) { return 0 }
+  var product = math.Multiply(code as logic[64], scale as logic[64])
+  var reconstructed = math.DivideEven(product, (1 << (SCALE_FRACTION - FRACTION)) as logic[64])
+  var result = math.Clamp(reconstructed)
+  failed = (result as logic[64]) != reconstructed
+  if (failed) { return 0 }
+  return result
+ }
+ /** Saturating residual or bias sum. Inputs must already fit the format. */
+ public fn Add(a: int, b: int) int
+ {
+  failed = a < -LIMIT || a > LIMIT || b < -LIMIT || b > LIMIT
+  if (failed) { return 0 }
+  return math.Clamp(math.Add(a as logic[64], b as logic[64]))
+ }
+ /** Rounded, saturated product for gates and affine normalization. */
+ public fn Multiply(a: int, b: int) int
+ {
+  failed = a < -LIMIT || a > LIMIT || b < -LIMIT || b > LIMIT
+  if (failed) { return 0 }
+  var product = math.Multiply(a as logic[64], b as logic[64])
+  return math.Clamp(math.DivideEven(product, ONE as logic[64]))
+ }
+ /** True when the last request violated an input or weight-range contract. */
+ public fn Failed() bool { return failed }
+}

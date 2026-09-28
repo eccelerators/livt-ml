@@ -1,0 +1,7 @@
+namespace Livt.ML.Storage
+/** Read-only nonnegative-indexed integer table supplied by the composition root. */
+interface ILookupTable
+{
+ fn Read(index: int) int
+ fn Length() int
+}

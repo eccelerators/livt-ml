@@ -1,0 +1,50 @@
+namespace Livt.ML.Norm
+using Livt.Math.Arithmetic
+using Livt.IO
+/** Affine RMS normalization over injected storage, with explicit fixed-point boundaries. */
+component FixedRmsNorm<LENGTH: int, BITS: int, FRACTION: int, EPSILON: int, STORAGE: IRam<int>>
+{
+ static assert LENGTH > 0 && LENGTH <= 65536, "invalid RMS length"
+ static assert BITS >= 2 && BITS <= 30, "invalid RMS activation width"
+ static assert FRACTION >= 0 && FRACTION < BITS, "invalid RMS fraction"
+ static assert EPSILON > 0, "RMS epsilon must be positive"
+ static assert 2 * BITS + Bits.RequiredFor(LENGTH) <= 64, "unsafe RMS accumulation"
+ public const LIMIT: int = (1 << (BITS - 1)) - 1
+ storage: STORAGE
+ math: WideArithmetic<BITS>
+ new(storage: STORAGE) { this.storage = storage
+ math = new WideArithmetic<BITS>() }
+ fn Valid(base: int) bool
+ {
+  if (base < 0 || base > 2147483647 - LENGTH) { return false }
+  return storage.IsValidAddress(base) && storage.IsValidAddress(base + LENGTH - 1)
+ }
+ /** Three disjoint LENGTH-element spans. False rejects invalid ranges or inputs. */
+ public fn Compute(inputBase: int, gammaBase: int, outputBase: int) bool
+ {
+  if (!Valid(inputBase) || !Valid(gammaBase) || !Valid(outputBase)) { return false }
+  if ((inputBase < gammaBase + LENGTH && gammaBase < inputBase + LENGTH) ||
+      (inputBase < outputBase + LENGTH && outputBase < inputBase + LENGTH) ||
+      (gammaBase < outputBase + LENGTH && outputBase < gammaBase + LENGTH)) { return false }
+  var sum: logic[64] = 0
+  for (var i = 0; i < LENGTH; i++) {
+   var value = storage.Read(inputBase + i)
+   var gamma = storage.Read(gammaBase + i)
+   if (value < -LIMIT || value > LIMIT || gamma < -LIMIT || gamma > LIMIT) { return false }
+   var square = math.Multiply(value as logic[64], value as logic[64])
+   sum = math.Add(sum, square)
+  }
+  var mean = math.DivideFloor(sum, LENGTH as logic[64])
+  var root = math.Sqrt(math.Add(mean, EPSILON as logic[64]))
+  for (var i = 0; i < LENGTH; i++) {
+   var value = storage.Read(inputBase + i)
+   var gamma = storage.Read(gammaBase + i)
+   var numerator = math.Multiply(value as logic[64], (1 << FRACTION) as logic[64])
+   var normalized = math.Clamp(math.DivideEven(numerator, root))
+   var affine = math.Multiply(normalized as logic[64], gamma as logic[64])
+   var result = math.Clamp(math.DivideEven(affine, (1 << FRACTION) as logic[64]))
+   storage.Write(outputBase + i, result)
+  }
+  return true
+ }
+}

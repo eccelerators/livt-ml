@@ -204,3 +204,9 @@ and stronger model-weight loading patterns.
 ## 📄 License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Generic wide fixed-point operators
+
+Version 1.3.0-dev adds streamed INT4 projection, fixed-point RMSNorm, masked
+softmax and lookup activation with explicit formats and injected storage.
+See [contracts](docs/FixedPointOperators.md). Existing operator semantics are unchanged.
