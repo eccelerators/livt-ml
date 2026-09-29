@@ -1,62 +1,140 @@
 namespace Livt.ML.Storage
+
 using Livt.IO
 using Livt.ML.Numeric
-/** Flattened, low-nibble-first INT4 tensors in external 32-bit little-endian storage. */
+
+/**
+ * Flattened, low-nibble-first INT4 tensors in external 32-bit little-endian storage.
+ */
 component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
- GROUP_SIZE: int, CATALOG: ITensorCatalog, MEMORY: IRam<int>> : IWeightTensor {
- static assert GROUP_SIZE > 0, "invalid quantization group"
- catalog: CATALOG
- memory: MEMORY
- fixed: FixedPointMath<BITS, FRACTION, SCALE_FRACTION>
- rows: int
- columns: int
- count: int
- codes: int
- scales: int
- failed: bool
- new(catalog: CATALOG, memory: MEMORY) {
-  this.catalog = catalog
-  this.memory = memory
-  fixed = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
- }
- override fn Select(tensor: int) bool {
-  count = 0
-  rows = 0
-  columns = 0
-  failed = true
-  var r = catalog.Rows(tensor)
-  var c = catalog.Columns(tensor)
-  if (r <= 0 || c <= 0) { return false }
-  if (r > 2147483647 / c) { return false }
-  var n = r * c
-  var w = catalog.WeightByteAddress(tensor)
-  var s = catalog.ScaleWordAddress(tensor)
-  var bytes = n / 2 + n % 2
-  var groups = (n - 1) / GROUP_SIZE + 1
-  if (w < 0 || w > 2147483647 - bytes || s < 0 || s > 2147483647 - groups) { return false }
-  if (!memory.IsValidAddress(w / 4) || !memory.IsValidAddress((w + bytes - 1) / 4) ||
-      !memory.IsValidAddress(s) || !memory.IsValidAddress(s + groups - 1)) { return false }
-  rows = r
-  columns = c
-  count = n
-  codes = w
-  scales = s
-  failed = false
-  return true
- }
- override fn Rows() int { return rows }
- override fn Columns() int { return columns }
- override fn Read(index: int) int {
-  if (failed || index < 0 || index >= count) { failed = true
-   return 0 }
-  var address = codes + index / 2
-  var word = memory.Read(address / 4) as logic[32]
-  var packed = (word >> ((address % 4) * 8)) as byte
-  var code = fixed.SignedNibble(packed, index % 2 != 0)
-  var scale = memory.Read(scales + index / GROUP_SIZE) as logic[32]
-  var value = fixed.Weight(code, scale)
-  failed = fixed.Failed()
-  return value
- }
- override fn Failed() bool { return failed }
+	GROUP_SIZE: int, CATALOG: ITensorCatalog, MEMORY: IRam<int>> : IWeightTensor
+{
+	static assert GROUP_SIZE > 0, "invalid quantization group"
+
+	// Borrowed tensor descriptors and external word-addressed storage.
+	catalog: CATALOG
+	memory: MEMORY
+
+	// Owned fixed-point reconstruction worker.
+	fixed: FixedPointMath<BITS, FRACTION, SCALE_FRACTION>
+
+	// Selected tensor dimensions and flattened element count.
+	rows: int
+	columns: int
+	count: int
+
+	// Packed-weight byte address; low nibble stores the first value.
+	codes: int
+
+	// Scale base address in int32 words.
+	scales: int
+
+	// Selection/read failure; successful selection permits recovery.
+	failed: bool
+
+	/**
+	 * Borrows the immutable catalog and word-addressed memory; owns the fixed-point
+	 * reconstruction worker. Load external storage and successfully Select a tensor before
+	 * reading.
+	 */
+	new(catalog: CATALOG, memory: MEMORY)
+	{
+		this.catalog = catalog
+		this.memory = memory
+		fixed = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
+	}
+
+	/**
+	 * Validates shape, packed-byte span, and scale-word span, then selects the tensor. Returns
+	 * false with zero dimensions on failure; a successful call clears prior read failure.
+	 */
+	override fn Select(tensor: int) bool
+	{
+		count = 0
+		rows = 0
+		columns = 0
+		failed = true
+		var r = catalog.Rows(tensor)
+		var c = catalog.Columns(tensor)
+
+		if (r <= 0 || c <= 0) {
+			return false
+		}
+
+		if (r > 2147483647 / c) {
+			return false
+		}
+
+		var n = r * c
+		var w = catalog.WeightByteAddress(tensor)
+		var s = catalog.ScaleWordAddress(tensor)
+		var bytes = n / 2 + n % 2
+		var groups = (n - 1) / GROUP_SIZE + 1
+
+		if (w < 0 || w > 2147483647 - bytes || s < 0 || s > 2147483647 - groups) {
+			return false
+		}
+
+		if (!memory.IsValidAddress(w / 4) ||
+			!memory.IsValidAddress((w + bytes - 1) / 4) ||
+			!memory.IsValidAddress(s) ||
+			!memory.IsValidAddress(s + groups - 1)) {
+			return false
+		}
+
+		rows = r
+		columns = c
+		count = n
+		codes = w
+		scales = s
+		failed = false
+		return true
+	}
+
+	/**
+	 * Returns the selected row count, or zero after an unsuccessful Select.
+	 */
+	override fn Rows() int
+	{
+		return rows
+	}
+
+	/**
+	 * Returns the selected column count, or zero after an unsuccessful Select.
+	 */
+	override fn Columns() int
+	{
+		return columns
+	}
+
+	/**
+	 * Reconstructs one row-major INT4 weight using its group scale. Invalid indices or
+	 * reconstruction errors latch failure and return zero; a successful Select is required to
+	 * recover.
+	 */
+	override fn Read(index: int) int
+	{
+		if (failed || index < 0 || index >= count) {
+			failed = true
+			return 0
+		}
+
+		var address = codes + index / 2
+		var word = memory.Read(address / 4) as logic[32]
+		var packed = (word >> ((address % 4) * 8)) as byte
+		var code = fixed.SignedNibble(packed, index % 2 != 0)
+		var scale = memory.Read(scales + index / GROUP_SIZE) as logic[32]
+		var value = fixed.Weight(code, scale)
+		failed = fixed.Failed()
+		return value
+	}
+
+	/**
+	 * Reports failure of selection or weight reconstruction. Inspect after Read; successful
+	 * Select clears the flag.
+	 */
+	override fn Failed() bool
+	{
+		return failed
+	}
 }

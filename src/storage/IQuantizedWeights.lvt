@@ -1,9 +1,29 @@
 namespace Livt.ML.Storage
-/** Read-only tensor-relative packed weights and scale words. A single worker owns calls. */
+
+/**
+ * Read-only tensor-relative packed weights and scale words. A single worker owns calls.
+ */
 interface IQuantizedWeights
 {
- fn ReadPacked(byteIndex: int) byte
- fn ReadScale(groupIndex: int) logic[32]
- fn WeightCount() int
- fn ScaleCount() int
+	/**
+	 * Reads a tensor-relative byte containing two signed INT4 codes, low nibble first.
+	 * Requires byteIndex in 0..ceil(WeightCount()/2)-1.
+	 */
+	fn ReadPacked(byteIndex: int) byte
+
+	/**
+	 * Reads the raw scale word for groupIndex in 0..ScaleCount()-1. Its fixed-point scale is
+	 * agreed with the consumer.
+	 */
+	fn ReadScale(groupIndex: int) logic[32]
+
+	/**
+	 * Returns the logical weight count, measured in individual INT4 values rather than bytes.
+	 */
+	fn WeightCount() int
+
+	/**
+	 * Returns the number of available quantization-group scale words.
+	 */
+	fn ScaleCount() int
 }

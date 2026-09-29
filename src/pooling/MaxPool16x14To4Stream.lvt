@@ -13,24 +13,37 @@ namespace Livt.ML.Pooling
  */
 component MaxPool16x14To4Stream
 {
+	// Input payload and toggle acknowledgment from the producer.
 	inputRequest: logic
 	inputData: byte
 	inputLast: logic
 	inputAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: byte
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	inputSeen: logic
 	pending: bool
+
+	// Current position and bounds within the configured frame.
 	channel: int
 	row: int
 	column: int
 	rowInWindow: int
 	columnInWindow: int
 	windowColumn: int
+
+	// Partial pooling-window storage, reused as input values arrive.
 	windowMaximum: byte[4]
 
+	/**
+	 * Binds the input and output toggle-handshake ports. Producers hold input data until
+	 * acknowledgment; consumers acknowledge each output before it can be replaced.
+	 */
 	new(inputRequest: in logic, inputData: in byte, inputLast: in logic,
 		inputAcknowledge: out logic, outputRequest: out logic,
 		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic)
@@ -45,24 +58,42 @@ component MaxPool16x14To4Stream
 		this.outputAcknowledge = outputAcknowledge
 	}
 
+	/**
+	 * Accumulates pooling-window maxima as frame values arrive. Holds a pending output until
+	 * acknowledgment before accepting further input; all endpoints must share compatible
+	 * clock/reset sequencing.
+	 */
 	process Main()
 	{
 		inputAcknowledge = inputSeen
 
 		if (pending) {
-			if (outputAcknowledge == outputRequest) { pending = false }
+			if (outputAcknowledge == outputRequest) {
+				pending = false
+			}
 		} else {
 			if (inputRequest != inputSeen) {
 				if (row < 12 && column < 12) {
 					var candidateMaximum = windowMaximum[windowColumn]
-					if (rowInWindow == 0 && columnInWindow == 0) { candidateMaximum = inputData }
-					if (inputData > candidateMaximum) { candidateMaximum = inputData }
+
+					if (rowInWindow == 0 && columnInWindow == 0) {
+						candidateMaximum = inputData
+					}
+
+					if (inputData > candidateMaximum) {
+						candidateMaximum = inputData
+					}
+
 					windowMaximum[windowColumn] = candidateMaximum
 
 					if (rowInWindow == 2 && columnInWindow == 2) {
 						outputData = candidateMaximum
 						outputLast = 0b0
-						if (channel == 15 && row == 11 && column == 11) { outputLast = 0b1 }
+
+						if (channel == 15 && row == 11 && column == 11) {
+							outputLast = 0b1
+						}
+
 						outputRequest = !outputRequest
 						pending = true
 					}
@@ -70,25 +101,41 @@ component MaxPool16x14To4Stream
 					if (columnInWindow == 2) {
 						columnInWindow = 0
 						windowColumn++
-					} else { columnInWindow++ }
+					} else {
+						columnInWindow++
+					}
 				}
 
 				inputSeen = inputRequest
+
 				if (column == 13) {
 					column = 0
 					columnInWindow = 0
 					windowColumn = 0
+
 					if (row == 13) {
 						row = 0
 						rowInWindow = 0
-						if (channel == 15) { channel = 0 } else { channel++ }
+
+						if (channel == 15) {
+							channel = 0
+						} else {
+							channel++
+						}
 					} else {
 						if (row < 11) {
-							if (rowInWindow == 2) { rowInWindow = 0 } else { rowInWindow++ }
+							if (rowInWindow == 2) {
+								rowInWindow = 0
+							} else {
+								rowInWindow++
+							}
 						}
+
 						row++
 					}
-				} else { column++ }
+				} else {
+					column++
+				}
 			}
 		}
 	}

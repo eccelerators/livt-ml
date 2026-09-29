@@ -14,6 +14,7 @@ component TransformerBlock
 	// Number of integer elements in the block input and output vectors.
 	public const VECTOR_SIZE: int = 8
 
+	// Owned inference subcomponents sharing the caller clock/reset context.
 	preAttnNorm: RMSNorm
 	attn: ScaledDotProductAttention
 	attnResidual: VecAdd
@@ -42,6 +43,7 @@ component TransformerBlock
 		preAttnNorm.Compute(input)
 
 		var preAttnOut: int[8]
+
 		for (var i = 0; i < VECTOR_SIZE; i++) {
 			preAttnOut[i] = preAttnNorm.GetOutput(i)
 		}
@@ -50,6 +52,7 @@ component TransformerBlock
 		attn.Compute(preAttnOut)
 
 		var attnOut: int[8]
+
 		for (var i = 0; i < VECTOR_SIZE; i++) {
 			attnOut[i] = attn.GetOutput(i)
 		}
@@ -57,6 +60,7 @@ component TransformerBlock
 		attnResidual.Compute(input, attnOut)
 
 		var attnResOut: int[8]
+
 		for (var i = 0; i < VECTOR_SIZE; i++) {
 			attnResOut[i] = attnResidual.GetOutput(i)
 		}
@@ -64,6 +68,7 @@ component TransformerBlock
 		preFfnNorm.Compute(attnResOut)
 
 		var preFfnOut: int[8]
+
 		for (var i = 0; i < VECTOR_SIZE; i++) {
 			preFfnOut[i] = preFfnNorm.GetOutput(i)
 		}
@@ -71,6 +76,7 @@ component TransformerBlock
 		silu.Compute(preFfnOut)
 
 		var ffnOut: int[8]
+
 		for (var i = 0; i < VECTOR_SIZE; i++) {
 			ffnOut[i] = silu.GetOutput(i)
 		}

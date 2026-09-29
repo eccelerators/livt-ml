@@ -9,12 +9,17 @@ namespace Livt.ML.Activation
  */
 component GeluNewApproxQ8
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const SCALE: int = 256
 	const STEP: int = 64
 	const LAST_INDEX: int = 32
 
+	// Owned approximation table in the component numeric scale.
 	lut: int[33]
 
+	/**
+	 * Loads the owned quarter-step Q8.8 GELU approximation table.
+	 */
 	new()
 	{
 		lut[0] = 0
@@ -52,26 +57,39 @@ component GeluNewApproxQ8
 		lut[32] = 1024
 	}
 
-	/** Applies the Q8.8 GELU-new approximation. */
+	/**
+	 * Applies the Q8.8 GELU-new approximation.
+	 */
 	public fn Apply(input: int) int
 	{
-		if (input <= -1024) { return 0 }
-		if (input >= 1024) { return input }
+		if (input <= -1024) {
+			return 0
+		}
+
+		if (input >= 1024) {
+			return input
+		}
+
 		var shifted = input + 1024
 		var index = shifted >> 6
 		var remainder = shifted & 63
 		var lower = lut[index]
 		var upper = lut[index + 1]
 		var interpolation = (upper - lower) * remainder
-		state {}
+
+		state {
+		}
+
 		// Signed division truncates toward zero, whereas an arithmetic right
 		// shift rounds negative values toward minus infinity. Correct the shifted
 		// quotient when discarded negative bits are non-zero so this retains the
 		// original `/ STEP` numerical behavior without inferring a divider.
 		var interpolationQuotient = interpolation >> 6
+
 		if (interpolation < 0 && (interpolation & 63) != 0) {
 			interpolationQuotient++
 		}
+
 		return lower + interpolationQuotient
 	}
 }

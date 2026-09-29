@@ -2,9 +2,16 @@ namespace Livt.ML.Tests.Linear
 
 using Livt.ML.Linear
 
+/**
+ * Exercises Int8Mac8 with a shared fixture instance. Each scenario establishes the inputs
+ * and state it needs.
+ */
 @Test
 component Int8Mac8Test
 {
+	/**
+	 * Checks that Accumulate s eight signed weights.
+	 */
 	@Test
 	fn AccumulatesEightSignedWeights()
 	{

@@ -1,68 +1,203 @@
 namespace Livt.ML.Tests
+
 using Livt.IO
 using Livt.ML.Storage
 using Livt.ML.Transformer
-component SmallTransformerWeights : IWeightTensor {
- selected: int
- matrix: int[6] = [256, -128, 384, -256, 512, 128]
- override fn Select(tensor: int) bool { selected = tensor
-  return tensor >= 0 && tensor < 3 }
- override fn Rows() int { if (selected == 0) { return 2 }
-  if (selected == 1) { return 1 }
-  return 4 }
- override fn Columns() int { if (selected == 2) { return 1 }
-  return 3 }
- override fn Read(index: int) int { if (selected == 0) { return matrix[index] }
-  if (selected == 1) { return 256 }
-  return 0 }
- override fn Failed() bool { return false }
+
+/**
+ * Deterministic tensor-weight provider for transformer kernel tests; selection is local to
+ * this shared fixture.
+ */
+component SmallTransformerWeights : IWeightTensor
+{
+	// Shared fixture instances, signals, and observation state.
+	selected: int
+	matrix: int[6] = [256, -128, 384, -256, 512, 128]
+
+	/**
+	 * Selects a deterministic fixture tensor and reports whether its ID is supported.
+	 */
+	override fn Select(tensor: int) bool
+	{
+		selected = tensor
+		return tensor >= 0 && tensor < 3
+	}
+
+	/**
+	 * Returns the row count of the selected fixture tensor; select a supported tensor first.
+	 */
+	override fn Rows() int
+	{
+		if (selected == 0) {
+			return 2
+		}
+
+		if (selected == 1) {
+			return 1
+		}
+
+		return 4
+	}
+
+	/**
+	 * Returns the column count of the selected fixture tensor.
+	 */
+	override fn Columns() int
+	{
+		if (selected == 2) {
+			return 1
+		}
+
+		return 3
+	}
+
+	/**
+	 * Returns the deterministic weight for the selected fixture tensor and row-major index.
+	 * Tests supply valid indices.
+	 */
+	override fn Read(index: int) int
+	{
+		if (selected == 0) {
+			return matrix[index]
+		}
+
+		if (selected == 1) {
+			return 256
+		}
+
+		return 0
+	}
+
+	/**
+	 * Returns false because this fixture supplies only successful weight reads.
+	 */
+	override fn Failed() bool
+	{
+		return false
+	}
 }
-component SmallTransformerTables : IFixedTransformerTables {
- override fn Exponent(delta: int) int { if (delta == 0) { return 256 }
-  return 0 }
- override fn Gelu(value: int) int { if (value < 0) { return 0 }
-  return value }
- override fn Bucket(relativePosition: int) int { return 0 }
+
+/**
+ * Deterministic activation and bias tables for kernel tests; isolates arithmetic/control
+ * behavior from model table accuracy.
+ */
+component SmallTransformerTables : IFixedTransformerTables
+{
+	/**
+	 * Supplies a Q8-scaled unit at zero delta and zero otherwise, making attention maxima
+	 * deterministic.
+	 */
+	override fn Exponent(delta: int) int
+	{
+		if (delta == 0) {
+			return 256
+		}
+
+		return 0
+	}
+
+	/**
+	 * Uses a zero-clamped identity approximation to isolate kernel scheduling from activation-
+	 * table accuracy.
+	 */
+	override fn Gelu(value: int) int
+	{
+		if (value < 0) {
+			return 0
+		}
+
+		return value
+	}
+
+	/**
+	 * Maps every relative position to bias row zero for deterministic attention tests.
+	 */
+	override fn Bucket(relativePosition: int) int
+	{
+		return 0
+	}
 }
+
+/**
+ * Exercises FixedTransformerKernels with a shared fixture instance. Each scenario
+ * establishes the inputs and state it needs.
+ */
 @Test
-component FixedTransformerKernelsTest {
- ram: Ram<int, 128>
- weights: SmallTransformerWeights
- tables: SmallTransformerTables
- kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, SmallTransformerWeights, SmallTransformerTables, Ram<int, 128>>
- new() { ram = new Ram<int, 128>()
-  weights = new SmallTransformerWeights()
-  tables = new SmallTransformerTables()
-  kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, SmallTransformerWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
- }
- @Test fn AlternateFormatAndDimensions() {
-  for (var i = 0; i < 3; i++) { ram.Write(i, 256) }
-  assert kernels.Norm(1, 0, 8, 1, 3)
-  for (var i = 0; i < 3; i++) { assert ram.Read(8 + i) == 256 }
-  assert kernels.Linear(0, 8, 16, 1, 2, 3)
-  assert ram.Read(16) == 512
-  assert ram.Read(17) == 384
-  assert kernels.Gate(8, 16, 24, 2)
-  assert ram.Read(24) == 512
-  assert ram.Read(25) == 384
-  ram.Write(0, 32767)
-  ram.Write(1, 1)
-  assert kernels.Add(0, 1, 0, 1)
-  assert ram.Read(0) == 32767
-  assert !kernels.Linear(0, 0, 16, 1, 3, 3)
-  assert !kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 0)
- }
- @Test fn IndividuallyRoundedProbabilitiesAreNotRenormalized() {
-  for (var i = 0; i < 3; i++) {
-   ram.Write(i, 0)
-   ram.Write(8 + i, 0)
-   ram.Write(16 + i, 256)
-   ram.Write(32 + i, 1)
-  }
-  assert kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 1)
-  for (var i = 0; i < 3; i++) { assert ram.Read(24 + i) == 255 }
-  for (var i = 0; i < 3; i++) { ram.Write(32 + i, 0) }
-  assert !kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 1)
-  assert ram.Read(24) == 255
- }
+component FixedTransformerKernelsTest
+{
+	// Shared fixture instances, signals, and observation state.
+	ram: Ram<int, 128>
+	weights: SmallTransformerWeights
+	tables: SmallTransformerTables
+	kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, SmallTransformerWeights, SmallTransformerTables, Ram<int, 128>>
+
+	/**
+	 * Creates the shared fixture instances (Ram, SmallTransformerWeights,
+	 * SmallTransformerTables, FixedTransformerKernels). Tests initialize the state required by
+	 * their scenario.
+	 */
+	new()
+	{
+		ram = new Ram<int, 128>()
+		weights = new SmallTransformerWeights()
+		tables = new SmallTransformerTables()
+		kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, SmallTransformerWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
+	}
+
+	/**
+	 * Checks the alternate format and dimensions case.
+	 */
+	@Test
+	fn AlternateFormatAndDimensions()
+	{
+		for (var i = 0; i < 3; i++) {
+			ram.Write(i, 256)
+		}
+
+		assert kernels.Norm(1, 0, 8, 1, 3)
+
+		for (var i = 0; i < 3; i++) {
+			assert ram.Read(8 + i) == 256
+		}
+
+		assert kernels.Linear(0, 8, 16, 1, 2, 3)
+		assert ram.Read(16) == 512
+		assert ram.Read(17) == 384
+		assert kernels.Gate(8, 16, 24, 2)
+		assert ram.Read(24) == 512
+		assert ram.Read(25) == 384
+		ram.Write(0, 32767)
+		ram.Write(1, 1)
+		assert kernels.Add(0, 1, 0, 1)
+		assert ram.Read(0) == 32767
+		assert !kernels.Linear(0, 0, 16, 1, 3, 3)
+		assert !kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 0)
+	}
+
+	/**
+	 * Checks the individually rounded probabilities are not renormalized case.
+	 */
+	@Test
+	fn IndividuallyRoundedProbabilitiesAreNotRenormalized()
+	{
+		for (var i = 0; i < 3; i++) {
+			ram.Write(i, 0)
+			ram.Write(8 + i, 0)
+			ram.Write(16 + i, 256)
+			ram.Write(32 + i, 1)
+		}
+
+		assert kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 1)
+
+		for (var i = 0; i < 3; i++) {
+			assert ram.Read(24 + i) == 255
+		}
+
+		for (var i = 0; i < 3; i++) {
+			ram.Write(32 + i, 0)
+		}
+
+		assert !kernels.Attention(2, 0, 8, 16, 24, 32, 3, 1, 1)
+		assert ram.Read(24) == 255
+	}
 }

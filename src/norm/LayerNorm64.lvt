@@ -14,6 +14,7 @@ using Livt.ML.Storage
  */
 component LayerNorm64
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const VECTOR_SIZE: int = 64
 	public const AFFINE_SCALE: int = 256
 	const INPUT_OFFSET: int = 0
@@ -21,33 +22,55 @@ component LayerNorm64
 	const BETA_OFFSET: int = 128
 	const OUTPUT_OFFSET: int = 192
 	const STORAGE_SIZE: int = 256
+
+	// Owned RAM for input, learned affine values, and output.
 	storage: Int32TensorRam2048
+
+	// Marks affine lanes whose values have been written to storage.
 	gammaConfigured: bool[64]
+
+	// Owned arithmetic worker used by serialized operations.
 	reciprocalSqrt: ReciprocalSqrtQ15
 
+	/**
+	 * Owns tensor RAM and the reciprocal-root helper. Unconfigured affine lanes use identity
+	 * defaults at runtime; input cells must be written before Compute.
+	 */
 	new()
 	{
 		storage = new Int32TensorRam2048(STORAGE_SIZE)
 		reciprocalSqrt = new ReciprocalSqrtQ15()
 	}
 
-	/** Stores one input element and ignores invalid indexes. */
+	/**
+	 * Stores one input element and ignores invalid indexes.
+	 */
 	public fn SetInput(index: int, value: int)
 	{
-		if (index < 0 || index >= VECTOR_SIZE) { return }
+		if (index < 0 || index >= VECTOR_SIZE) {
+			return
+		}
+
 		storage.Write(INPUT_OFFSET + index, value)
 	}
 
-	/** Stores one Q8.8 learned gamma and beta pair. */
+	/**
+	 * Stores one Q8.8 learned gamma and beta pair.
+	 */
 	public fn SetAffine(index: int, gammaValue: int, betaValue: int)
 	{
-		if (index < 0 || index >= VECTOR_SIZE) { return }
+		if (index < 0 || index >= VECTOR_SIZE) {
+			return
+		}
+
 		storage.Write(GAMMA_OFFSET + index, gammaValue)
 		storage.Write(BETA_OFFSET + index, betaValue)
 		gammaConfigured[index] = true
 	}
 
-	/** Copies complete Q8.8 gamma and beta vectors. */
+	/**
+	 * Copies complete Q8.8 gamma and beta vectors.
+	 */
 	public fn SetAffineValues(gammaValues: int[64], betaValues: int[64])
 	{
 		for (var index = 0; index < VECTOR_SIZE; index++) {
@@ -57,58 +80,84 @@ component LayerNorm64
 		}
 	}
 
-	/** Computes LayerNorm; epsilon must be non-negative. */
+	/**
+	 * Computes LayerNorm; epsilon must be non-negative.
+	 */
 	public fn Compute(epsilon: int)
 	{
 		var sum = 0
+
 		for (var index = 0; index < VECTOR_SIZE; index++) {
 			var inputValue = storage.Read(INPUT_OFFSET + index)
 			sum = sum + inputValue
 		}
+
 		var mean = sum / VECTOR_SIZE
 		var squaredSum = 0
+
 		for (var index = 0; index < VECTOR_SIZE; index++) {
 			var inputValue = storage.Read(INPUT_OFFSET + index)
 			var centered = inputValue - mean
 			squaredSum = squaredSum + centered * centered
 		}
+
 		var variance = squaredSum / VECTOR_SIZE
 		var boundedEpsilon = epsilon
-		if (boundedEpsilon < 0) { boundedEpsilon = 0 }
+
+		if (boundedEpsilon < 0) {
+			boundedEpsilon = 0
+		}
+
 		var inverseStddev = reciprocalSqrt.Compute(variance + boundedEpsilon)
 
 		for (var index = 0; index < VECTOR_SIZE; index++) {
 			var inputValue = storage.Read(INPUT_OFFSET + index)
 			var gammaValue = AFFINE_SCALE
 			var betaValue = 0
+
 			if (gammaConfigured[index]) {
 				gammaValue = storage.Read(GAMMA_OFFSET + index)
 				betaValue = storage.Read(BETA_OFFSET + index)
 			}
+
 			var centered = inputValue - mean
 			var normalizationProduct = centered * inverseStddev
-			state {}
+
+			state {
+			}
+
 			var normalized = normalizationProduct / 128
 			var affineProduct = normalized * gammaValue
-			state {}
+
+			state {
+			}
+
 			var outputValue = affineProduct / AFFINE_SCALE + betaValue
 			storage.Write(OUTPUT_OFFSET + index, outputValue)
 		}
 	}
 
-	/** Copies one complete vector, computes LayerNorm, and stores the outputs. */
+	/**
+	 * Copies one complete vector, computes LayerNorm, and stores the outputs.
+	 */
 	public fn ComputeValues(values: int[64], epsilon: int)
 	{
 		for (var index = 0; index < VECTOR_SIZE; index++) {
 			storage.Write(INPUT_OFFSET + index, values[index])
 		}
+
 		this.Compute(epsilon)
 	}
 
-	/** Returns one Q8.8 normalized output, or zero for an invalid index. */
+	/**
+	 * Returns one Q8.8 normalized output, or zero for an invalid index.
+	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0 || index >= VECTOR_SIZE) { return 0 }
+		if (index < 0 || index >= VECTOR_SIZE) {
+			return 0
+		}
+
 		return storage.Read(OUTPUT_OFFSET + index)
 	}
 }

@@ -1,75 +1,158 @@
 namespace Livt.ML.Activation
+
 using Livt.Math.Arithmetic
 using Livt.ML.Storage
 using Livt.IO
-/** Stable masked fixed-point softmax. Probabilities are individually ties-even; no sum correction. */
+
+/**
+ * Stable masked fixed-point softmax. Probabilities are individually ties-even; no sum correction.
+ */
 component MaskedFixedSoftmax<CAPACITY: int, BITS: int, FRACTION: int,
- EXP_FRACTION: int, PROB_FRACTION: int, STEP_BITS: int, CUTOFF: int,
- TABLE: ILookupTable, STORAGE: IRam<int>>
+	EXP_FRACTION: int, PROB_FRACTION: int, STEP_BITS: int, CUTOFF: int,
+	TABLE: ILookupTable, STORAGE: IRam<int>>
 {
- static assert CAPACITY > 0 && CAPACITY <= 65536, "invalid softmax capacity"
- static assert BITS >= 2 && BITS <= 30, "invalid softmax score width"
- static assert FRACTION >= 0 && FRACTION < BITS, "invalid softmax score fraction"
- static assert EXP_FRACTION >= 0 && EXP_FRACTION <= 30, "invalid exponent fraction"
- static assert PROB_FRACTION >= 0 && PROB_FRACTION <= 30, "invalid probability fraction"
- static assert STEP_BITS >= 0 && STEP_BITS <= 20, "invalid softmax table step"
- static assert CUTOFF >= 0 && CUTOFF <= 1073741823, "invalid softmax cutoff"
- public const LIMIT: int = (1 << (BITS - 1)) - 1
- table: TABLE
- storage: STORAGE
- math: WideArithmetic<31>
- new(table: TABLE, storage: STORAGE) { this.table = table
- this.storage = storage
- math = new WideArithmetic<31>() }
- fn Valid(base: int, length: int) bool
- {
-  if (base < 0 || base > 2147483647 - length) { return false }
-  return storage.IsValidAddress(base) && storage.IsValidAddress(base + length - 1)
- }
- fn Exponent(delta: int) int
- {
-  if (delta > CUTOFF) { return 0 }
-  var index = math.DivideEven(delta as logic[64], (1 << STEP_BITS) as logic[64]) as int
-  if (index < 0 || index >= table.Length()) { return -1 }
-  return table.Read(index)
- }
- /** Three disjoint length-element spans: Q scores, masks (zero=false), unsigned probabilities. */
- public fn Compute(length: int, scores: int, masks: int, output: int) bool
- {
-  if (length <= 0 || length > CAPACITY) { return false }
-  if (!Valid(scores, length) || !Valid(masks, length) || !Valid(output, length)) { return false }
-  if ((scores < masks + length && masks < scores + length) ||
-      (scores < output + length && output < scores + length) ||
-      (masks < output + length && output < masks + length)) { return false }
-  if (table.Length() <= 0 || table.Read(0) != (1 << EXP_FRACTION)) { return false }
-  var maximum = -LIMIT
-  var any = false
-  for (var i = 0; i < length; i++) {
-   var value = storage.Read(scores + i)
-   if (value < -LIMIT || value > LIMIT) { return false }
-   if (storage.Read(masks + i) != 0) {
-    any = true
-    if (value > maximum) { maximum = value }
-   }
-  }
-  if (!any) { return false }
-  var denominator: logic[64] = 0
-  for (var i = 0; i < length; i++) {
-   if (storage.Read(masks + i) != 0) {
-    var exponent = Exponent(maximum - storage.Read(scores + i))
-    if (exponent < 0 || exponent > (1 << EXP_FRACTION)) { return false }
-    denominator = math.Add(denominator, exponent as logic[64])
-   }
-  }
-  for (var i = 0; i < length; i++) {
-   var probability = 0
-   if (storage.Read(masks + i) != 0) {
-    var exponent = Exponent(maximum - storage.Read(scores + i))
-    var numerator = math.Multiply(exponent as logic[64], (1 << PROB_FRACTION) as logic[64])
-    probability = math.DivideEven(numerator, denominator) as int
-   }
-   storage.Write(output + i, probability)
-  }
-  return true
- }
+	static assert CAPACITY > 0 && CAPACITY <= 65536, "invalid softmax capacity"
+
+	static assert BITS >= 2 && BITS <= 30, "invalid softmax score width"
+
+	static assert FRACTION >= 0 && FRACTION < BITS, "invalid softmax score fraction"
+
+	static assert EXP_FRACTION >= 0 && EXP_FRACTION <= 30, "invalid exponent fraction"
+
+	static assert PROB_FRACTION >= 0 && PROB_FRACTION <= 30, "invalid probability fraction"
+
+	static assert STEP_BITS >= 0 && STEP_BITS <= 20, "invalid softmax table step"
+
+	static assert CUTOFF >= 0 && CUTOFF <= 1073741823, "invalid softmax cutoff"
+
+	// Symmetric raw activation magnitude allowed by the configured bit width.
+	public const LIMIT: int = (1 << (BITS - 1)) - 1
+
+	// Borrowed score/mask/output memory and initialized exponent table.
+	table: TABLE
+	storage: STORAGE
+
+	// Owned arithmetic worker used by serialized operations.
+	math: WideArithmetic<31>
+
+	/**
+	 * Borrows the exponent table and word-addressed scratch storage; owns the wide arithmetic
+	 * worker. Initialize table and input spans before Compute and serialize calls.
+	 */
+	new(table: TABLE, storage: STORAGE)
+	{
+		this.table = table
+		this.storage = storage
+		math = new WideArithmetic<31>()
+	}
+
+	/**
+	 * Checks endpoint addresses and addition overflow for a word span. Compute supplies a
+	 * positive length; storage must expose a contiguous address range.
+	 */
+	fn Valid(base: int, length: int) bool
+	{
+		if (base < 0 || base > 2147483647 - length) {
+			return false
+		}
+
+		return storage.IsValidAddress(base) && storage.IsValidAddress(base + length - 1)
+	}
+
+	/**
+	 * Looks up exp(-delta) for a nonnegative score difference, rounding the table index to
+	 * even. Returns zero beyond CUTOFF, or -1 for an unavailable entry.
+	 */
+	fn Exponent(delta: int) int
+	{
+		if (delta > CUTOFF) {
+			return 0
+		}
+
+		var index = math.DivideEven(delta as logic[64], (1 << STEP_BITS) as logic[64]) as int
+
+		if (index < 0 || index >= table.Length()) {
+			return -1
+		}
+
+		return table.Read(index)
+	}
+
+	/**
+	 * Three disjoint length-element spans: Q scores, masks (zero=false), unsigned probabilities.
+	 */
+	public fn Compute(length: int, scores: int, masks: int, output: int) bool
+	{
+		if (length <= 0 || length > CAPACITY) {
+			return false
+		}
+
+		if (!Valid(scores, length) || !Valid(masks, length) || !Valid(output, length)) {
+			return false
+		}
+
+		if ((scores < masks + length &&
+			masks < scores + length) ||
+			(scores < output + length &&
+			output < scores + length) ||
+			(masks < output + length &&
+			output < masks + length)) {
+			return false
+		}
+
+		if (table.Length() <= 0 || table.Read(0) != (1 << EXP_FRACTION)) {
+			return false
+		}
+
+		var maximum = -LIMIT
+		var any = false
+
+		for (var i = 0; i < length; i++) {
+			var value = storage.Read(scores + i)
+
+			if (value < -LIMIT || value > LIMIT) {
+				return false
+			}
+
+			if (storage.Read(masks + i) != 0) {
+				any = true
+
+				if (value > maximum) {
+					maximum = value
+				}
+			}
+		}
+
+		if (!any) {
+			return false
+		}
+
+		var denominator: logic[64] = 0
+
+		for (var i = 0; i < length; i++) {
+			if (storage.Read(masks + i) != 0) {
+				var exponent = Exponent(maximum - storage.Read(scores + i))
+
+				if (exponent < 0 || exponent > (1 << EXP_FRACTION)) {
+					return false
+				}
+
+				denominator = math.Add(denominator, exponent as logic[64])
+			}
+		}
+
+		for (var i = 0; i < length; i++) {
+			var probability = 0
+
+			if (storage.Read(masks + i) != 0) {
+				var exponent = Exponent(maximum - storage.Read(scores + i))
+				var numerator = math.Multiply(exponent as logic[64], (1 << PROB_FRACTION) as logic[64])
+				probability = math.DivideEven(numerator, denominator) as int
+			}
+
+			storage.Write(output + i, probability)
+		}
+
+		return true
+	}
 }

@@ -11,9 +11,14 @@ component FeedForwardBlock
 	// Number of integer elements in inputs, hidden rows, and outputs.
 	public const VECTOR_SIZE: int = 8
 
+	// Configured coefficients and numeric scaling parameters.
 	hiddenRows: int[8, 8]
 	outputRows: int[8, 8]
+
+	// Owned inference subcomponents sharing the caller clock/reset context.
 	relu: ReLU
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**

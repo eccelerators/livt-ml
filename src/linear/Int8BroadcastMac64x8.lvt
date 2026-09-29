@@ -8,41 +8,72 @@ namespace Livt.ML.Linear
  */
 component Int8BroadcastMac64x8
 {
+	// Request toggle paired with the native worker acknowledgment.
 	request: logic
+
+	// Owned arithmetic worker used by serialized operations.
 	primitive: Int8BroadcastMac64x8Primitive
 
-	new() { primitive = new Int8BroadcastMac64x8Primitive() }
+	/**
+	 * Owns one native eight-lane worker in the caller clock/reset context; serialize calls
+	 * sharing this instance.
+	 */
+	new()
+	{
+		primitive = new Int8BroadcastMac64x8Primitive()
+	}
 
+	/**
+	 * Submits the configured operation by toggling the request and waits for matching
+	 * acknowledgment. Operands must already be stable; reset cancels the pending operation.
+	 */
 	fn Submit(resetValue: logic)
 	{
 		primitive.clear = resetValue
 		request = !request
 		primitive.request = request
-		while (primitive.acknowledge != request) { state {} }
+
+		while (primitive.acknowledge != request) {
+			state {
+			}
+		}
 	}
 
-	/** Clears all 64 int32 output accumulators. */
+	/**
+	 * Clears all 64 int32 output accumulators.
+	 */
 	public fn Reset()
 	{
 		Submit(0b1)
 	}
 
-	/** Accumulates one activation against a packed row of 64 signed-int8 weights. */
+	/**
+	 * Accumulates one activation against a packed row of 64 signed-int8 weights.
+	 */
 	public fn AccumulateRow(activation: int, weights: logic[512])
 	{
 		state {
 			primitive.activation = activation
 			primitive.weights = weights
 		}
+
 		Submit(0b0)
 	}
 
-	/** Returns one int32 output accumulator, or zero for an invalid index. */
+	/**
+	 * Returns one int32 output accumulator, or zero for an invalid index.
+	 */
 	public fn GetResult(index: int) int
 	{
-		if (index < 0 || index >= 64) { return 0 }
+		if (index < 0 || index >= 64) {
+			return 0
+		}
+
 		primitive.resultIndex = index as logic[6]
-		state {}
+
+		state {
+		}
+
 		return primitive.result
 	}
 }

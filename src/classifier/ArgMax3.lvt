@@ -10,11 +10,14 @@ component ArgMax3
 {
 	// First class index returned by the classifier.
 	public const CLASS_0: int = 0
+
 	// Second class index returned by the classifier.
 	public const CLASS_1: int = 1
+
 	// Third class index returned by the classifier.
 	public const CLASS_2: int = 2
 
+	// Latest computed result, retained for the caller.
 	classId: int
 
 	/**

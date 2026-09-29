@@ -2,9 +2,14 @@ namespace Livt.ML.Tests.Norm
 
 using Livt.ML.Norm
 
+/**
+ * Exercises LayerNorm64Stream with a shared fixture instance. Each scenario establishes
+ * the inputs and state it needs.
+ */
 @Test
 component LayerNorm64StreamTest
 {
+	// Shared fixture instances, signals, and observation state.
 	affineRequest: logic
 	affineGamma: int
 	affineBeta: int
@@ -22,6 +27,10 @@ component LayerNorm64StreamTest
 	frameError: logic
 	dut: LayerNorm64Stream
 
+	/**
+	 * Creates the shared fixture instances (LayerNorm64Stream). Tests initialize the state
+	 * required by their scenario.
+	 */
 	new()
 	{
 		this.dut = new LayerNorm64Stream(
@@ -32,43 +41,91 @@ component LayerNorm64StreamTest
 			this.outputAcknowledge, this.configured, this.frameError)
 	}
 
+	/**
+	 * Submits one affine parameter tuple and waits for the matching toggle acknowledgment
+	 * before returning.
+	 */
 	fn SendAffine(gamma: int, beta: int, epsilon: int)
 	{
 		affineGamma = gamma
 		affineBeta = beta
 		affineEpsilon = epsilon
 		affineRequest = !affineRequest
-		while (affineAcknowledge != affineRequest) { state {} }
+
+		while (affineAcknowledge != affineRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one frame element and waits for the matching toggle acknowledgment before
+	 * returning.
+	 */
 	fn SendInput(value: int, last: logic)
 	{
 		inputData = value
 		inputLast = last
 		inputRequest = !inputRequest
-		while (inputAcknowledge != inputRequest) { state {} }
+
+		while (inputAcknowledge != inputRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Checks that Norm alizes one complete frame.
+	 */
 	@Test
 	fn NormalizesOneCompleteFrame()
 	{
-		for (var index = 0; index < 64; index++) { this.SendAffine(256, 0, 0) }
-		while (configured != 0b1) { state {} }
+		for (var index = 0; index < 64; index++) {
+			this.SendAffine(256, 0, 0)
+		}
+
+		while (configured != 0b1) {
+			state {
+			}
+		}
+
 		for (var index = 0; index < 64; index++) {
 			var value = 1
-			if (index < 32) { value = -1 }
+
+			if (index < 32) {
+				value = -1
+			}
+
 			var last = 0b0
-			if (index == 63) { last = 0b1 }
+
+			if (index == 63) {
+				last = 0b1
+			}
+
 			this.SendInput(value, last)
 		}
+
 		for (var index = 0; index < 64; index++) {
-			while (outputRequest == outputAcknowledge) { state {} }
-			if (index < 32) { assert outputData == -256 }
-			else { assert outputData == 256 }
-			if (index == 63) { assert outputLast == 0b1 }
-			else { assert outputLast == 0b0 }
+			while (outputRequest == outputAcknowledge) {
+				state {
+				}
+			}
+
+			if (index < 32) {
+				assert outputData == -256
+			} else {
+				assert outputData == 256
+			}
+
+			if (index == 63) {
+				assert outputLast == 0b1
+			} else {
+				assert outputLast == 0b0
+			}
+
 			outputAcknowledge = outputRequest
 		}
+
 		assert frameError == 0b0
 	}
 }

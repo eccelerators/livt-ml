@@ -9,16 +9,21 @@ component ScaledDotProductAttention
 {
 	// Number of integer elements in query, key, value, and output vectors.
 	public const VECTOR_SIZE: int = 8
+
 	// Maximum number of cached key/value pairs.
 	public const CACHE_SIZE: int = 4
+
 	// Integer divisor applied to raw dot-product scores.
 	public const SCORE_SCALE: int = 3
+
 	// Fixed-point scale used by SoftmaxApprox weights.
 	public const WEIGHT_SCALE: int = 256
 
+	// Owned inference subcomponents sharing the caller clock/reset context.
 	kvcache: KVCache
 	softmax: SoftmaxApprox
 
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**
@@ -44,10 +49,15 @@ component ScaledDotProductAttention
 	public fn Compute(query: int[8])
 	{
 		var activeCount = kvcache.GetSize()
+
 		if (activeCount == 0) {
-			for (var elem = 0; elem < VECTOR_SIZE; elem++) { output[elem] = 0 }
+			for (var elem = 0; elem < VECTOR_SIZE; elem++) {
+				output[elem] = 0
+			}
+
 			return
 		}
+
 		var scores: int[8]
 
 		for (var slot = 0; slot < activeCount; slot++) {

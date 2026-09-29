@@ -18,8 +18,13 @@ class RequantizeUInt8
 		divisor: int,
 		outputZeroPoint: int) int
 	{
-		if (multiplier < 0) { return RequantizeUInt8.Clamp(outputZeroPoint) }
-		if (divisor <= 0) { return RequantizeUInt8.Clamp(outputZeroPoint) }
+		if (multiplier < 0) {
+			return RequantizeUInt8.Clamp(outputZeroPoint)
+		}
+
+		if (divisor <= 0) {
+			return RequantizeUInt8.Clamp(outputZeroPoint)
+		}
 
 		var negative = value < 0
 		var magnitude = value
@@ -64,8 +69,13 @@ class RequantizeUInt8
 	 */
 	public static inline fn Clamp(value: int) int
 	{
-		if (value < 0) { return 0 }
-		if (value > 255) { return 255 }
+		if (value < 0) {
+			return 0
+		}
+
+		if (value > 255) {
+			return 255
+		}
 
 		return value
 	}

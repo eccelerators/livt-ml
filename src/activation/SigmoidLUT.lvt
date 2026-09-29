@@ -8,6 +8,7 @@ component SigmoidLUT
 	// Number of entries in the integer sigmoid lookup table.
 	const LUT_SIZE: int = 256
 
+	// Owned approximation table in the component numeric scale.
 	lut: int[256]
 
 	/**
@@ -279,12 +280,15 @@ component SigmoidLUT
 	public fn Apply(input: int) int
 	{
 		var index = input
+
 		if (index < 0) {
 			index = 0
 		}
+
 		if (index > 255) {
 			index = 255
 		}
+
 		return lut[index]
 	}
 }

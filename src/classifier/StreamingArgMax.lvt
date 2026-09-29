@@ -1,13 +1,18 @@
 namespace Livt.ML.Classifier
 
-/** Computes ArgMax over an arbitrary scalar stream without storing logits. */
+/**
+ * Computes ArgMax over an arbitrary scalar stream without storing logits.
+ */
 component StreamingArgMax
 {
+	// Best candidate and whether the current reduction has accepted a value.
 	bestIndex: int
 	bestValue: int
 	seen: bool
 
-	/** Clears the previous stream result. */
+	/**
+	 * Clears the previous stream result.
+	 */
 	public fn Reset()
 	{
 		bestIndex = 0
@@ -15,7 +20,9 @@ component StreamingArgMax
 		seen = false
 	}
 
-	/** Consumes one indexed score; the lowest index wins exact ties. */
+	/**
+	 * Consumes one indexed score; the lowest index wins exact ties.
+	 */
 	public fn Accept(index: int, value: int)
 	{
 		if (!seen || value > bestValue || (value == bestValue && index < bestIndex)) {
@@ -25,10 +32,27 @@ component StreamingArgMax
 		}
 	}
 
-	/** Returns whether at least one score has been accepted. */
-	public fn HasValue() bool { return seen }
-	/** Returns the winning index, or zero for an empty stream. */
-	public fn GetIndex() int { return bestIndex }
-	/** Returns the winning value, or zero for an empty stream. */
-	public fn GetValue() int { return bestValue }
+	/**
+	 * Returns whether at least one score has been accepted.
+	 */
+	public fn HasValue() bool
+	{
+		return seen
+	}
+
+	/**
+	 * Returns the winning index, or zero for an empty stream.
+	 */
+	public fn GetIndex() int
+	{
+		return bestIndex
+	}
+
+	/**
+	 * Returns the winning value, or zero for an empty stream.
+	 */
+	public fn GetValue() int
+	{
+		return bestValue
+	}
 }

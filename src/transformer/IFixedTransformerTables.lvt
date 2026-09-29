@@ -1,7 +1,25 @@
 namespace Livt.ML.Transformer
-/** Read-only integer activation/position tables. Caller validates lengths and masks. */
-interface IFixedTransformerTables {
- fn Gelu(value: int) int
- fn Exponent(delta: int) int
- fn Bucket(relativePosition: int) int
+
+/**
+ * Read-only integer activation/position tables. Caller validates lengths and masks.
+ */
+interface IFixedTransformerTables
+{
+	/**
+	 * Returns the activation approximation in the same raw fixed-point scale as value.
+	 * Providers must remain stable throughout a kernel call.
+	 */
+	fn Gelu(value: int) int
+
+	/**
+	 * Returns the nonnegative approximation of exp(-delta) in the configured exponent scale;
+	 * delta is a nonnegative raw score difference.
+	 */
+	fn Exponent(delta: int) int
+
+	/**
+	 * Maps signed key-minus-query token distance to a learned relative-bias row index. Kernels
+	 * validate the returned index against the selected tensor.
+	 */
+	fn Bucket(relativePosition: int) int
 }

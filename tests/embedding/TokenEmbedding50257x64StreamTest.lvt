@@ -2,9 +2,14 @@ namespace Livt.ML.Tests.Embedding
 
 using Livt.ML.Embedding
 
+/**
+ * Exercises TokenEmbedding50257x64Stream with a shared fixture instance. Each scenario
+ * establishes the inputs and state it needs.
+ */
 @Test
 component TokenEmbedding50257x64StreamTest
 {
+	// Shared fixture instances, signals, and observation state.
 	tokenRequest: logic
 	tokenIndex: int
 	tokenAcknowledge: logic
@@ -19,6 +24,10 @@ component TokenEmbedding50257x64StreamTest
 	invalidToken: logic
 	dut: TokenEmbedding50257x64Stream
 
+	/**
+	 * Creates the shared fixture instances (TokenEmbedding50257x64Stream). Tests initialize
+	 * the state required by their scenario.
+	 */
 	new()
 	{
 		this.dut = new TokenEmbedding50257x64Stream(
@@ -28,31 +37,61 @@ component TokenEmbedding50257x64StreamTest
 			this.outputLast, this.outputAcknowledge, this.invalidToken)
 	}
 
+	/**
+	 * Submits one token selection and waits for the matching toggle acknowledgment before
+	 * returning.
+	 */
 	fn SendToken(token: int)
 	{
 		tokenIndex = token
 		tokenRequest = !tokenRequest
-		while (tokenAcknowledge != tokenRequest) { state {} }
+
+		while (tokenAcknowledge != tokenRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Checks that the component streams sixty four consecutive addresses.
+	 */
 	@Test
 	fn StreamsSixtyFourConsecutiveAddresses()
 	{
 		this.SendToken(7)
+
 		for (var element = 0; element < 64; element++) {
-			while (memoryRequest == memoryAcknowledge) { state {} }
+			while (memoryRequest == memoryAcknowledge) {
+				state {
+				}
+			}
+
 			assert memoryAddress == 448 + element
 			memoryData = element - 32
 			memoryAcknowledge = memoryRequest
-			while (outputRequest == outputAcknowledge) { state {} }
+
+			while (outputRequest == outputAcknowledge) {
+				state {
+				}
+			}
+
 			assert outputData == element - 32
-			if (element == 63) { assert outputLast == 0b1 }
-			else { assert outputLast == 0b0 }
+
+			if (element == 63) {
+				assert outputLast == 0b1
+			} else {
+				assert outputLast == 0b0
+			}
+
 			outputAcknowledge = outputRequest
 		}
+
 		assert invalidToken == 0b0
 	}
 
+	/**
+	 * Checks that the component rejects token outside vocabulary.
+	 */
 	@Test
 	fn RejectsTokenOutsideVocabulary()
 	{

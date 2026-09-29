@@ -10,28 +10,47 @@ namespace Livt.ML.Embedding
  */
 component Embedding64Stream
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const VECTOR_SIZE: int = 64
 
+	// Entry-selection handshake and invalid-index status.
 	entryRequest: logic
 	entryIndex: int
 	entryAcknowledge: logic
+
+	// Borrowed scalar-memory request/response handshake.
 	memoryRequest: logic
 	memoryAddress: int
 	memoryData: int
 	memoryAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: int
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Entry-selection handshake and invalid-index status.
 	invalidEntry: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	entrySeen: logic
+
+	// Current position and bounds within the configured frame.
 	elementIndex: int
 	currentEntry: int
 	entryCount: int
+
+	// Transfer progress and retained request/acknowledgment state.
 	waitingMemory: bool
 	pendingOutput: bool
 	active: bool
 
+	/**
+	 * Binds the borrowed scalar memory service and entry/output handshakes. entryCount defines
+	 * valid row indices; memory addresses count scalar elements. Hold request payloads until
+	 * acknowledged.
+	 */
 	new(
 		entryCount: int,
 		entryRequest: in logic, entryIndex: in int, entryAcknowledge: out logic,
@@ -55,6 +74,10 @@ component Embedding64Stream
 		invalidEntry = this.invalidEntry
 	}
 
+	/**
+	 * Accepts one entry request, reads its 64 scalar values, and holds each output until
+	 * acknowledged. An invalid entry is acknowledged with invalidEntry and produces no row.
+	 */
 	process Main()
 	{
 		entryAcknowledge = entrySeen
@@ -62,6 +85,7 @@ component Embedding64Stream
 		if (pendingOutput) {
 			if (outputAcknowledge == outputRequest) {
 				pendingOutput = false
+
 				if (elementIndex == 63) {
 					elementIndex = 0
 					active = false
@@ -77,7 +101,11 @@ component Embedding64Stream
 				if (memoryAcknowledge == memoryRequest) {
 					outputData = memoryData
 					outputLast = 0b0
-					if (elementIndex == 63) { outputLast = 0b1 }
+
+					if (elementIndex == 63) {
+						outputLast = 0b1
+					}
+
 					outputRequest = !outputRequest
 					waitingMemory = false
 					pendingOutput = true
@@ -86,6 +114,7 @@ component Embedding64Stream
 				if (!active && entryRequest != entrySeen) {
 					entrySeen = entryRequest
 					invalidEntry = 0b0
+
 					if (entryIndex < 0 || entryIndex >= entryCount) {
 						invalidEntry = 0b1
 					} else {

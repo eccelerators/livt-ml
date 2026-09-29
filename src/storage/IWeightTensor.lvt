@@ -1,9 +1,36 @@
 namespace Livt.ML.Storage
-/** One serialized owner; selection changes the tensor used by Read. */
-interface IWeightTensor {
- fn Select(tensor: int) bool
- fn Rows() int
- fn Columns() int
- fn Read(index: int) int
- fn Failed() bool
+
+/**
+ * One serialized owner; selection changes the tensor used by Read.
+ */
+interface IWeightTensor
+{
+	/**
+	 * Selects a tensor for subsequent reads and completes descriptor validation. Returns false
+	 * when unavailable or invalid; callers must not read after failure.
+	 */
+	fn Select(tensor: int) bool
+
+	/**
+	 * Returns the selected tensor row count; use only after successful Select.
+	 */
+	fn Rows() int
+
+	/**
+	 * Returns the selected tensor column count; use only after successful Select.
+	 */
+	fn Columns() int
+
+	/**
+	 * Returns a reconstructed fixed-point weight at a row-major index in
+	 * 0..Rows()*Columns()-1. Check Failed after each read; the numeric return alone cannot
+	 * signal failure.
+	 */
+	fn Read(index: int) int
+
+	/**
+	 * Reports whether the current selection or read failed. Callers must discard a failed
+	 * result and select again before retrying.
+	 */
+	fn Failed() bool
 }

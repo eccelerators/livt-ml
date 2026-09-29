@@ -10,7 +10,10 @@ component RMSNorm
 	// Number of integer elements processed by Compute.
 	public const VECTOR_SIZE: int = 8
 
+	// Owned arithmetic worker used by serialized operations.
 	sqrtNr: SqrtNewtonRaphson
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**

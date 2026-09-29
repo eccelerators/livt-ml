@@ -11,6 +11,7 @@ component RequantizeInt8
 {
 	// Minimum value represented by a signed int8 tensor element.
 	public const MIN_VALUE: int = -128
+
 	// Maximum value represented by a signed int8 tensor element.
 	public const MAX_VALUE: int = 127
 

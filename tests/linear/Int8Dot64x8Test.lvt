@@ -2,20 +2,38 @@ namespace Livt.ML.Tests.Linear
 
 using Livt.ML.Linear
 
+/**
+ * Exercises Int8Dot64x8 with a shared fixture instance. Each scenario establishes the
+ * inputs and state it needs.
+ */
 @Test
 component Int8Dot64x8Test
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	const WEIGHTS: logic[512] = 0xfd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd03020100fffefd
+
+	// Shared fixture instances, signals, and observation state.
 	dot: Int8Dot64x8
 
-	new() { dot = new Int8Dot64x8() }
+	/**
+	 * Creates the shared fixture instances (Int8Dot64x8). Tests initialize the state required
+	 * by their scenario.
+	 */
+	new()
+	{
+		dot = new Int8Dot64x8()
+	}
 
+	/**
+	 * Checks that Compute s signed dot product in eight registered groups.
+	 */
 	@Test
 	fn ComputesSignedDotProductInEightRegisteredGroups()
 	{
 		for (var index = 0; index < 64; index++) {
 			dot.SetActivation(index, index - 32)
 		}
+
 		assert dot.Compute(WEIGHTS) == 159
 		dot.Reset()
 		assert dot.Compute(WEIGHTS) == 159

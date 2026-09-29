@@ -2,16 +2,28 @@ namespace Livt.ML.Tests.Classifier
 
 using Livt.ML.Classifier
 
+/**
+ * Exercises ArgMax3 with a shared fixture instance. Each scenario establishes the inputs
+ * and state it needs.
+ */
 @Test
 component ArgMax3Test
 {
+	// Shared fixture instances, signals, and observation state.
 	argmax: ArgMax3
 
+	/**
+	 * Creates the shared fixture instances (ArgMax3). Tests initialize the state required by
+	 * their scenario.
+	 */
 	new()
 	{
 		argmax = new ArgMax3()
 	}
 
+	/**
+	 * Checks that Select s class0.
+	 */
 	@Test
 	fn SelectsClass0()
 	{
@@ -20,6 +32,9 @@ component ArgMax3Test
 		assert argmax.GetClass() == ArgMax3.CLASS_0
 	}
 
+	/**
+	 * Checks that Select s class1.
+	 */
 	@Test
 	fn SelectsClass1()
 	{
@@ -28,6 +43,9 @@ component ArgMax3Test
 		assert argmax.GetClass() == ArgMax3.CLASS_1
 	}
 
+	/**
+	 * Checks that Select s class2.
+	 */
 	@Test
 	fn SelectsClass2()
 	{
@@ -36,6 +54,9 @@ component ArgMax3Test
 		assert argmax.GetClass() == ArgMax3.CLASS_2
 	}
 
+	/**
+	 * Checks the ties resolve to lowest class case.
+	 */
 	@Test
 	fn TiesResolveToLowestClass()
 	{

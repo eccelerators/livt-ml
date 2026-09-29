@@ -1,15 +1,20 @@
 namespace Livt.ML.Linear
 
-/** Portable pipelined eight-lane primitive for a 64-element signed-int8 dot product. */
+/**
+ * Portable pipelined eight-lane primitive for a 64-element signed-int8 dot product.
+ */
 @Opaque
 component Int8Dot64x8Primitive
 {
+	// Command and operand inputs held stable until acknowledgment.
 	public request: in logic
 	public clear: in logic
 	public configure: in logic
 	public index: in logic[6]
 	public value: in int
 	public weights: in logic[512]
+
+	// Native worker completion and retained result.
 	public acknowledge: out logic
 	public result: out int
 }

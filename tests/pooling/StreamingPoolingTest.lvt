@@ -8,6 +8,7 @@ using Livt.ML.Pooling
 @Test
 component StreamingPoolingTest
 {
+	// Shared fixture instances, signals, and observation state.
 	input1Request: logic
 	input1Data: byte
 	input1Last: logic
@@ -17,6 +18,7 @@ component StreamingPoolingTest
 	output1Last: logic
 	output1Acknowledge: logic
 
+	// Shared fixture instances, signals, and observation state.
 	input2Request: logic
 	input2Data: byte
 	input2Last: logic
@@ -26,9 +28,14 @@ component StreamingPoolingTest
 	output2Last: logic
 	output2Acknowledge: logic
 
+	// Shared fixture instances, signals, and observation state.
 	pool1: MaxPool8x28To14Stream
 	pool2: MaxPool16x14To4Stream
 
+	/**
+	 * Creates the shared fixture instances (MaxPool8x28To14Stream, MaxPool16x14To4Stream).
+	 * Tests initialize the state required by their scenario.
+	 */
 	new()
 	{
 		this.pool1 = new MaxPool8x28To14Stream(
@@ -39,31 +46,55 @@ component StreamingPoolingTest
 			this.output2Request, this.output2Data, this.output2Last, this.output2Acknowledge)
 	}
 
+	/**
+	 * Submits one 2x2 pooling input and waits for the matching toggle acknowledgment before
+	 * returning.
+	 */
 	fn SendPool1(data: byte, last: logic)
 	{
 		input1Data = data
 		input1Last = last
 		input1Request = !input1Request
-		while (input1Acknowledge != input1Request) { state {} }
+
+		while (input1Acknowledge != input1Request) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one 3x3 pooling input and waits for the matching toggle acknowledgment before
+	 * returning.
+	 */
 	fn SendPool2(data: byte, last: logic)
 	{
 		input2Data = data
 		input2Last = last
 		input2Request = !input2Request
-		while (input2Acknowledge != input2Request) { state {} }
+
+		while (input2Acknowledge != input2Request) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Checks that the component pools complete two by two tensor.
+	 */
 	@Test
 	fn PoolsCompleteTwoByTwoTensor()
 	{
 		var outputCount = 0
+
 		for (var channel = 0; channel < 8; channel++) {
 			for (var row = 0; row < 28; row++) {
 				for (var column = 0; column < 28; column++) {
 					var last = 0b0
-					if (channel == 7 && row == 27 && column == 27) { last = 0b1 }
+
+					if (channel == 7 && row == 27 && column == 27) {
+						last = 0b1
+					}
+
 					this.SendPool1(column as byte, last)
 
 					if (output1Request != output1Acknowledge) {
@@ -75,33 +106,45 @@ component StreamingPoolingTest
 				}
 			}
 		}
+
 		assert outputCount == 1568
 	}
 
+	/**
+	 * Checks that the component pools complete three by three tensor.
+	 */
 	@Test
 	fn PoolsCompleteThreeByThreeTensor()
 	{
 		var outputCount = 0
+
 		for (var channel = 0; channel < 16; channel++) {
 			for (var row = 0; row < 14; row++) {
 				for (var column = 0; column < 14; column++) {
 					var last = 0b0
-					if (channel == 15 && row == 13 && column == 13) { last = 0b1 }
+
+					if (channel == 15 && row == 13 && column == 13) {
+						last = 0b1
+					}
+
 					this.SendPool2(column as byte, last)
 
 					if (output2Request != output2Acknowledge) {
 						assert output2Data == column as byte
+
 						if (outputCount == 255) {
 							assert output2Last == 0b1
 						} else {
 							assert output2Last == 0b0
 						}
+
 						output2Acknowledge = output2Request
 						outputCount++
 					}
 				}
 			}
 		}
+
 		assert outputCount == 256
 	}
 }

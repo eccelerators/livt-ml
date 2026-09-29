@@ -11,27 +11,44 @@ using Livt.IO
  */
 component Int16TensorRam2048
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const CAPACITY: int = 2048
+
+	// Owned tensor RAM and logical address bounds; cells require initialization before reads.
 	ram: Ram16
 	logicalSize: int
 
+	/**
+	 * Owns the physical RAM and records logicalSize. Valid indices must satisfy both the
+	 * logical size and physical capacity; write cells before reading them.
+	 */
 	new(logicalSize: int)
 	{
 		ram = new Ram16()
 		this.logicalSize = logicalSize
 	}
 
-	/** Writes one signed 16-bit value when index is in the logical range. */
+	/**
+	 * Writes one signed 16-bit value when index is in the logical range.
+	 */
 	public fn Write(index: int, value: int)
 	{
-		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return }
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) {
+			return
+		}
+
 		ram.Write(index, value as logic[16])
 	}
 
-	/** Reads one sign-extended value, or zero when index is invalid. */
+	/**
+	 * Reads one sign-extended value, or zero when index is invalid.
+	 */
 	public fn Read(index: int) int
 	{
-		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return 0 }
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) {
+			return 0
+		}
+
 		var bits: logic[16] = ram.Read(index)
 		return bits as int
 	}
@@ -45,27 +62,44 @@ component Int16TensorRam2048
  */
 component Int32TensorRam2048
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const CAPACITY: int = 2048
+
+	// Owned tensor RAM and logical address bounds; cells require initialization before reads.
 	ram: Ram32
 	logicalSize: int
 
+	/**
+	 * Owns the physical RAM and records logicalSize. Valid indices must satisfy both the
+	 * logical size and physical capacity; write cells before reading them.
+	 */
 	new(logicalSize: int)
 	{
 		ram = new Ram32()
 		this.logicalSize = logicalSize
 	}
 
-	/** Writes one signed 32-bit value when index is in the logical range. */
+	/**
+	 * Writes one signed 32-bit value when index is in the logical range.
+	 */
 	public fn Write(index: int, value: int)
 	{
-		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return }
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) {
+			return
+		}
+
 		ram.Write(index, value as logic[32])
 	}
 
-	/** Reads one signed value, or zero when index is invalid. */
+	/**
+	 * Reads one signed value, or zero when index is invalid.
+	 */
 	public fn Read(index: int) int
 	{
-		if (index < 0 || index >= logicalSize || index >= CAPACITY) { return 0 }
+		if (index < 0 || index >= logicalSize || index >= CAPACITY) {
+			return 0
+		}
+
 		var bits: logic[32] = ram.Read(index)
 		return bits as int
 	}

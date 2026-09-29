@@ -11,11 +11,13 @@ using Livt.ML.Numeric
  */
 component QLinearConv1x8Same5x5
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 784
 	public const OUTPUT_SIZE: int = 6272
 	public const CHANNELS: int = 8
 	public const KERNEL_SIZE: int = 25
 
+	// Configured coefficients and numeric scaling parameters.
 	weights: int[8, 25]
 	biases: int[8]
 	multipliers: int[8]
@@ -23,7 +25,11 @@ component QLinearConv1x8Same5x5
 	inputZeroPoints: int[8]
 	weightZeroPoints: int[8]
 	outputZeroPoints: int[8]
+
+	// Input tensor storage; populate the required span before computation.
 	inputValues: int[784]
+
+	// Latest computed result, retained for the caller.
 	output: int[6272]
 
 	/**
@@ -54,8 +60,14 @@ component QLinearConv1x8Same5x5
 	 */
 	public fn SetInput(index: int, value: int)
 	{
-		if (index < 0) { return }
-		if (index >= INPUT_SIZE) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= INPUT_SIZE) {
+			return
+		}
+
 		inputValues[index] = value
 	}
 
@@ -64,10 +76,21 @@ component QLinearConv1x8Same5x5
 	 */
 	public fn SetWeight(channel: int, index: int, value: int)
 	{
-		if (channel < 0) { return }
-		if (channel >= CHANNELS) { return }
-		if (index < 0) { return }
-		if (index >= KERNEL_SIZE) { return }
+		if (channel < 0) {
+			return
+		}
+
+		if (channel >= CHANNELS) {
+			return
+		}
+
+		if (index < 0) {
+			return
+		}
+
+		if (index >= KERNEL_SIZE) {
+			return
+		}
 
 		weights[channel, index] = value
 	}
@@ -79,8 +102,13 @@ component QLinearConv1x8Same5x5
 		channel: int, bias: int, multiplier: int, divisor: int,
 		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
 	{
-		if (channel < 0) { return }
-		if (channel >= CHANNELS) { return }
+		if (channel < 0) {
+			return
+		}
+
+		if (channel >= CHANNELS) {
+			return
+		}
 
 		biases[channel] = bias
 		multipliers[channel] = multiplier
@@ -103,6 +131,7 @@ component QLinearConv1x8Same5x5
 					for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
 						state {
 							var inputRow = row + kernelRow - 2
+
 							for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
 								var inputColumn = column + kernelColumn - 2
 
@@ -125,7 +154,7 @@ component QLinearConv1x8Same5x5
 					state {
 						var outputIndex = channel * 784 + row * 28 + column
 						output[outputIndex] = RequantizeUInt8.ApplyRational(
-						accumulator, multipliers[channel], divisors[channel], outputZeroPoints[channel])
+							accumulator, multipliers[channel], divisors[channel], outputZeroPoints[channel])
 					}
 				}
 			}
@@ -137,8 +166,13 @@ component QLinearConv1x8Same5x5
 	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
 
 		return output[index]
 	}

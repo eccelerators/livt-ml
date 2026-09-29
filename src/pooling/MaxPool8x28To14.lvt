@@ -5,10 +5,14 @@ namespace Livt.ML.Pooling
  */
 component MaxPool8x28To14
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 6272
 	public const OUTPUT_SIZE: int = 1568
 
+	// Input tensor storage; populate the required span before computation.
 	inputValues: int[6272]
+
+	// Latest computed result, retained for the caller.
 	output: int[1568]
 
 	/**
@@ -16,8 +20,13 @@ component MaxPool8x28To14
 	 */
 	public fn SetInput(index: int, value: int)
 	{
-		if (index < 0) { return }
-		if (index >= INPUT_SIZE) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= INPUT_SIZE) {
+			return
+		}
 
 		inputValues[index] = value
 	}
@@ -61,8 +70,13 @@ component MaxPool8x28To14
 	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
 
 		return output[index]
 	}

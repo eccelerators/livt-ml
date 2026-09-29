@@ -2,16 +2,29 @@ namespace Livt.ML.Tests.Model
 
 using Livt.ML.Model
 
+/**
+ * Exercises LinearRegression with a shared fixture instance. Each scenario establishes the
+ * inputs and state it needs.
+ */
 @Test
 component LinearRegressionTest
 {
+	// Shared fixture instances, signals, and observation state.
 	model: LinearRegression
 
+	/**
+	 * Creates the shared fixture instances (LinearRegression). Tests initialize the state
+	 * required by their scenario.
+	 */
 	new()
 	{
 		model = new LinearRegression()
 	}
 
+	/**
+	 * Writes six calibration pairs into the supplied arrays; remaining entries are outside the
+	 * fitted sample count.
+	 */
 	fn LoadCalibrationData(x: int[32], y: int[32])
 	{
 		x[0] = 180
@@ -29,6 +42,9 @@ component LinearRegressionTest
 		y[5] = 270
 	}
 
+	/**
+	 * Checks that Fit s linear model.
+	 */
 	@Test
 	fn FitsLinearModel()
 	{
@@ -47,6 +63,9 @@ component LinearRegressionTest
 		assert b < 0
 	}
 
+	/**
+	 * Checks that Predict s within training range.
+	 */
 	@Test
 	fn PredictsWithinTrainingRange()
 	{
@@ -62,6 +81,9 @@ component LinearRegressionTest
 		assert predicted < 210
 	}
 
+	/**
+	 * Checks that Predict s training data with small error.
+	 */
 	@Test
 	fn PredictsTrainingDataWithSmallError()
 	{
@@ -83,6 +105,9 @@ component LinearRegressionTest
 		}
 	}
 
+	/**
+	 * Checks that the component rejects insufficient data.
+	 */
 	@Test
 	fn RejectsInsufficientData()
 	{
@@ -98,6 +123,9 @@ component LinearRegressionTest
 		assert model.GetB() == 0
 	}
 
+	/**
+	 * Checks that the component rejects degenerate data.
+	 */
 	@Test
 	fn RejectsDegenerateData()
 	{

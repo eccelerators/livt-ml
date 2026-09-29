@@ -2,43 +2,86 @@ namespace Livt.ML.Tests.Norm
 
 using Livt.ML.Norm
 
-/** Regression for identity initialization and compiler issue #283. */
+/**
+ * Regression for identity initialization and compiler issue #283.
+ */
 @Test
 component LayerNorm64Test
 {
+	// Shared fixture instances, signals, and observation state.
 	norm: LayerNorm64
 
-	new() { norm = new LayerNorm64() }
+	/**
+	 * Creates the shared fixture instances (LayerNorm64). Tests initialize the state required
+	 * by their scenario.
+	 */
+	new()
+	{
+		norm = new LayerNorm64()
+	}
 
+	/**
+	 * Checks the constructor initialization terminates case.
+	 */
 	@Test
 	fn ConstructorInitializationTerminates()
 	{
-		for (var index = 0; index < 64; index++) { norm.SetInput(index, 7) }
+		for (var index = 0; index < 64; index++) {
+			norm.SetInput(index, 7)
+		}
+
 		norm.Compute(1)
-		for (var index = 0; index < 64; index++) { assert norm.GetOutput(index) == 0 }
+
+		for (var index = 0; index < 64; index++) {
+			assert norm.GetOutput(index) == 0
+		}
 	}
 
+	/**
+	 * Checks that the component preserves defaults around configured affine elements.
+	 */
 	@Test
 	fn PreservesDefaultsAroundConfiguredAffineElements()
 	{
 		for (var index = 0; index < 64; index++) {
 			var value = 1
-			if (index < 32) { value = -1 }
+
+			if (index < 32) {
+				value = -1
+			}
+
 			norm.SetInput(index, value)
 		}
+
 		norm.SetAffine(0, 512, 7)
 		norm.SetAffine(63, 128, -3)
+
 		for (var pass = 0; pass < 2; pass++) {
-			if (pass == 1) { norm.SetAffine(0, 256, -9) }
+			if (pass == 1) {
+				norm.SetAffine(0, 256, -9)
+			}
+
 			norm.Compute(0)
+
 			for (var index = 0; index < 64; index++) {
 				var expected = 256
-				if (index < 32) { expected = -256 }
+
+				if (index < 32) {
+					expected = -256
+				}
+
 				if (index == 0) {
 					expected = -505
-					if (pass == 1) { expected = -265 }
+
+					if (pass == 1) {
+						expected = -265
+					}
 				}
-				if (index == 63) { expected = 125 }
+
+				if (index == 63) {
+					expected = 125
+				}
+
 				assert norm.GetOutput(index) == expected
 			}
 		}

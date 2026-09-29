@@ -1,23 +1,57 @@
 namespace Livt.ML.Storage
+
 using Livt.IO
-/** A bounded view of externally owned RAM; no implicit table initialization. */
+
+/**
+ * A bounded view of externally owned RAM; no implicit table initialization.
+ */
 component RamLookupTable<ENTRIES: int, STORAGE: IRam<int>> : ILookupTable
 {
- static assert ENTRIES > 0, "table length must be positive"
- storage: STORAGE
- base: int
- new(storage: STORAGE, base: int) { this.storage = storage
- this.base = base }
- override fn Length() int
- {
-  if (base < 0 || base > 2147483647 - ENTRIES) { return 0 }
-  if (!storage.IsValidAddress(base) || !storage.IsValidAddress(base + ENTRIES - 1)) { return 0 }
-  return ENTRIES
- }
- override fn Read(index: int) int
- {
-  var available = this.Length()
-  if (index < 0 || index >= available) { return 0 }
-  return storage.Read(base + index)
- }
+	static assert ENTRIES > 0, "table length must be positive"
+
+	// Borrowed word-addressed memory and table base offset.
+	storage: STORAGE
+	base: int
+
+	/**
+	 * Borrows externally initialized word-addressed storage and records the base offset. No
+	 * table data is allocated or loaded.
+	 */
+	new(storage: STORAGE, base: int)
+	{
+		this.storage = storage
+		this.base = base
+	}
+
+	/**
+	 * Returns ENTRIES when the full word span is addressable, otherwise zero. Assumes a
+	 * contiguous memory address range.
+	 */
+	override fn Length() int
+	{
+		if (base < 0 || base > 2147483647 - ENTRIES) {
+			return 0
+		}
+
+		if (!storage.IsValidAddress(base) || !storage.IsValidAddress(base + ENTRIES - 1)) {
+			return 0
+		}
+
+		return ENTRIES
+	}
+
+	/**
+	 * Returns the stored integer at the table-relative index, or zero for an invalid index or
+	 * unavailable span.
+	 */
+	override fn Read(index: int) int
+	{
+		var available = this.Length()
+
+		if (index < 0 || index >= available) {
+			return 0
+		}
+
+		return storage.Read(base + index)
+	}
 }

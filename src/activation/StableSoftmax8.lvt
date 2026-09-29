@@ -11,14 +11,24 @@ using Livt.Math.Arithmetic
  */
 component StableSoftmax8
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const VECTOR_SIZE: int = 8
 	public const OUTPUT_SCALE: int = 32768
 	const LAST_LUT_INDEX: int = 15
 
+	// Owned approximation table in the component numeric scale.
 	expNegative: int[16]
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
+
+	// Owned arithmetic worker used by serialized operations.
 	divider: UnsignedDivideInt32
 
+	/**
+	 * Loads the owned exp(-x) table and creates the integer divider used to normalize
+	 * probabilities.
+	 */
 	new()
 	{
 		expNegative[0] = 32768
@@ -40,41 +50,75 @@ component StableSoftmax8
 		this.divider = new UnsignedDivideInt32()
 	}
 
-	/** Computes Q1.15 softmax weights for the first count scores. */
+	/**
+	 * Computes Q1.15 softmax weights for the first count scores.
+	 */
 	public fn ComputeCount(scores: int[8], count: int, scoreStep: int)
 	{
 		var activeCount = count
-		if (activeCount < 0) { activeCount = 0 }
-		if (activeCount > VECTOR_SIZE) { activeCount = VECTOR_SIZE }
-		for (var index = 0; index < VECTOR_SIZE; index++) { output[index] = 0 }
-		if (activeCount == 0) { return }
+
+		if (activeCount < 0) {
+			activeCount = 0
+		}
+
+		if (activeCount > VECTOR_SIZE) {
+			activeCount = VECTOR_SIZE
+		}
+
+		for (var index = 0; index < VECTOR_SIZE; index++) {
+			output[index] = 0
+		}
+
+		if (activeCount == 0) {
+			return
+		}
 
 		var step = scoreStep
-		if (step <= 0) { step = 1 }
+
+		if (step <= 0) {
+			step = 1
+		}
+
 		var maxScore = scores[0]
+
 		for (var index = 1; index < activeCount; index++) {
-			if (scores[index] > maxScore) { maxScore = scores[index] }
+			if (scores[index] > maxScore) {
+				maxScore = scores[index]
+			}
 		}
 
 		var exponentials: int[8]
 		var sum = 0
+
 		for (var index = 0; index < activeCount; index++) {
 			var distance = this.divider.Compute(maxScore - scores[index] + (step >> 1), step)
-			if (distance > LAST_LUT_INDEX) { distance = LAST_LUT_INDEX }
+
+			if (distance > LAST_LUT_INDEX) {
+				distance = LAST_LUT_INDEX
+			}
+
 			exponentials[index] = expNegative[distance]
 			sum = sum + exponentials[index]
 		}
-		if (sum <= 0) { return }
+
+		if (sum <= 0) {
+			return
+		}
 
 		for (var index = 0; index < activeCount; index++) {
 			output[index] = this.divider.Compute(exponentials[index] * OUTPUT_SCALE, sum)
 		}
 	}
 
-	/** Returns one Q1.15 probability, or zero for an invalid index. */
+	/**
+	 * Returns one Q1.15 probability, or zero for an invalid index.
+	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0 || index >= VECTOR_SIZE) { return 0 }
+		if (index < 0 || index >= VECTOR_SIZE) {
+			return 0
+		}
+
 		return output[index]
 	}
 }

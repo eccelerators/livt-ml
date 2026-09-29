@@ -14,22 +14,35 @@ namespace Livt.ML.Pooling
  */
 component MaxPool8x28To14Stream
 {
+	// Input payload and toggle acknowledgment from the producer.
 	inputRequest: logic
 	inputData: byte
 	inputLast: logic
 	inputAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: byte
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	inputSeen: logic
 	pending: bool
+
+	// Current position and bounds within the configured frame.
 	channel: int
 	row: int
 	column: int
+
+	// Partial pooling-window storage, reused as input values arrive.
 	previousRow: byte[28]
 	horizontalMaximum: byte
 
+	/**
+	 * Binds the input and output toggle-handshake ports. Producers hold input data until
+	 * acknowledgment; consumers acknowledge each output before it can be replaced.
+	 */
 	new(inputRequest: in logic, inputData: in byte, inputLast: in logic,
 		inputAcknowledge: out logic, outputRequest: out logic,
 		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic)
@@ -44,28 +57,52 @@ component MaxPool8x28To14Stream
 		this.outputAcknowledge = outputAcknowledge
 	}
 
+	/**
+	 * Accumulates pooling-window maxima as frame values arrive. Holds a pending output until
+	 * acknowledgment before accepting further input; all endpoints must share compatible
+	 * clock/reset sequencing.
+	 */
 	process Main()
 	{
 		inputAcknowledge = inputSeen
 
 		if (pending) {
-			if (outputAcknowledge == outputRequest) { pending = false }
+			if (outputAcknowledge == outputRequest) {
+				pending = false
+			}
 		} else {
 			if (inputRequest != inputSeen) {
 				if (row < 1) {
 					previousRow[column] = inputData
 				} else {
 					var verticalMaximum = previousRow[column]
-					if (inputData > verticalMaximum) { verticalMaximum = inputData }
 
-					if (column == 0 || column == 2 || column == 4 || column == 6 ||
-						column == 8 || column == 10 || column == 12 || column == 14 ||
-						column == 16 || column == 18 || column == 20 || column == 22 ||
-						column == 24 || column == 26) {
+					if (inputData > verticalMaximum) {
+						verticalMaximum = inputData
+					}
+
+					if (column == 0 ||
+						column == 2 ||
+						column == 4 ||
+						column == 6 ||
+						column == 8 ||
+						column == 10 ||
+						column == 12 ||
+						column == 14 ||
+						column == 16 ||
+						column == 18 ||
+						column == 20 ||
+						column == 22 ||
+						column == 24 ||
+						column == 26) {
 						horizontalMaximum = verticalMaximum
 					} else {
 						outputData = horizontalMaximum
-						if (verticalMaximum > horizontalMaximum) { outputData = verticalMaximum }
+
+						if (verticalMaximum > horizontalMaximum) {
+							outputData = verticalMaximum
+						}
+
 						outputLast = inputLast
 						outputRequest = !outputRequest
 						pending = true
@@ -73,13 +110,24 @@ component MaxPool8x28To14Stream
 				}
 
 				inputSeen = inputRequest
+
 				if (column == 27) {
 					column = 0
+
 					if (row == 1) {
 						row = 0
-						if (channel == 7) { channel = 0 } else { channel++ }
-					} else { row++ }
-				} else { column++ }
+
+						if (channel == 7) {
+							channel = 0
+						} else {
+							channel++
+						}
+					} else {
+						row++
+					}
+				} else {
+					column++
+				}
 			}
 		}
 	}

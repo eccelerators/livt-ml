@@ -33,9 +33,18 @@ component ByteTensorRam2048
 	 */
 	public fn Write(index: int, value: byte)
 	{
-		if (index < 0) { return }
-		if (index >= logicalSize) { return }
-		if (index >= CAPACITY) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= logicalSize) {
+			return
+		}
+
+		if (index >= CAPACITY) {
+			return
+		}
+
 		this.ram0.Write(index, value)
 	}
 
@@ -44,9 +53,18 @@ component ByteTensorRam2048
 	 */
 	public fn Read(index: int) byte
 	{
-		if (index < 0) { return 0x00 }
-		if (index >= logicalSize) { return 0x00 }
-		if (index >= CAPACITY) { return 0x00 }
+		if (index < 0) {
+			return 0x00
+		}
+
+		if (index >= logicalSize) {
+			return 0x00
+		}
+
+		if (index >= CAPACITY) {
+			return 0x00
+		}
+
 		return this.ram0.Read(index)
 	}
 }
@@ -84,9 +102,18 @@ component ByteTensorRam4096
 	 */
 	public fn Write(index: int, value: byte)
 	{
-		if (index < 0) { return }
-		if (index >= logicalSize) { return }
-		if (index >= CAPACITY) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= logicalSize) {
+			return
+		}
+
+		if (index >= CAPACITY) {
+			return
+		}
+
 		if (index < 2048) {
 			this.ram0.Write(index, value)
 		} else {
@@ -99,10 +126,22 @@ component ByteTensorRam4096
 	 */
 	public fn Read(index: int) byte
 	{
-		if (index < 0) { return 0x00 }
-		if (index >= logicalSize) { return 0x00 }
-		if (index >= CAPACITY) { return 0x00 }
-		if (index < 2048) { return this.ram0.Read(index) }
+		if (index < 0) {
+			return 0x00
+		}
+
+		if (index >= logicalSize) {
+			return 0x00
+		}
+
+		if (index >= CAPACITY) {
+			return 0x00
+		}
+
+		if (index < 2048) {
+			return this.ram0.Read(index)
+		}
+
 		return this.ram1.Read(index - 2048)
 	}
 }
@@ -144,9 +183,18 @@ component ByteTensorRam8192
 	 */
 	public fn Write(index: int, value: byte)
 	{
-		if (index < 0) { return }
-		if (index >= logicalSize) { return }
-		if (index >= CAPACITY) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= logicalSize) {
+			return
+		}
+
+		if (index >= CAPACITY) {
+			return
+		}
+
 		if (index < 2048) {
 			this.ram0.Write(index, value)
 		} else {
@@ -167,12 +215,30 @@ component ByteTensorRam8192
 	 */
 	public fn Read(index: int) byte
 	{
-		if (index < 0) { return 0x00 }
-		if (index >= logicalSize) { return 0x00 }
-		if (index >= CAPACITY) { return 0x00 }
-		if (index < 2048) { return this.ram0.Read(index) }
-		if (index < 4096) { return this.ram1.Read(index - 2048) }
-		if (index < 6144) { return this.ram2.Read(index - 4096) }
+		if (index < 0) {
+			return 0x00
+		}
+
+		if (index >= logicalSize) {
+			return 0x00
+		}
+
+		if (index >= CAPACITY) {
+			return 0x00
+		}
+
+		if (index < 2048) {
+			return this.ram0.Read(index)
+		}
+
+		if (index < 4096) {
+			return this.ram1.Read(index - 2048)
+		}
+
+		if (index < 6144) {
+			return this.ram2.Read(index - 4096)
+		}
+
 		return this.ram3.Read(index - 6144)
 	}
 }

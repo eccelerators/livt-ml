@@ -7,17 +7,25 @@ using Livt.ML.Numeric
  */
 component QLinearMatMul256x10
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 256
 	public const OUTPUT_SIZE: int = 10
 
+	// Input tensor storage; populate the required span before computation.
 	inputValues: int[256]
+
+	// Configured coefficients and numeric scaling parameters.
 	weights: int[10, 256]
 	multipliers: int[10]
 	divisors: int[10]
 	inputZeroPoints: int[10]
 	weightZeroPoints: int[10]
 	outputZeroPoints: int[10]
+
+	// Wide output accumulators before final output conversion.
 	accumulators: int[10]
+
+	// Latest computed result, retained for the caller.
 	output: int[10]
 
 	/**
@@ -25,8 +33,13 @@ component QLinearMatMul256x10
 	 */
 	public fn SetInput(index: int, value: int)
 	{
-		if (index < 0) { return }
-		if (index >= INPUT_SIZE) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= INPUT_SIZE) {
+			return
+		}
 
 		inputValues[index] = value
 	}
@@ -56,10 +69,21 @@ component QLinearMatMul256x10
 	 */
 	public fn SetWeight(column: int, row: int, value: int)
 	{
-		if (column < 0) { return }
-		if (column >= OUTPUT_SIZE) { return }
-		if (row < 0) { return }
-		if (row >= INPUT_SIZE) { return }
+		if (column < 0) {
+			return
+		}
+
+		if (column >= OUTPUT_SIZE) {
+			return
+		}
+
+		if (row < 0) {
+			return
+		}
+
+		if (row >= INPUT_SIZE) {
+			return
+		}
 
 		weights[column, row] = value
 	}
@@ -71,8 +95,13 @@ component QLinearMatMul256x10
 		column: int, multiplier: int, divisor: int,
 		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
 	{
-		if (column < 0) { return }
-		if (column >= OUTPUT_SIZE) { return }
+		if (column < 0) {
+			return
+		}
+
+		if (column >= OUTPUT_SIZE) {
+			return
+		}
 
 		multipliers[column] = multiplier
 		divisors[column] = divisor
@@ -111,8 +140,13 @@ component QLinearMatMul256x10
 	 */
 	public fn GetAccumulator(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
 
 		return accumulators[index]
 	}
@@ -122,8 +156,13 @@ component QLinearMatMul256x10
 	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
 
 		return output[index]
 	}

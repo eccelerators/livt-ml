@@ -7,9 +7,11 @@ component LinearRegression
 {
 	// Maximum number of samples accepted by Fit.
 	public const MAX_SAMPLES: int = 32
+
 	// Fixed-point scale used to store the slope coefficient.
 	public const SCALE: int = 1000
 
+	// Fitted slope and intercept retained for predictions.
 	aFixed: int
 	b: int
 

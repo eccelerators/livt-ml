@@ -1,12 +1,28 @@
 namespace Livt.ML.Transformer
-/** Extends existing kernels without changing the encoder interface.
+
+/**
+ * Extends existing kernels without changing the encoder interface.
  * CachedAttention consumes one query and token-major K/V with distinct length.
  * A negative-one bias tensor disables learned bias (cross attention).
  * Buckets are word entries for relative distances -(MAX_TOKENS-1)..+(MAX_TOKENS-1).
  * ProjectArgMax streams rounded/clipped logits; lowest row wins ties; -1 is error.
  */
-interface IIncrementalTransformerKernels : ITransformerKernels {
- fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
-                    length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool
- fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int
+interface IIncrementalTransformerKernels : ITransformerKernels
+{
+	/**
+	 * Computes one query against length token-major cached K/V vectors. Width is features per
+	 * head; position is the query token position. Causal mode excludes keys beyond position;
+	 * zero masks exclude keys. Tensor -1 disables bias, otherwise buckets holds 2*MAX_TOKENS-1
+	 * entries centered on relative position zero. Target must not overlap any consumed input
+	 * span. True means completed writes; false may leave partial output.
+	 */
+	fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+		length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool
+
+	/**
+	 * Projects one columns-element vector through rows weight rows without storing logits.
+	 * Returns the lowest row index among equal rounded/clipped maxima, or -1 on invalid shape,
+	 * storage, or weights. Does not write activation memory.
+	 */
+	fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int
 }

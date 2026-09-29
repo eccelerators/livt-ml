@@ -11,11 +11,15 @@ component Int8Linear8x3
 {
 	// Number of input elements consumed by Compute.
 	public const INPUT_SIZE: int = 8
+
 	// Number of accumulator outputs produced by Compute.
 	public const OUTPUT_SIZE: int = 3
 
+	// Configured coefficients and numeric scaling parameters.
 	weights: int[3, 8]
 	biases: int[3]
+
+	// Wide output accumulators before final output conversion.
 	accumulators: int[3]
 
 	/**
@@ -41,8 +45,13 @@ component Int8Linear8x3
 		w0: int, w1: int, w2: int, w3: int,
 		w4: int, w5: int, w6: int, w7: int)
 	{
-		if (row < 0) { return }
-		if (row >= OUTPUT_SIZE) { return }
+		if (row < 0) {
+			return
+		}
+
+		if (row >= OUTPUT_SIZE) {
+			return
+		}
 
 		weights[row, 0] = w0
 		weights[row, 1] = w1
@@ -59,8 +68,13 @@ component Int8Linear8x3
 	 */
 	public fn SetBias(row: int, value: int)
 	{
-		if (row < 0) { return }
-		if (row >= OUTPUT_SIZE) { return }
+		if (row < 0) {
+			return
+		}
+
+		if (row >= OUTPUT_SIZE) {
+			return
+		}
 
 		biases[row] = value
 	}
@@ -101,8 +115,13 @@ component Int8Linear8x3
 	 */
 	public fn GetAccumulator(row: int) int
 	{
-		if (row < 0) { return 0 }
-		if (row >= OUTPUT_SIZE) { return 0 }
+		if (row < 0) {
+			return 0
+		}
+
+		if (row >= OUTPUT_SIZE) {
+			return 0
+		}
 
 		return accumulators[row]
 	}

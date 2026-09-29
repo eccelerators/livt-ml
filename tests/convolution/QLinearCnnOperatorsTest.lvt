@@ -9,6 +9,7 @@ using Livt.ML.Linear
 @Test
 component QLinearCnnOperatorsTest
 {
+	// Shared fixture instances, signals, and observation state.
 	pool1: MaxPool8x28To14
 	pool2: MaxPool16x14To4
 	dense: QLinearMatMul256x10

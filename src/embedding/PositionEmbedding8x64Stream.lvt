@@ -1,12 +1,20 @@
 namespace Livt.ML.Embedding
 
-/** Context-eight position-table specialization of Embedding64Stream. */
+/**
+ * Context-eight position-table specialization of Embedding64Stream.
+ */
 component PositionEmbedding8x64Stream
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const POSITION_COUNT: int = 8
 
+	// Owned embedding worker with forwarded external handshakes.
 	stream: Embedding64Stream
 
+	/**
+	 * Owns an Embedding64Stream for 8 rows and forwards the supplied memory and toggle-
+	 * handshake ports. External memory must be initialized before requesting a row.
+	 */
 	new(
 		positionRequest: in logic, positionIndex: in int,
 		positionAcknowledge: out logic, memoryRequest: out logic,

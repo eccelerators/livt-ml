@@ -7,11 +7,17 @@ component Linear8x8
 {
 	// Number of output rows produced by Compute.
 	public const ROW_COUNT: int = 8
+
 	// Number of integer elements in each input and weight row.
 	public const VECTOR_SIZE: int = 8
 
+	// Configured coefficients and numeric scaling parameters.
 	rows: int[8, 8]
+
+	// Latest computed result, retained for the caller.
 	results: int[8]
+
+	// Owned arithmetic worker used by serialized operations.
 	dp: DotProduct
 
 	/**

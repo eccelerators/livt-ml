@@ -2,22 +2,43 @@ namespace Livt.ML.Tests.Attention
 
 using Livt.ML.Attention
 
+/**
+ * Exercises CausalAttentionHead4Context8 with a shared fixture instance. Each scenario
+ * establishes the inputs and state it needs.
+ */
 @Test
 component CausalAttentionHead4Context8Test
 {
+	// Shared fixture instances, signals, and observation state.
 	dut: CausalAttentionHead4Context8
-	new() { this.dut = new CausalAttentionHead4Context8() }
 
+	/**
+	 * Creates the shared fixture instances (CausalAttentionHead4Context8). Tests initialize
+	 * the state required by their scenario.
+	 */
+	new()
+	{
+		this.dut = new CausalAttentionHead4Context8()
+	}
+
+	/**
+	 * Checks the applies causal mask and uniform attention case.
+	 */
 	@Test
 	fn AppliesCausalMaskAndUniformAttention()
 	{
 		for (var token = 0; token < 8; token++) {
 			for (var element = 0; element < 4; element++) {
 				var value = 0
-				if (element == 0) { value = (token + 1) * 8 }
+
+				if (element == 0) {
+					value = (token + 1) * 8
+				}
+
 				this.dut.SetElement(token, element, 0, 0, value)
 			}
 		}
+
 		this.dut.Compute(1)
 		assert this.dut.GetOutput(0, 0) == 8
 		assert this.dut.GetOutput(1, 0) == 12
@@ -26,6 +47,9 @@ component CausalAttentionHead4Context8Test
 		assert this.dut.GetOutput(7, 1) == 0
 	}
 
+	/**
+	 * Checks that the component rejects invalid coordinates.
+	 */
 	@Test
 	fn RejectsInvalidCoordinates()
 	{

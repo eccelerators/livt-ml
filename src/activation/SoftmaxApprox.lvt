@@ -7,12 +7,17 @@ component SoftmaxApprox
 {
 	// Number of logits processed by Compute.
 	public const VECTOR_SIZE: int = 8
+
 	// Number of entries in the clamped exponential lookup table.
 	public const LUT_SIZE: int = 16
+
 	// Fixed-point probability scale used for stored outputs.
 	public const SCALE_FACTOR: int = 256
 
+	// Owned approximation table in the component numeric scale.
 	expLut: int[16]
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**
@@ -52,11 +57,22 @@ component SoftmaxApprox
 	public fn ComputeCount(input: int[8], count: int)
 	{
 		var activeCount = count
-		if (activeCount < 0) { activeCount = 0 }
-		if (activeCount > VECTOR_SIZE) { activeCount = VECTOR_SIZE }
 
-		for (var i = 0; i < VECTOR_SIZE; i++) { output[i] = 0 }
-		if (activeCount == 0) { return }
+		if (activeCount < 0) {
+			activeCount = 0
+		}
+
+		if (activeCount > VECTOR_SIZE) {
+			activeCount = VECTOR_SIZE
+		}
+
+		for (var i = 0; i < VECTOR_SIZE; i++) {
+			output[i] = 0
+		}
+
+		if (activeCount == 0) {
+			return
+		}
 
 		var sumExp = 0
 

@@ -2,18 +2,30 @@ namespace Livt.ML.Tests.Pooling
 
 using Livt.ML.Pooling
 
+/**
+ * Exercises RamPooling with a shared fixture instance. Each scenario establishes the
+ * inputs and state it needs.
+ */
 @Test
 component RamPoolingTest
 {
+	// Shared fixture instances, signals, and observation state.
 	pool1: MaxPool8x28To14Ram
 	pool2: MaxPool16x14To4Ram
 
+	/**
+	 * Creates the shared fixture instances (MaxPool8x28To14Ram, MaxPool16x14To4Ram). Tests
+	 * initialize the state required by their scenario.
+	 */
 	new()
 	{
 		this.pool1 = new MaxPool8x28To14Ram()
 		this.pool2 = new MaxPool16x14To4Ram()
 	}
 
+	/**
+	 * Checks that the component pools every two by two output.
+	 */
 	@Test
 	fn PoolsEveryTwoByTwoOutput()
 	{
@@ -24,7 +36,9 @@ component RamPoolingTest
 				}
 			}
 		}
+
 		this.pool1.Compute()
+
 		for (var channel = 0; channel < 8; channel++) {
 			for (var row = 0; row < 14; row++) {
 				for (var column = 0; column < 14; column++) {
@@ -32,10 +46,14 @@ component RamPoolingTest
 				}
 			}
 		}
+
 		assert this.pool1.GetOutput(-1) == 0
 		assert this.pool1.GetOutput(1568) == 0
 	}
 
+	/**
+	 * Checks that the component pools every three by three output.
+	 */
 	@Test
 	fn PoolsEveryThreeByThreeOutput()
 	{
@@ -46,7 +64,9 @@ component RamPoolingTest
 				}
 			}
 		}
+
 		this.pool2.Compute()
+
 		for (var channel = 0; channel < 16; channel++) {
 			for (var row = 0; row < 4; row++) {
 				for (var column = 0; column < 4; column++) {
@@ -54,6 +74,7 @@ component RamPoolingTest
 				}
 			}
 		}
+
 		assert this.pool2.GetOutput(-1) == 0
 		assert this.pool2.GetOutput(256) == 0
 	}

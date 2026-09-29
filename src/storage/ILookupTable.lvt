@@ -1,7 +1,19 @@
 namespace Livt.ML.Storage
-/** Read-only nonnegative-indexed integer table supplied by the composition root. */
+
+/**
+ * Read-only nonnegative-indexed integer table supplied by the composition root.
+ */
 interface ILookupTable
 {
- fn Read(index: int) int
- fn Length() int
+	/**
+	 * Reads the raw integer at index. Callers must supply an index in 0..Length()-1 and keep
+	 * the provider stable during a calculation.
+	 */
+	fn Read(index: int) int
+
+	/**
+	 * Returns the number of addressable table entries; zero describes an unavailable or empty
+	 * table.
+	 */
+	fn Length() int
 }

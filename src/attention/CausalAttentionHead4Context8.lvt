@@ -58,9 +58,16 @@ component CausalAttentionHead4Context8
 	 */
 	public fn SetElement(token: int, element: int, query: int, key: int, value: int)
 	{
-		if (token < 0 || token >= CONTEXT_LENGTH) { return }
-		if (element < 0 || element >= HEAD_WIDTH) { return }
+		if (token < 0 || token >= CONTEXT_LENGTH) {
+			return
+		}
+
+		if (element < 0 || element >= HEAD_WIDTH) {
+			return
+		}
+
 		var address = token * HEAD_WIDTH + element
+
 		state {
 			queriesAddress = address as logic[5]
 			queriesWriteData = query as logic[32]
@@ -72,12 +79,15 @@ component CausalAttentionHead4Context8
 			valuesWriteData = value as logic[32]
 			valuesWriteEnable = true
 		}
+
 		state {
 			queriesWriteEnable = false
 			keysWriteEnable = false
 			valuesWriteEnable = false
 		}
-		state {}
+
+		state {
+		}
 	}
 
 	/**
@@ -87,43 +97,68 @@ component CausalAttentionHead4Context8
 	{
 		for (var token = 0; token < CONTEXT_LENGTH; token++) {
 			var scores: int[8]
+
 			for (var source = 0; source <= token; source++) {
 				var dot = 0
+
 				for (var element = 0; element < HEAD_WIDTH; element++) {
 					state {
 						queriesAddress = (token * HEAD_WIDTH + element) as logic[5]
 						keysAddress = (source * HEAD_WIDTH + element) as logic[5]
 					}
-					state {}
+
+					state {
+					}
+
 					var queryValue = queriesReadData as int
 					var keyValue = keysReadData as int
 					var dotProduct = queryValue * keyValue
-					state {}
+
+					state {
+					}
+
 					dot = dot + dotProduct
 				}
+
 				scores[source] = dot / 2
 			}
+
 			softmax.ComputeCount(scores, token + 1, scoreStep)
+
 			for (var element = 0; element < HEAD_WIDTH; element++) {
 				var weighted = 0
+
 				for (var source = 0; source <= token; source++) {
 					state {
 						valuesAddress = (source * HEAD_WIDTH + element) as logic[5]
 					}
-					state {}
+
+					state {
+					}
+
 					var value = valuesReadData as int
 					var weightedProduct = softmax.GetOutput(source) * value
-					state {}
+
+					state {
+					}
+
 					weighted = weighted + weightedProduct
 				}
+
 				var result = weighted / StableSoftmax8.OUTPUT_SCALE
+
 				state {
 					outputAddress = (token * HEAD_WIDTH + element) as logic[5]
 					outputWriteData = result as logic[32]
 					outputWriteEnable = true
 				}
-				state { outputWriteEnable = false }
-				state {}
+
+				state {
+					outputWriteEnable = false
+				}
+
+				state {
+				}
 			}
 		}
 	}
@@ -133,10 +168,21 @@ component CausalAttentionHead4Context8
 	 */
 	public fn GetOutput(token: int, element: int) int
 	{
-		if (token < 0 || token >= CONTEXT_LENGTH) { return 0 }
-		if (element < 0 || element >= HEAD_WIDTH) { return 0 }
-		state { outputAddress = (token * HEAD_WIDTH + element) as logic[5] }
-		state {}
+		if (token < 0 || token >= CONTEXT_LENGTH) {
+			return 0
+		}
+
+		if (element < 0 || element >= HEAD_WIDTH) {
+			return 0
+		}
+
+		state {
+			outputAddress = (token * HEAD_WIDTH + element) as logic[5]
+		}
+
+		state {
+		}
+
 		return outputReadData as int
 	}
 

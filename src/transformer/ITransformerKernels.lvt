@@ -1,14 +1,53 @@
 namespace Livt.ML.Transformer
-/** Serialized tensor operations. All storage addresses count int32 words, not bytes.
+
+/**
+ * Serialized tensor operations. All storage addresses count int32 words, not bytes.
  * False invalidates the request: destinations may contain partial results.
  * Providers and source spans must remain stable until an operation completes.
  */
-interface ITransformerKernels {
- fn Embed(tensor: int, tokens: int, target: int, length: int, width: int) bool
- fn Norm(tensor: int, source: int, target: int, length: int, width: int) bool
- fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool
- fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
-              length: int, heads: int, width: int) bool
- fn Gate(a: int, b: int, target: int, count: int) bool
- fn Add(a: int, b: int, target: int, count: int) bool
+interface ITransformerKernels
+{
+	/**
+	 * Copies length embedding rows selected by token IDs into a length-by-width target.
+	 * Addresses count int32 words; target must not overlap the token span. Returns true after
+	 * all writes; false may leave partial output.
+	 */
+	fn Embed(tensor: int, tokens: int, target: int, length: int, width: int) bool
+
+	/**
+	 * Applies affine RMS normalization to length vectors of width elements, using a 1-by-width
+	 * weight tensor. Source and target word spans must be disjoint. True means completed
+	 * writes; false may leave partial output.
+	 */
+	fn Norm(tensor: int, source: int, target: int, length: int, width: int) bool
+
+	/**
+	 * Projects length token-major vectors through a rows-by-columns weight tensor. Source and
+	 * target word spans must be disjoint. Returns true after all rows are written; false may
+	 * leave partial output.
+	 */
+	fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool
+
+	/**
+	 * Computes unscaled attention over token-major Q/K/V, with heads groups of width features
+	 * and nonzero key masks. Uses learned relative-position bias. Target must be disjoint from
+	 * Q/K/V and masks; at least one key must be enabled. True means completed writes; false
+	 * may leave partial output.
+	 */
+	fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+		length: int, heads: int, width: int) bool
+
+	/**
+	 * Writes GELU(a) multiplied by b for count fixed-point elements. All addresses count int32
+	 * words; target must be disjoint from both inputs. True means completed writes; false may
+	 * leave partial output.
+	 */
+	fn Gate(a: int, b: int, target: int, count: int) bool
+
+	/**
+	 * Writes count saturated elementwise sums. Target may equal either input base, but partial
+	 * overlap is rejected. Addresses count int32 words. True means completed writes; false may
+	 * leave partial output.
+	 */
+	fn Add(a: int, b: int, target: int, count: int) bool
 }

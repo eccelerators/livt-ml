@@ -9,7 +9,9 @@ namespace Livt.ML.Convolution
  */
 class QConv2DStreamBase
 {
-	/** Adds one centered uint8-by-int8 product to an accumulator. */
+	/**
+	 * Adds one centered uint8-by-int8 product to an accumulator.
+	 */
 	public static fn Accumulate[](
 		accumulator: int, activation: byte, weight: logic[8],
 		inputZeroPoint: int, weightZeroPoint: int) int

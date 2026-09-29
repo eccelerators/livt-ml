@@ -7,12 +7,15 @@ component KVCache
 {
 	// Maximum number of key/value pairs retained by the cache.
 	public const CACHE_SIZE: int = 4
+
 	// Number of integer elements in each key and value vector.
 	public const VECTOR_SIZE: int = 8
 
+	// Owned key/value cache and circular-buffer positions.
 	keys: int[4, 8]
 	vals: int[4, 8]
 
+	// Owned key/value cache and circular-buffer positions.
 	head: int
 	tail: int
 	size: int
@@ -43,8 +46,14 @@ component KVCache
 	 */
 	public fn GetKeyElement(slot: int, elem: int) int
 	{
-		if (slot < 0 || slot >= size) { return 0 }
-		if (elem < 0 || elem >= VECTOR_SIZE) { return 0 }
+		if (slot < 0 || slot >= size) {
+			return 0
+		}
+
+		if (elem < 0 || elem >= VECTOR_SIZE) {
+			return 0
+		}
+
 		var physSlot = (head + slot) % CACHE_SIZE
 
 		return keys[physSlot, elem]
@@ -55,8 +64,14 @@ component KVCache
 	 */
 	public fn GetValueElement(slot: int, elem: int) int
 	{
-		if (slot < 0 || slot >= size) { return 0 }
-		if (elem < 0 || elem >= VECTOR_SIZE) { return 0 }
+		if (slot < 0 || slot >= size) {
+			return 0
+		}
+
+		if (elem < 0 || elem >= VECTOR_SIZE) {
+			return 0
+		}
+
 		var physSlot = (head + slot) % CACHE_SIZE
 
 		return vals[physSlot, elem]

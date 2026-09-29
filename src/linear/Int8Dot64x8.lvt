@@ -9,40 +9,69 @@ namespace Livt.ML.Linear
  */
 component Int8Dot64x8
 {
+	// Request toggle paired with the native worker acknowledgment.
 	request: logic
+
+	// Owned arithmetic worker used by serialized operations.
 	primitive: Int8Dot64x8Primitive
 
-	new() { primitive = new Int8Dot64x8Primitive() }
+	/**
+	 * Owns one native eight-lane worker in the caller clock/reset context; serialize calls
+	 * sharing this instance.
+	 */
+	new()
+	{
+		primitive = new Int8Dot64x8Primitive()
+	}
 
+	/**
+	 * Submits the configured operation by toggling the request and waits for matching
+	 * acknowledgment. Operands must already be stable; reset cancels the pending operation.
+	 */
 	fn Submit(resetValue: logic, configureValue: logic)
 	{
 		state {
 			primitive.clear = resetValue
 			primitive.configure = configureValue
 		}
+
 		request = !request
 		primitive.request = request
-		while (primitive.acknowledge != request) { state {} }
+
+		while (primitive.acknowledge != request) {
+			state {
+			}
+		}
 	}
 
-	/** Clears the current dot-product accumulator. */
+	/**
+	 * Clears the current dot-product accumulator.
+	 */
 	public fn Reset()
 	{
 		Submit(0b1, 0b0)
 	}
 
-	/** Configures one signed 16-bit activation; invalid indexes are ignored. */
+	/**
+	 * Configures one signed 16-bit activation; invalid indexes are ignored.
+	 */
 	public fn SetActivation(index: int, value: int)
 	{
-		if (index < 0 || index >= 64) { return }
+		if (index < 0 || index >= 64) {
+			return
+		}
+
 		state {
 			primitive.index = index as logic[6]
 			primitive.value = value
 		}
+
 		Submit(0b0, 0b1)
 	}
 
-	/** Computes one 64-element dot product from a packed signed-int8 row. */
+	/**
+	 * Computes one 64-element dot product from a packed signed-int8 row.
+	 */
 	public fn Compute(weights: logic[512]) int
 	{
 		primitive.weights = weights

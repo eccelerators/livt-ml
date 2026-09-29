@@ -1,293 +1,661 @@
 namespace Livt.ML.Transformer
+
 using Livt.IO
 using Livt.ML.Storage
 using Livt.Math.Arithmetic
 using Livt.ML.Classifier
 
-/** Serial correctness implementation over external memory; one instance serves all layers.
+/**
+ * Serial correctness implementation over external memory; one instance serves all layers.
  * Unscaled attention, affine RMSNorm, separately rounded GELU/gate and residuals.
  * Does not allocate model-sized on-chip arrays. Only two MAX_TOKENS row buffers.
  */
 component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
- FRACTION: int, PROB_FRACTION: int, EPSILON: int,
- WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>> : IIncrementalTransformerKernels {
- static assert MAX_TOKENS > 0 && MAX_TOKENS <= 1024, "invalid token capacity"
- static assert MAX_WIDTH > 0 && MAX_WIDTH <= 65536, "invalid vector capacity"
- static assert BITS >= 2 && BITS <= 30, "invalid activation width"
- static assert FRACTION >= 0 && FRACTION < BITS, "invalid activation fraction"
- static assert PROB_FRACTION >= 0 && PROB_FRACTION < BITS - 1, "invalid probability width"
- static assert EPSILON > 0, "epsilon must be positive"
- static assert 2 * BITS + Bits.RequiredFor(MAX_WIDTH) <= 64, "unsafe accumulation"
- static assert 2 * BITS + Bits.RequiredFor(MAX_TOKENS) <= 64, "unsafe context accumulation"
- public const LIMIT: int = (1 << (BITS - 1)) - 1
- weights: WEIGHTS
- tables: TABLES
- memory: MEMORY
- math: WideArithmetic<BITS>
- argmax: StreamingArgMax
- scores: int[MAX_TOKENS]
- probabilities: int[MAX_TOKENS]
- new(weights: WEIGHTS, tables: TABLES, memory: MEMORY) {
-  this.weights = weights
-  this.tables = tables
-  this.memory = memory
-  math = new WideArithmetic<BITS>()
-  argmax = new StreamingArgMax()
- }
- fn ValueValid(x: int) bool { return x >= -LIMIT && x <= LIMIT }
- fn Span(base: int, count: int) bool {
-  if (base < 0 || count <= 0 || base > 2147483647 - count) { return false }
-  return memory.IsValidAddress(base) && memory.IsValidAddress(base + count - 1)
- }
- fn Overlap(a: int, na: int, b: int, nb: int) bool { return a < b + nb && b < a + na }
- fn Shape(length: int, width: int) bool {
-  return length > 0 && length <= MAX_TOKENS && width > 0 && width <= MAX_WIDTH
- }
- fn Round(value: logic[64], fraction: int) int {
-  return math.Clamp(math.DivideEven(value, (1 << fraction) as logic[64]))
- }
- override fn Embed(tensor: int, tokens: int, target: int, length: int, width: int) bool {
-  if (!Shape(length, width) || !Span(tokens, length) || !Span(target, length * width)) { return false }
-  if (Overlap(tokens, length, target, length * width) || !weights.Select(tensor)) { return false }
-  if (weights.Columns() != width) { return false }
-  for (var t = 0; t < length; t++) {
-   var id = memory.Read(tokens + t)
-   if (id < 0 || id >= weights.Rows()) { return false }
-  }
-  for (var t = 0; t < length; t++) {
-   var id = memory.Read(tokens + t)
-   for (var i = 0; i < width; i++) {
-    var x = weights.Read(id * width + i)
-    if (weights.Failed() || !ValueValid(x)) { return false }
-    memory.Write(target + t * width + i, x)
-   }
-  }
-  return true
- }
- override fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool {
-  if (!Shape(length, rows) || !Shape(length, columns)) { return false }
-  if (!Span(source, length * columns) || !Span(target, length * rows)) { return false }
-  if (Overlap(source, length * columns, target, length * rows) || !weights.Select(tensor)) { return false }
-  if (weights.Rows() != rows || weights.Columns() != columns) { return false }
-  for (var t = 0; t < length; t++) {
-   for (var r = 0; r < rows; r++) {
-    var sum: logic[64] = 0
-    for (var c = 0; c < columns; c++) {
-     var x = memory.Read(source + t * columns + c)
-     var w = weights.Read(r * columns + c)
-     if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) { return false }
-     sum = math.Add(sum, math.Multiply(x as logic[64], w as logic[64]))
-    }
-    memory.Write(target + t * rows + r, Round(sum, FRACTION))
-   }
-  }
-  return true
- }
- override fn Norm(tensor: int, source: int, target: int, length: int, width: int) bool {
-  if (!Shape(length, width) || !Span(source, length * width) || !Span(target, length * width)) { return false }
-  if (Overlap(source, length * width, target, length * width) || !weights.Select(tensor)) { return false }
-  if (weights.Rows() != 1 || weights.Columns() != width) { return false }
-  for (var t = 0; t < length; t++) {
-   var sum: logic[64] = 0
-   for (var i = 0; i < width; i++) {
-    var x = memory.Read(source + t * width + i)
-    if (!ValueValid(x)) { return false }
-    sum = math.Add(sum, math.Multiply(x as logic[64], x as logic[64]))
-   }
-   var mean = math.DivideFloor(sum, width as logic[64])
-   var root = math.Sqrt(math.Add(mean, EPSILON as logic[64]))
-   for (var i = 0; i < width; i++) {
-    var affineInput = memory.Read(source + t * width + i)
-    var gamma = weights.Read(i)
-    if (weights.Failed() || !ValueValid(gamma)) { return false }
-    var numerator = math.Multiply(affineInput as logic[64], (1 << FRACTION) as logic[64])
-    var normalized = math.Clamp(math.DivideEven(numerator, root))
-    var result = Round(math.Multiply(normalized as logic[64], gamma as logic[64]), FRACTION)
-    memory.Write(target + t * width + i, result)
-   }
-  }
-  return true
- }
- override fn Add(a: int, b: int, target: int, count: int) bool {
-  if (count <= 0 || count > MAX_TOKENS * MAX_WIDTH) { return false }
-  if (!Span(a, count) || !Span(b, count) || !Span(target, count)) { return false }
-  if ((a != target && Overlap(a, count, target, count)) ||
-      (b != target && Overlap(b, count, target, count))) { return false }
-  for (var i = 0; i < count; i++) {
-   var x = memory.Read(a + i)
-   var y = memory.Read(b + i)
-   if (!ValueValid(x) || !ValueValid(y)) { return false }
-   memory.Write(target + i, math.Clamp(math.Add(x as logic[64], y as logic[64])))
-  }
-  return true
- }
- override fn Gate(a: int, b: int, target: int, count: int) bool {
-  if (count <= 0 || count > MAX_TOKENS * MAX_WIDTH) { return false }
-  if (!Span(a, count) || !Span(b, count) || !Span(target, count)) { return false }
-  if (Overlap(a, count, target, count) || Overlap(b, count, target, count)) { return false }
-  for (var i = 0; i < count; i++) {
-   var x = memory.Read(a + i)
-   var y = memory.Read(b + i)
-   if (!ValueValid(x) || !ValueValid(y)) { return false }
-   var activated = tables.Gelu(x)
-   if (!ValueValid(activated)) { return false }
-   memory.Write(target + i, Round(math.Multiply(activated as logic[64], y as logic[64]), FRACTION))
-  }
-  return true
- }
- override fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
-                       length: int, heads: int, width: int) bool {
-  if (!Shape(length, width)) { return false }
-  if (heads <= 0 || heads > MAX_WIDTH / width) { return false }
-  var features = heads * width
-  var count = length * features
-  if (!Span(q, count) || !Span(k, count) || !Span(v, count) || !Span(target, count) || !Span(masks, length)) { return false }
-  if (Overlap(q, count, target, count) || Overlap(k, count, target, count) ||
-      Overlap(v, count, target, count) || Overlap(masks, length, target, count)) { return false }
-  if (!weights.Select(tensor) || weights.Columns() != heads) { return false }
-  var any = false
-  for (var i = 0; i < length; i++) { if (memory.Read(masks + i) != 0) { any = true } }
-  if (!any) { return false }
-  for (var h = 0; h < heads; h++) {
-   for (var t = 0; t < length; t++) {
-    var maximum = -LIMIT
-    for (var j = 0; j < length; j++) {
-     var sum: logic[64] = 0
-     for (var d = 0; d < width; d++) {
-      var x = memory.Read(q + t * features + h * width + d)
-      var y = memory.Read(k + j * features + h * width + d)
-      if (!ValueValid(x) || !ValueValid(y)) { return false }
-      sum = math.Add(sum, math.Multiply(x as logic[64], y as logic[64]))
-     }
-     var bucket = tables.Bucket(j - t)
-     if (bucket < 0 || bucket >= weights.Rows()) { return false }
-     var bias = weights.Read(bucket * heads + h)
-     if (weights.Failed() || !ValueValid(bias)) { return false }
-     var score = Round(sum, FRACTION)
-     score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
-     scores[j] = score
-     if (memory.Read(masks + j) != 0 && score > maximum) { maximum = score }
-    }
-    var denominator: logic[64] = 0
-    for (var j = 0; j < length; j++) {
-     var exponent = 0
-     if (memory.Read(masks + j) != 0) {
-      exponent = tables.Exponent(maximum - scores[j])
-      if (exponent < 0) { return false }
-     }
-     probabilities[j] = exponent
-     denominator = math.Add(denominator, exponent as logic[64])
-    }
-    if (denominator == 0) { return false }
-    for (var j = 0; j < length; j++) {
-     var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
-     probabilities[j] = math.DivideEven(numerator, denominator) as int
-     if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) { return false }
-    }
-    for (var d = 0; d < width; d++) {
-     var contextSum: logic[64] = 0
-     for (var j = 0; j < length; j++) {
-      var value = memory.Read(v + j * features + h * width + d)
-      if (!ValueValid(value)) { return false }
-      contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
-     }
-     memory.Write(target + t * features + h * width + d, Round(contextSum, PROB_FRACTION))
-    }
-   }
-  }
-  return true
- }
+	FRACTION: int, PROB_FRACTION: int, EPSILON: int,
+	WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>> : IIncrementalTransformerKernels
+{
+	static assert MAX_TOKENS > 0 && MAX_TOKENS <= 1024, "invalid token capacity"
 
- override fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
-                             length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool {
-  if (!Shape(length, width) || position < 0 || position >= MAX_TOKENS || tensor < -1) { return false }
-  if (heads <= 0 || heads > MAX_WIDTH / width) { return false }
-  var features = heads * width
-  var count = length * features
-  if (!Span(q, features) || !Span(k, count) || !Span(v, count) || !Span(target, features) || !Span(masks, length)) { return false }
-  if (Overlap(q, features, target, features) || Overlap(k, count, target, features) ||
-      Overlap(v, count, target, features) || Overlap(masks, length, target, features)) { return false }
-  if (tensor >= 0) {
-   if (!Span(buckets, 2 * MAX_TOKENS - 1)) { return false }
-   if (Overlap(buckets, 2 * MAX_TOKENS - 1, target, features)) { return false }
-   if (!weights.Select(tensor) || weights.Columns() != heads) { return false }
-  }
-  var any = false
-  for (var i = 0; i < length; i++) {
-   if ((!causal || i <= position) && memory.Read(masks + i) != 0) { any = true }
-  }
-  if (!any) { return false }
-  for (var h = 0; h < heads; h++) {
-   var maximum = -LIMIT
-   for (var j = 0; j < length; j++) {
-    scores[j] = 0
-    if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
-     var sum: logic[64] = 0
-     for (var d = 0; d < width; d++) {
-      var x = memory.Read(q + h * width + d)
-      var y = memory.Read(k + j * features + h * width + d)
-      if (!ValueValid(x) || !ValueValid(y)) { return false }
-      sum = math.Add(sum, math.Multiply(x as logic[64], y as logic[64]))
-     }
-     var score = Round(sum, FRACTION)
-     if (tensor >= 0) {
-      var bucket = memory.Read(buckets + j - position + MAX_TOKENS - 1)
-      if (bucket < 0 || bucket >= weights.Rows()) { return false }
-      var bias = weights.Read(bucket * heads + h)
-      if (weights.Failed() || !ValueValid(bias)) { return false }
-      score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
-     }
-     scores[j] = score
-     if (score > maximum) { maximum = score }
-    }
-   }
-   var denominator: logic[64] = 0
-   for (var j = 0; j < length; j++) {
-    var exponent = 0
-    if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
-     exponent = tables.Exponent(maximum - scores[j])
-     if (exponent < 0) { return false }
-    }
-    probabilities[j] = exponent
-    denominator = math.Add(denominator, exponent as logic[64])
-   }
-   if (denominator == 0) { return false }
-   for (var j = 0; j < length; j++) {
-    var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
-    probabilities[j] = math.DivideEven(numerator, denominator) as int
-    if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) { return false }
-   }
-   for (var d = 0; d < width; d++) {
-    var contextSum: logic[64] = 0
-    for (var j = 0; j < length; j++) {
-     if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
-      var value = memory.Read(v + j * features + h * width + d)
-      if (!ValueValid(value)) { return false }
-      contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
-     }
-    }
-    memory.Write(target + h * width + d, Round(contextSum, PROB_FRACTION))
-   }
-  }
-  return true
- }
- override fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int {
-  if (rows <= 0 || rows > 65536 || columns <= 0 || columns > MAX_WIDTH) { return -1 }
-  if (!Span(source, columns) || !weights.Select(tensor)) { return -1 }
-  if (weights.Rows() != rows || weights.Columns() != columns) { return -1 }
-  // No rows-by-columns int multiplication can overflow at these bounds.
-  if (rows > 2147483647 / columns) { return -1 }
-  argmax.Reset()
-  for (var row = 0; row < rows; row++) {
-   var sum: logic[64] = 0
-   for (var c = 0; c < columns; c++) {
-    var x = memory.Read(source + c)
-    var w = weights.Read(row * columns + c)
-    if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) { return -1 }
-    sum = math.Add(sum, math.Multiply(x as logic[64], w as logic[64]))
-   }
-   argmax.Accept(row, Round(sum, FRACTION))
-  }
-  return argmax.GetIndex()
- }
+	static assert MAX_WIDTH > 0 && MAX_WIDTH <= 65536, "invalid vector capacity"
+
+	static assert BITS >= 2 && BITS <= 30, "invalid activation width"
+
+	static assert FRACTION >= 0 && FRACTION < BITS, "invalid activation fraction"
+
+	static assert PROB_FRACTION >= 0 && PROB_FRACTION < BITS - 1, "invalid probability width"
+
+	static assert EPSILON > 0, "epsilon must be positive"
+
+	static assert 2 * BITS + Bits.RequiredFor(MAX_WIDTH) <= 64, "unsafe accumulation"
+
+	static assert 2 * BITS + Bits.RequiredFor(MAX_TOKENS) <= 64, "unsafe context accumulation"
+
+	// Symmetric raw activation magnitude allowed by the configured bit width.
+	public const LIMIT: int = (1 << (BITS - 1)) - 1
+
+	// Borrowed model providers and activation memory; callers serialize access.
+	weights: WEIGHTS
+	tables: TABLES
+	memory: MEMORY
+
+	// Owned arithmetic and streaming argmax workers.
+	math: WideArithmetic<BITS>
+	argmax: StreamingArgMax
+
+	// Per-query scratch rows; storage scales with MAX_TOKENS, not model size.
+	scores: int[MAX_TOKENS]
+	probabilities: int[MAX_TOKENS]
+
+	/**
+	 * Borrows weights, tables, and word-addressed memory for the instance lifetime. Owns one
+	 * arithmetic worker, an argmax reducer, and two MAX_TOKENS scratch rows; serialize all
+	 * operations.
+	 */
+	new(weights: WEIGHTS, tables: TABLES, memory: MEMORY)
+	{
+		this.weights = weights
+		this.tables = tables
+		this.memory = memory
+		math = new WideArithmetic<BITS>()
+		argmax = new StreamingArgMax()
+	}
+
+	/**
+	 * Checks the symmetric raw activation range -LIMIT..LIMIT.
+	 */
+	fn ValueValid(x: int) bool
+	{
+		return x >= -LIMIT && x <= LIMIT
+	}
+
+	/**
+	 * Checks a nonempty word span for address overflow and valid endpoints. Assumes the memory
+	 * exposes a contiguous valid range.
+	 */
+	fn Span(base: int, count: int) bool
+	{
+		if (base < 0 || count <= 0 || base > 2147483647 - count) {
+			return false
+		}
+
+		return memory.IsValidAddress(base) && memory.IsValidAddress(base + count - 1)
+	}
+
+	/**
+	 * Tests intersection of two half-open word spans whose endpoints were validated by Span.
+	 */
+	fn Overlap(a: int, na: int, b: int, nb: int) bool
+	{
+		return a < b + nb && b < a + na
+	}
+
+	/**
+	 * Checks positive token and vector dimensions against MAX_TOKENS and MAX_WIDTH.
+	 */
+	fn Shape(length: int, width: int) bool
+	{
+		return length > 0 && length <= MAX_TOKENS && width > 0 && width <= MAX_WIDTH
+	}
+
+	/**
+	 * Divides a signed wide intermediate by 2^fraction with ties to even, then clamps to the
+	 * symmetric activation range. Requires a supported nonnegative shift.
+	 */
+	fn Round(value: logic[64], fraction: int) int
+	{
+		return math.Clamp(math.DivideEven(value, (1 << fraction) as logic[64]))
+	}
+
+	/**
+	 * Copies length embedding rows selected by token IDs into a length-by-width target.
+	 * Addresses count int32 words; target must not overlap the token span. Returns true after
+	 * all writes; false may leave partial output.
+	 */
+	override fn Embed(tensor: int, tokens: int, target: int, length: int, width: int) bool
+	{
+		if (!Shape(length, width) || !Span(tokens, length) || !Span(target, length * width)) {
+			return false
+		}
+
+		if (Overlap(tokens, length, target, length * width) || !weights.Select(tensor)) {
+			return false
+		}
+
+		if (weights.Columns() != width) {
+			return false
+		}
+
+		for (var t = 0; t < length; t++) {
+			var id = memory.Read(tokens + t)
+
+			if (id < 0 || id >= weights.Rows()) {
+				return false
+			}
+		}
+
+		for (var t = 0; t < length; t++) {
+			var id = memory.Read(tokens + t)
+
+			for (var i = 0; i < width; i++) {
+				var x = weights.Read(id * width + i)
+
+				if (weights.Failed() || !ValueValid(x)) {
+					return false
+				}
+
+				memory.Write(target + t * width + i, x)
+			}
+		}
+
+		return true
+	}
+
+	/**
+	 * Projects length token-major vectors through a rows-by-columns weight tensor. Source and
+	 * target word spans must be disjoint. Returns true after all rows are written; false may
+	 * leave partial output.
+	 */
+	override fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool
+	{
+		if (!Shape(length, rows) || !Shape(length, columns)) {
+			return false
+		}
+
+		if (!Span(source, length * columns) || !Span(target, length * rows)) {
+			return false
+		}
+
+		if (Overlap(source, length * columns, target, length * rows) || !weights.Select(tensor)) {
+			return false
+		}
+
+		if (weights.Rows() != rows || weights.Columns() != columns) {
+			return false
+		}
+
+		for (var t = 0; t < length; t++) {
+			for (var r = 0; r < rows; r++) {
+				var sum: logic[64] = 0
+
+				for (var c = 0; c < columns; c++) {
+					var x = memory.Read(source + t * columns + c)
+					var w = weights.Read(r * columns + c)
+
+					if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) {
+						return false
+					}
+
+					sum = math.Add(sum, math.Multiply(x as logic[64], w as logic[64]))
+				}
+
+				memory.Write(target + t * rows + r, Round(sum, FRACTION))
+			}
+		}
+
+		return true
+	}
+
+	/**
+	 * Applies affine RMS normalization to length vectors of width elements, using a 1-by-width
+	 * weight tensor. Source and target word spans must be disjoint. True means completed
+	 * writes; false may leave partial output.
+	 */
+	override fn Norm(tensor: int, source: int, target: int, length: int, width: int) bool
+	{
+		if (!Shape(length, width) || !Span(source, length * width) || !Span(target, length * width)) {
+			return false
+		}
+
+		if (Overlap(source, length * width, target, length * width) || !weights.Select(tensor)) {
+			return false
+		}
+
+		if (weights.Rows() != 1 || weights.Columns() != width) {
+			return false
+		}
+
+		for (var t = 0; t < length; t++) {
+			var sum: logic[64] = 0
+
+			for (var i = 0; i < width; i++) {
+				var x = memory.Read(source + t * width + i)
+
+				if (!ValueValid(x)) {
+					return false
+				}
+
+				sum = math.Add(sum, math.Multiply(x as logic[64], x as logic[64]))
+			}
+
+			var mean = math.DivideFloor(sum, width as logic[64])
+			var root = math.Sqrt(math.Add(mean, EPSILON as logic[64]))
+
+			for (var i = 0; i < width; i++) {
+				var affineInput = memory.Read(source + t * width + i)
+				var gamma = weights.Read(i)
+
+				if (weights.Failed() || !ValueValid(gamma)) {
+					return false
+				}
+
+				var numerator = math.Multiply(affineInput as logic[64], (1 << FRACTION) as logic[64])
+				var normalized = math.Clamp(math.DivideEven(numerator, root))
+				var result = Round(math.Multiply(normalized as logic[64], gamma as logic[64]), FRACTION)
+				memory.Write(target + t * width + i, result)
+			}
+		}
+
+		return true
+	}
+
+	/**
+	 * Writes count saturated elementwise sums. Target may equal either input base, but partial
+	 * overlap is rejected. Addresses count int32 words. True means completed writes; false may
+	 * leave partial output.
+	 */
+	override fn Add(a: int, b: int, target: int, count: int) bool
+	{
+		if (count <= 0 || count > MAX_TOKENS * MAX_WIDTH) {
+			return false
+		}
+
+		if (!Span(a, count) || !Span(b, count) || !Span(target, count)) {
+			return false
+		}
+
+		if ((a != target && Overlap(a, count, target, count)) || (b != target && Overlap(b, count, target, count))) {
+			return false
+		}
+
+		for (var i = 0; i < count; i++) {
+			var x = memory.Read(a + i)
+			var y = memory.Read(b + i)
+
+			if (!ValueValid(x) || !ValueValid(y)) {
+				return false
+			}
+
+			memory.Write(target + i, math.Clamp(math.Add(x as logic[64], y as logic[64])))
+		}
+
+		return true
+	}
+
+	/**
+	 * Writes GELU(a) multiplied by b for count fixed-point elements. All addresses count int32
+	 * words; target must be disjoint from both inputs. True means completed writes; false may
+	 * leave partial output.
+	 */
+	override fn Gate(a: int, b: int, target: int, count: int) bool
+	{
+		if (count <= 0 || count > MAX_TOKENS * MAX_WIDTH) {
+			return false
+		}
+
+		if (!Span(a, count) || !Span(b, count) || !Span(target, count)) {
+			return false
+		}
+
+		if (Overlap(a, count, target, count) || Overlap(b, count, target, count)) {
+			return false
+		}
+
+		for (var i = 0; i < count; i++) {
+			var x = memory.Read(a + i)
+			var y = memory.Read(b + i)
+
+			if (!ValueValid(x) || !ValueValid(y)) {
+				return false
+			}
+
+			var activated = tables.Gelu(x)
+
+			if (!ValueValid(activated)) {
+				return false
+			}
+
+			memory.Write(target + i, Round(math.Multiply(activated as logic[64], y as logic[64]), FRACTION))
+		}
+
+		return true
+	}
+
+	/**
+	 * Computes unscaled attention over token-major Q/K/V, with heads groups of width features
+	 * and nonzero key masks. Uses learned relative-position bias. Target must be disjoint from
+	 * Q/K/V and masks; at least one key must be enabled. True means completed writes; false
+	 * may leave partial output.
+	 */
+	override fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+		length: int, heads: int, width: int) bool
+	{
+		if (!Shape(length, width)) {
+			return false
+		}
+
+		if (heads <= 0 || heads > MAX_WIDTH / width) {
+			return false
+		}
+
+		var features = heads * width
+		var count = length * features
+
+		if (!Span(q, count) || !Span(k, count) || !Span(v, count) || !Span(target, count) || !Span(masks, length)) {
+			return false
+		}
+
+		if (Overlap(q, count, target, count) ||
+			Overlap(k, count, target, count) ||
+			Overlap(v, count, target, count) ||
+			Overlap(masks, length, target, count)) {
+			return false
+		}
+
+		if (!weights.Select(tensor) || weights.Columns() != heads) {
+			return false
+		}
+
+		var any = false
+
+		for (var i = 0; i < length; i++) {
+			if (memory.Read(masks + i) != 0) {
+				any = true
+			}
+		}
+
+		if (!any) {
+			return false
+		}
+
+		for (var h = 0; h < heads; h++) {
+			for (var t = 0; t < length; t++) {
+				var maximum = -LIMIT
+
+				for (var j = 0; j < length; j++) {
+					var sum: logic[64] = 0
+
+					for (var d = 0; d < width; d++) {
+						var x = memory.Read(q + t * features + h * width + d)
+						var y = memory.Read(k + j * features + h * width + d)
+
+						if (!ValueValid(x) || !ValueValid(y)) {
+							return false
+						}
+
+						sum = math.Add(sum, math.Multiply(x as logic[64], y as logic[64]))
+					}
+
+					var bucket = tables.Bucket(j - t)
+
+					if (bucket < 0 || bucket >= weights.Rows()) {
+						return false
+					}
+
+					var bias = weights.Read(bucket * heads + h)
+
+					if (weights.Failed() || !ValueValid(bias)) {
+						return false
+					}
+
+					var score = Round(sum, FRACTION)
+					score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
+					scores[j] = score
+
+					if (memory.Read(masks + j) != 0 && score > maximum) {
+						maximum = score
+					}
+				}
+
+				var denominator: logic[64] = 0
+
+				for (var j = 0; j < length; j++) {
+					var exponent = 0
+
+					if (memory.Read(masks + j) != 0) {
+						exponent = tables.Exponent(maximum - scores[j])
+
+						if (exponent < 0) {
+							return false
+						}
+					}
+
+					probabilities[j] = exponent
+					denominator = math.Add(denominator, exponent as logic[64])
+				}
+
+				if (denominator == 0) {
+					return false
+				}
+
+				for (var j = 0; j < length; j++) {
+					var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
+					probabilities[j] = math.DivideEven(numerator, denominator) as int
+
+					if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) {
+						return false
+					}
+				}
+
+				for (var d = 0; d < width; d++) {
+					var contextSum: logic[64] = 0
+
+					for (var j = 0; j < length; j++) {
+						var value = memory.Read(v + j * features + h * width + d)
+
+						if (!ValueValid(value)) {
+							return false
+						}
+
+						contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
+					}
+
+					memory.Write(target + t * features + h * width + d, Round(contextSum, PROB_FRACTION))
+				}
+			}
+		}
+
+		return true
+	}
+
+	/**
+	 * Computes one query against length token-major cached K/V vectors. Width is features per
+	 * head; position is the query token position. Causal mode excludes keys beyond position;
+	 * zero masks exclude keys. Tensor -1 disables bias, otherwise buckets holds 2*MAX_TOKENS-1
+	 * entries centered on relative position zero. Target must not overlap any consumed input
+	 * span. True means completed writes; false may leave partial output.
+	 */
+	override fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
+		length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool
+	{
+		if (!Shape(length, width) || position < 0 || position >= MAX_TOKENS || tensor < -1) {
+			return false
+		}
+
+		if (heads <= 0 || heads > MAX_WIDTH / width) {
+			return false
+		}
+
+		var features = heads * width
+		var count = length * features
+
+		if (!Span(q, features) || !Span(k, count) || !Span(v, count) || !Span(target, features) || !Span(masks, length)) {
+			return false
+		}
+
+		if (Overlap(q, features, target, features) ||
+			Overlap(k, count, target, features) ||
+			Overlap(v, count, target, features) ||
+			Overlap(masks, length, target, features)) {
+			return false
+		}
+
+		if (tensor >= 0) {
+			if (!Span(buckets, 2 * MAX_TOKENS - 1)) {
+				return false
+			}
+
+			if (Overlap(buckets, 2 * MAX_TOKENS - 1, target, features)) {
+				return false
+			}
+
+			if (!weights.Select(tensor) || weights.Columns() != heads) {
+				return false
+			}
+		}
+
+		var any = false
+
+		for (var i = 0; i < length; i++) {
+			if ((!causal || i <= position) && memory.Read(masks + i) != 0) {
+				any = true
+			}
+		}
+
+		if (!any) {
+			return false
+		}
+
+		for (var h = 0; h < heads; h++) {
+			var maximum = -LIMIT
+
+			for (var j = 0; j < length; j++) {
+				scores[j] = 0
+
+				if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+					var sum: logic[64] = 0
+
+					for (var d = 0; d < width; d++) {
+						var x = memory.Read(q + h * width + d)
+						var y = memory.Read(k + j * features + h * width + d)
+
+						if (!ValueValid(x) || !ValueValid(y)) {
+							return false
+						}
+
+						sum = math.Add(sum, math.Multiply(x as logic[64], y as logic[64]))
+					}
+
+					var score = Round(sum, FRACTION)
+
+					if (tensor >= 0) {
+						var bucket = memory.Read(buckets + j - position + MAX_TOKENS - 1)
+
+						if (bucket < 0 || bucket >= weights.Rows()) {
+							return false
+						}
+
+						var bias = weights.Read(bucket * heads + h)
+
+						if (weights.Failed() || !ValueValid(bias)) {
+							return false
+						}
+
+						score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
+					}
+
+					scores[j] = score
+
+					if (score > maximum) {
+						maximum = score
+					}
+				}
+			}
+
+			var denominator: logic[64] = 0
+
+			for (var j = 0; j < length; j++) {
+				var exponent = 0
+
+				if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+					exponent = tables.Exponent(maximum - scores[j])
+
+					if (exponent < 0) {
+						return false
+					}
+				}
+
+				probabilities[j] = exponent
+				denominator = math.Add(denominator, exponent as logic[64])
+			}
+
+			if (denominator == 0) {
+				return false
+			}
+
+			for (var j = 0; j < length; j++) {
+				var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
+				probabilities[j] = math.DivideEven(numerator, denominator) as int
+
+				if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) {
+					return false
+				}
+			}
+
+			for (var d = 0; d < width; d++) {
+				var contextSum: logic[64] = 0
+
+				for (var j = 0; j < length; j++) {
+					if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
+						var value = memory.Read(v + j * features + h * width + d)
+
+						if (!ValueValid(value)) {
+							return false
+						}
+
+						contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
+					}
+				}
+
+				memory.Write(target + h * width + d, Round(contextSum, PROB_FRACTION))
+			}
+		}
+
+		return true
+	}
+
+	/**
+	 * Projects one columns-element vector through rows weight rows without storing logits.
+	 * Returns the lowest row index among equal rounded/clipped maxima, or -1 on invalid shape,
+	 * storage, or weights. Does not write activation memory.
+	 */
+	override fn ProjectArgMax(tensor: int, source: int, rows: int, columns: int) int
+	{
+		if (rows <= 0 || rows > 65536 || columns <= 0 || columns > MAX_WIDTH) {
+			return -1
+		}
+
+		if (!Span(source, columns) || !weights.Select(tensor)) {
+			return -1
+		}
+
+		if (weights.Rows() != rows || weights.Columns() != columns) {
+			return -1
+		}
+
+		// No rows-by-columns int multiplication can overflow at these bounds.
+		if (rows > 2147483647 / columns) {
+			return -1
+		}
+
+		argmax.Reset()
+
+		for (var row = 0; row < rows; row++) {
+			var sum: logic[64] = 0
+
+			for (var c = 0; c < columns; c++) {
+				var x = memory.Read(source + c)
+				var w = weights.Read(row * columns + c)
+
+				if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) {
+					return -1
+				}
+
+				sum = math.Add(sum, math.Multiply(x as logic[64], w as logic[64]))
+			}
+
+			argmax.Accept(row, Round(sum, FRACTION))
+		}
+
+		return argmax.GetIndex()
+	}
 }

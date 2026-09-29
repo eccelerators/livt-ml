@@ -1,44 +1,99 @@
 namespace Livt.ML.Linear
+
 using Livt.Math.Arithmetic
 
-/** Bounded serial dot product; products remain wide until the final rounding. */
+/**
+ * Bounded serial dot product; products remain wide until the final rounding.
+ */
 component FixedPointAccumulator<TERMS: int = 1024, BITS: int = 24, FRACTION: int = 12>
 {
- static assert TERMS > 0 && TERMS <= 65536, "term count must be 1..65536"
- static assert BITS >= 2 && BITS <= 30, "activation bits must be 2..30"
- static assert FRACTION >= 0 && FRACTION < BITS, "invalid fraction"
- static assert 2 * BITS + Bits.RequiredFor(TERMS) <= 64, "unsafe accumulator width"
- public const LIMIT: int = (1 << (BITS - 1)) - 1
- math: WideArithmetic<BITS>
- accumulator: logic[64]
- count: int
- failed: bool
- new() { math = new WideArithmetic<BITS>() }
- /** Begin a new reduction; reset also invalidates prior state. */
- public fn Begin() { accumulator = 0
- count = 0
- failed = false }
- /** Reject excessive terms or values outside the declared symmetric format. */
- public fn Accumulate(a: int, b: int)
- {
-  if (failed) { return }
-  if (count >= TERMS || a < -LIMIT || a > LIMIT || b < -LIMIT || b > LIMIT) {
-   failed = true
-   return
-  }
-  var product = math.Multiply(a as logic[64], b as logic[64])
-  accumulator = math.Add(accumulator, product)
-  failed = math.Failed()
-  count++
- }
- /** Finish a nonempty partial or full reduction; invalid results are zero. */
- public fn Finish() int
- {
-  if (failed || count == 0) { failed = true
-   return 0 }
-  var rounded = math.DivideEven(accumulator, (1 << FRACTION) as logic[64])
-  return math.Clamp(rounded)
- }
- public fn Failed() bool { return failed }
- public fn Raw() logic[64] { return accumulator }
+	static assert TERMS > 0 && TERMS <= 65536, "term count must be 1..65536"
+
+	static assert BITS >= 2 && BITS <= 30, "activation bits must be 2..30"
+
+	static assert FRACTION >= 0 && FRACTION < BITS, "invalid fraction"
+
+	static assert 2 * BITS + Bits.RequiredFor(TERMS) <= 64, "unsafe accumulator width"
+
+	// Symmetric raw activation magnitude allowed by the configured bit width.
+	public const LIMIT: int = (1 << (BITS - 1)) - 1
+
+	// Owned arithmetic worker used by serialized operations.
+	math: WideArithmetic<BITS>
+
+	// Reduction state and validity for the current operation.
+	accumulator: logic[64]
+	count: int
+	failed: bool
+
+	/**
+	 * Creates the owned wide arithmetic worker. Begin starts each reduction; serialize access
+	 * to this accumulator.
+	 */
+	new()
+	{
+		math = new WideArithmetic<BITS>()
+	}
+
+	/**
+	 * Begin a new reduction; reset also invalidates prior state.
+	 */
+	public fn Begin()
+	{
+		accumulator = 0
+		count = 0
+		failed = false
+	}
+
+	/**
+	 * Reject excessive terms or values outside the declared symmetric format.
+	 */
+	public fn Accumulate(a: int, b: int)
+	{
+		if (failed) {
+			return
+		}
+
+		if (count >= TERMS || a < -LIMIT || a > LIMIT || b < -LIMIT || b > LIMIT) {
+			failed = true
+			return
+		}
+
+		var product = math.Multiply(a as logic[64], b as logic[64])
+		accumulator = math.Add(accumulator, product)
+		failed = math.Failed()
+		count++
+	}
+
+	/**
+	 * Finish a nonempty partial or full reduction; invalid results are zero.
+	 */
+	public fn Finish() int
+	{
+		if (failed || count == 0) {
+			failed = true
+			return 0
+		}
+
+		var rounded = math.DivideEven(accumulator, (1 << FRACTION) as logic[64])
+		return math.Clamp(rounded)
+	}
+
+	/**
+	 * Reports a rejected term or invalid reduction; Begin clears this status for the next
+	 * reduction.
+	 */
+	public fn Failed() bool
+	{
+		return failed
+	}
+
+	/**
+	 * Returns the signed 64-bit accumulated product bits before rescaling. This observation
+	 * neither finishes nor clears the reduction.
+	 */
+	public fn Raw() logic[64]
+	{
+		return accumulator
+	}
 }

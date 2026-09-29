@@ -7,11 +7,17 @@ component MatrixVectorMultiplication
 {
 	// Number of output rows produced by Compute.
 	public const ROW_COUNT: int = 4
+
 	// Number of integer elements in each input and weight row.
 	public const VECTOR_SIZE: int = 8
 
+	// Configured coefficients and numeric scaling parameters.
 	rows: int[4, 8]
+
+	// Latest computed result, retained for the caller.
 	results: int[4]
+
+	// Owned arithmetic worker used by serialized operations.
 	dp: DotProduct
 
 	/**

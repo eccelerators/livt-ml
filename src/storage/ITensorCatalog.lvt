@@ -1,8 +1,30 @@
 namespace Livt.ML.Storage
-/** Immutable descriptors. Addresses are byte (packed codes) and word (scales). */
-interface ITensorCatalog {
- fn Rows(tensor: int) int
- fn Columns(tensor: int) int
- fn WeightByteAddress(tensor: int) int
- fn ScaleWordAddress(tensor: int) int
+
+/**
+ * Immutable descriptors. Addresses are byte (packed codes) and word (scales).
+ */
+interface ITensorCatalog
+{
+	/**
+	 * Returns the tensor row count. An unavailable tensor must not describe a positive valid
+	 * shape.
+	 */
+	fn Rows(tensor: int) int
+
+	/**
+	 * Returns the tensor column count. Consumers reject nonpositive dimensions.
+	 */
+	fn Columns(tensor: int) int
+
+	/**
+	 * Returns the byte address of the first packed low-nibble-first weight; consumers validate
+	 * the resulting span.
+	 */
+	fn WeightByteAddress(tensor: int) int
+
+	/**
+	 * Returns the int32 word address of the first group scale; consumers validate the
+	 * resulting span.
+	 */
+	fn ScaleWordAddress(tensor: int) int
 }

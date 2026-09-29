@@ -8,6 +8,7 @@ component VecAdd
 	// Number of integer elements accepted by Compute.
 	public const VECTOR_SIZE: int = 8
 
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**

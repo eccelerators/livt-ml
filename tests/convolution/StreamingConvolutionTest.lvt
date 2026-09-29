@@ -2,10 +2,13 @@ namespace Livt.ML.Tests.Convolution
 
 using Livt.ML.Convolution
 
-/** Verifies specialized stream framing, signed weights, padding, and reuse. */
+/**
+ * Verifies specialized stream framing, signed weights, padding, and reuse.
+ */
 @Test
 component StreamingConvolutionTest
 {
+	// Shared fixture instances, signals, and observation state.
 	c1WeightRequest: logic
 	c1WeightData: logic[8]
 	c1WeightAcknowledge: logic
@@ -28,6 +31,7 @@ component StreamingConvolutionTest
 	c1Configured: logic
 	c1FrameError: logic
 
+	// Shared fixture instances, signals, and observation state.
 	c2WeightRequest: logic
 	c2WeightData: logic[8]
 	c2WeightAcknowledge: logic
@@ -50,9 +54,14 @@ component StreamingConvolutionTest
 	c2Configured: logic
 	c2FrameError: logic
 
+	// Shared fixture instances, signals, and observation state.
 	conv1: QConv2D1x8Kernel5Image28Stream
 	conv2: QConv2D8x16Kernel5Image14Stream
 
+	/**
+	 * Creates the shared fixture instances (QConv2D1x8Kernel5Image28Stream,
+	 * QConv2D8x16Kernel5Image14Stream). Tests initialize the state required by their scenario.
+	 */
 	new()
 	{
 		this.conv1 = new QConv2D1x8Kernel5Image28Stream(
@@ -75,13 +84,25 @@ component StreamingConvolutionTest
 			this.c2Configured, this.c2FrameError)
 	}
 
+	/**
+	 * Submits one first convolution weight and waits for the matching toggle acknowledgment
+	 * before returning.
+	 */
 	fn SendC1Weight(value: int)
 	{
 		c1WeightData = value as logic[8]
 		c1WeightRequest = !c1WeightRequest
-		while (c1WeightAcknowledge != c1WeightRequest) { state {} }
+
+		while (c1WeightAcknowledge != c1WeightRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one first convolution identity quantization parameters and waits for the
+	 * matching toggle acknowledgment before returning.
+	 */
 	fn SendC1Parameter(bias: int, outputZeroPoint: int)
 	{
 		c1ParameterBias = bias
@@ -91,24 +112,48 @@ component StreamingConvolutionTest
 		c1ParameterWeightZeroPoint = 0
 		c1ParameterOutputZeroPoint = outputZeroPoint
 		c1ParameterRequest = !c1ParameterRequest
-		while (c1ParameterAcknowledge != c1ParameterRequest) { state {} }
+
+		while (c1ParameterAcknowledge != c1ParameterRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one first convolution input and waits for the matching toggle acknowledgment
+	 * before returning.
+	 */
 	fn SendC1Input(value: byte, last: logic)
 	{
 		c1InputData = value
 		c1InputLast = last
 		c1InputRequest = !c1InputRequest
-		while (c1InputAcknowledge != c1InputRequest) { state {} }
+
+		while (c1InputAcknowledge != c1InputRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one second convolution weight and waits for the matching toggle acknowledgment
+	 * before returning.
+	 */
 	fn SendC2Weight(value: int)
 	{
 		c2WeightData = value as logic[8]
 		c2WeightRequest = !c2WeightRequest
-		while (c2WeightAcknowledge != c2WeightRequest) { state {} }
+
+		while (c2WeightAcknowledge != c2WeightRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one second convolution identity quantization parameters and waits for the
+	 * matching toggle acknowledgment before returning.
+	 */
 	fn SendC2Parameter()
 	{
 		c2ParameterBias = 0
@@ -118,75 +163,164 @@ component StreamingConvolutionTest
 		c2ParameterWeightZeroPoint = 0
 		c2ParameterOutputZeroPoint = 0
 		c2ParameterRequest = !c2ParameterRequest
-		while (c2ParameterAcknowledge != c2ParameterRequest) { state {} }
+
+		while (c2ParameterAcknowledge != c2ParameterRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Submits one second convolution input and waits for the matching toggle acknowledgment
+	 * before returning.
+	 */
 	fn SendC2Input(value: byte, last: logic)
 	{
 		c2InputData = value
 		c2InputLast = last
 		c2InputRequest = !c2InputRequest
-		while (c2InputAcknowledge != c2InputRequest) { state {} }
+
+		while (c2InputAcknowledge != c2InputRequest) {
+			state {
+			}
+		}
 	}
 
+	/**
+	 * Checks that Compute s first specialized shape.
+	 */
 	@Test
 	fn ComputesFirstSpecializedShape()
 	{
 		for (var channel = 0; channel < 8; channel++) {
 			for (var index = 0; index < 25; index++) {
 				var weight = 0
-				if (channel == 0 && index == 12) { weight = 2 }
+
+				if (channel == 0 && index == 12) {
+					weight = 2
+				}
+
 				this.SendC1Weight(weight)
 			}
-			if (channel == 0) { this.SendC1Parameter(-1, 7) }
-			else { this.SendC1Parameter(0, 0) }
+
+			if (channel == 0) {
+				this.SendC1Parameter(-1, 7)
+			} else {
+				this.SendC1Parameter(0, 0)
+			}
 		}
-		while (c1Configured != 0b1) { state {} }
+
+		while (c1Configured != 0b1) {
+			state {
+			}
+		}
+
 		for (var index = 0; index < 784; index++) {
 			var value = 0x00
-			if (index == 0) { value = 0x03 }
+
+			if (index == 0) {
+				value = 0x03
+			}
+
 			var last = 0b0
-			if (index == 783) { last = 0b1 }
+
+			if (index == 783) {
+				last = 0b1
+			}
+
 			this.SendC1Input(value, last)
 		}
+
 		for (var index = 0; index < 6272; index++) {
-			while (c1OutputRequest == c1OutputAcknowledge) { state {} }
-			if (index == 0) { assert c1OutputData == 0x0c }
-			if (index == 1) { assert c1OutputData == 0x06 }
-			if (index == 6271) { assert c1OutputLast == 0b1 }
-			else { assert c1OutputLast == 0b0 }
+			while (c1OutputRequest == c1OutputAcknowledge) {
+				state {
+				}
+			}
+
+			if (index == 0) {
+				assert c1OutputData == 0x0c
+			}
+
+			if (index == 1) {
+				assert c1OutputData == 0x06
+			}
+
+			if (index == 6271) {
+				assert c1OutputLast == 0b1
+			} else {
+				assert c1OutputLast == 0b0
+			}
+
 			c1OutputAcknowledge = c1OutputRequest
 		}
+
 		assert c1FrameError == 0b0
 	}
 
+	/**
+	 * Checks that Compute s second specialized shape.
+	 */
 	@Test
 	fn ComputesSecondSpecializedShape()
 	{
 		for (var channel = 0; channel < 16; channel++) {
 			for (var index = 0; index < 200; index++) {
 				var weight = 0
-				if (channel == 0 && index == 12) { weight = 2 }
+
+				if (channel == 0 && index == 12) {
+					weight = 2
+				}
+
 				this.SendC2Weight(weight)
 			}
+
 			this.SendC2Parameter()
 		}
-		while (c2Configured != 0b1) { state {} }
+
+		while (c2Configured != 0b1) {
+			state {
+			}
+		}
+
 		for (var index = 0; index < 1568; index++) {
 			var value = 0x00
-			if (index == 0) { value = 0x03 }
+
+			if (index == 0) {
+				value = 0x03
+			}
+
 			var last = 0b0
-			if (index == 1567) { last = 0b1 }
+
+			if (index == 1567) {
+				last = 0b1
+			}
+
 			this.SendC2Input(value, last)
 		}
+
 		for (var index = 0; index < 3136; index++) {
-			while (c2OutputRequest == c2OutputAcknowledge) { state {} }
-			if (index == 0) { assert c2OutputData == 0x06 }
-			if (index > 0) { assert c2OutputData == 0x00 }
-			if (index == 3135) { assert c2OutputLast == 0b1 }
-			else { assert c2OutputLast == 0b0 }
+			while (c2OutputRequest == c2OutputAcknowledge) {
+				state {
+				}
+			}
+
+			if (index == 0) {
+				assert c2OutputData == 0x06
+			}
+
+			if (index > 0) {
+				assert c2OutputData == 0x00
+			}
+
+			if (index == 3135) {
+				assert c2OutputLast == 0b1
+			} else {
+				assert c2OutputLast == 0b0
+			}
+
 			c2OutputAcknowledge = c2OutputRequest
 		}
+
 		assert c2FrameError == 0b0
 	}
 }

@@ -8,6 +8,7 @@ using Livt.ML.Classifier
 @Test
 component ArgMax10Test
 {
+	// Shared fixture instances, signals, and observation state.
 	argmax: ArgMax10
 
 	/**

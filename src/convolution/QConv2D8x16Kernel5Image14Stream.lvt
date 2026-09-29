@@ -6,14 +6,17 @@ using Livt.ML.Numeric
  * Resource-shared quantized SAME convolution for eight 14x14 uint8 planes and
  * sixteen output channels with 5x5 signed-int8 kernels.
  *
-	 * The interface matches QConv2D1x8Kernel5Image28Stream. One output pixel is
-	 * evaluated by a parallel eight-channel 5x5 specialization.
+ * The interface matches QConv2D1x8Kernel5Image28Stream. One output pixel is
+ * evaluated by a parallel eight-channel 5x5 specialization.
  */
 component QConv2D8x16Kernel5Image14Stream
 {
+	// Weight-loading payload and toggle acknowledgment.
 	weightRequest: logic
 	weightData: logic[8]
 	weightAcknowledge: logic
+
+	// Parameter-loading payload and toggle acknowledgment.
 	parameterRequest: logic
 	parameterBias: int
 	parameterMultiplier: int
@@ -22,16 +25,24 @@ component QConv2D8x16Kernel5Image14Stream
 	parameterWeightZeroPoint: int
 	parameterOutputZeroPoint: int
 	parameterAcknowledge: logic
+
+	// Input payload and toggle acknowledgment from the producer.
 	inputRequest: logic
 	inputData: byte
 	inputLast: logic
 	inputAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: byte
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Configuration readiness and frame-boundary error status.
 	configured: logic
 	frameError: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	weightSeen: logic
 	parameterSeen: logic
 	inputSeen: logic
@@ -39,6 +50,8 @@ component QConv2D8x16Kernel5Image14Stream
 	parametersLoaded: bool
 	pending: bool
 	frameLoaded: bool
+
+	// Current position and bounds within the configured frame.
 	weightChannel: int
 	weightIndex: int
 	parameterChannel: int
@@ -46,7 +59,11 @@ component QConv2D8x16Kernel5Image14Stream
 	outputChannel: int
 	outputRow: int
 	outputColumn: int
+
+	// Input tensor storage; populate the required span before computation.
 	inputs: byte[1568]
+
+	// Configured coefficients and numeric scaling parameters.
 	weights: logic[16, 200, 8]
 	biases: int[16]
 	multipliers: int[16]
@@ -55,6 +72,11 @@ component QConv2D8x16Kernel5Image14Stream
 	weightZeroPoints: int[16]
 	outputZeroPoints: int[16]
 
+	/**
+	 * Binds configuration, input, and output toggle-handshake ports. Callers hold each payload
+	 * until its acknowledgment matches the request; configure the worker before sending
+	 * frames.
+	 */
 	new(weightRequest: in logic, weightData: in logic[8], weightAcknowledge: out logic,
 		parameterRequest: in logic, parameterBias: in int,
 		parameterMultiplier: in int, parameterDivisor: in int,
@@ -88,18 +110,22 @@ component QConv2D8x16Kernel5Image14Stream
 		frameError = this.frameError
 	}
 
-	/** Parallel SAME-padded eight-channel 5x5 accumulator for this shape. */
+	/**
+	 * Parallel SAME-padded eight-channel 5x5 accumulator for this shape.
+	 */
 	public static fn ComputeAccumulator[](
 		inputs: in byte[1568], weights: in logic[16, 200, 8],
 		bias: int, inputZeroPoint: int, weightZeroPoint: int,
 		outputChannel: int, outputRow: int, outputColumn: int) int
 	{
 		var accumulator = bias
+
 		for (var inputChannel = 0; inputChannel < 8; inputChannel++) {
 			for (var kernelRow = 0; kernelRow < 5; kernelRow++) {
 				for (var kernelColumn = 0; kernelColumn < 5; kernelColumn++) {
 					var inputRow = outputRow + kernelRow - 2
 					var inputColumn = outputColumn + kernelColumn - 2
+
 					if (inputRow >= 0 && inputRow < 14 && inputColumn >= 0 && inputColumn < 14) {
 						var weightIndex = inputChannel * 25 + kernelRow * 5 + kernelColumn
 						accumulator = QConv2DStreamBase.Accumulate(accumulator,
@@ -109,25 +135,42 @@ component QConv2D8x16Kernel5Image14Stream
 				}
 			}
 		}
+
 		return accumulator
 	}
 
+	/**
+	 * Accepts configuration and frame values through the toggle handshakes, evaluates the
+	 * configured operator, and holds each output until acknowledged. All connected endpoints
+	 * must share compatible clock/reset sequencing.
+	 */
 	process Main()
 	{
 		weightAcknowledge = weightSeen
 		parameterAcknowledge = parameterSeen
 		inputAcknowledge = inputSeen
 		configured = 0b0
-		if (weightsLoaded && parametersLoaded) { configured = 0b1 }
+
+		if (weightsLoaded && parametersLoaded) {
+			configured = 0b1
+		}
 
 		if (!frameLoaded && !pending && weightRequest != weightSeen) {
 			weights[weightChannel, weightIndex] = weightData
 			weightSeen = weightRequest
+
 			if (weightIndex == 199) {
 				weightIndex = 0
-				if (weightChannel == 15) { weightChannel = 0; weightsLoaded = true }
-				else { weightChannel++ }
-			} else { weightIndex++ }
+
+				if (weightChannel == 15) {
+					weightChannel = 0;
+					weightsLoaded = true
+				} else {
+					weightChannel++
+				}
+			} else {
+				weightIndex++
+			}
 		}
 
 		if (!frameLoaded && !pending && parameterRequest != parameterSeen) {
@@ -138,48 +181,82 @@ component QConv2D8x16Kernel5Image14Stream
 			weightZeroPoints[parameterChannel] = parameterWeightZeroPoint
 			outputZeroPoints[parameterChannel] = parameterOutputZeroPoint
 			parameterSeen = parameterRequest
-			if (parameterChannel == 15) { parameterChannel = 0; parametersLoaded = true }
-			else { parameterChannel++ }
+
+			if (parameterChannel == 15) {
+				parameterChannel = 0;
+				parametersLoaded = true
+			} else {
+				parameterChannel++
+			}
 		}
 
 		if (!frameLoaded && weightsLoaded && parametersLoaded && inputRequest != inputSeen) {
-			if (inputIndex == 0) { frameError = 0b0 }
-			if (inputLast == 0b1 && inputIndex != 1567) { frameError = 0b1 }
-			if (inputIndex == 1567 && inputLast != 0b1) { frameError = 0b1 }
+			if (inputIndex == 0) {
+				frameError = 0b0
+			}
+
+			if (inputLast == 0b1 && inputIndex != 1567) {
+				frameError = 0b1
+			}
+
+			if (inputIndex == 1567 && inputLast != 0b1) {
+				frameError = 0b1
+			}
+
 			inputs[inputIndex] = inputData
 			inputSeen = inputRequest
+
 			if (inputIndex == 1567) {
 				inputIndex = 0
 				frameLoaded = true
 				outputChannel = 0
 				outputRow = 0
 				outputColumn = 0
-			} else { inputIndex++ }
+			} else {
+				inputIndex++
+			}
 		}
 
 		if (pending) {
-			if (outputAcknowledge == outputRequest) { pending = false }
+			if (outputAcknowledge == outputRequest) {
+				pending = false
+			}
 		} else {
 			if (frameLoaded) {
 				var candidate = QConv2D8x16Kernel5Image14Stream.ComputeAccumulator(
 					inputs, weights, biases[outputChannel], inputZeroPoints[outputChannel],
 					weightZeroPoints[outputChannel], outputChannel, outputRow, outputColumn)
 				var finished = RequantizeUInt8.ApplyRational(candidate,
-						multipliers[outputChannel], divisors[outputChannel],
-						outputZeroPoints[outputChannel])
+					multipliers[outputChannel], divisors[outputChannel],
+					outputZeroPoints[outputChannel])
 				outputData = finished as byte
 				outputLast = 0b0
-				if (outputChannel == 15 && outputRow == 13 && outputColumn == 13) { outputLast = 0b1 }
+
+				if (outputChannel == 15 && outputRow == 13 && outputColumn == 13) {
+					outputLast = 0b1
+				}
+
 				outputRequest = !outputRequest
 				pending = true
+
 				if (outputColumn == 13) {
 					outputColumn = 0
+
 					if (outputRow == 13) {
 						outputRow = 0
-						if (outputChannel == 15) { outputChannel = 0; frameLoaded = false }
-						else { outputChannel++ }
-					} else { outputRow++ }
-				} else { outputColumn++ }
+
+						if (outputChannel == 15) {
+							outputChannel = 0;
+							frameLoaded = false
+						} else {
+							outputChannel++
+						}
+					} else {
+						outputRow++
+					}
+				} else {
+					outputColumn++
+				}
 			}
 		}
 	}

@@ -2,16 +2,28 @@ namespace Livt.ML.Tests.Attention
 
 using Livt.ML.Attention
 
+/**
+ * Exercises KVCache with a shared fixture instance. Each scenario establishes the inputs
+ * and state it needs.
+ */
 @Test
 component KVCacheTest
 {
+	// Shared fixture instances, signals, and observation state.
 	cache: KVCache
 
+	/**
+	 * Creates the shared fixture instances (KVCache). Tests initialize the state required by
+	 * their scenario.
+	 */
 	new()
 	{
 		cache = new KVCache()
 	}
 
+	/**
+	 * Checks the new cache is empty case.
+	 */
 	@Test
 	fn NewCacheIsEmpty()
 	{
@@ -20,6 +32,9 @@ component KVCacheTest
 		assert cache.GetSize() == 0
 	}
 
+	/**
+	 * Checks that Write s single pair.
+	 */
 	@Test
 	fn WritesSinglePair()
 	{
@@ -42,6 +57,9 @@ component KVCacheTest
 		assert cache.GetValueElement(0, 8) == 0
 	}
 
+	/**
+	 * Checks the evicts oldest pair when full case.
+	 */
 	@Test
 	fn EvictsOldestPairWhenFull()
 	{
@@ -92,6 +110,9 @@ component KVCacheTest
 		assert cache.GetValueElement(3, 7) == 550
 	}
 
+	/**
+	 * Checks that Clear s cache.
+	 */
 	@Test
 	fn ClearsCache()
 	{

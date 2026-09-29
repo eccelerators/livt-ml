@@ -1,58 +1,103 @@
 namespace Livt.ML.Linear
+
 using Livt.ML.Numeric
 using Livt.ML.Storage
 using Livt.IO
-/** Row-major packed signed INT4 projection with flattened scale groups and injected storage. */
+
+/**
+ * Row-major packed signed INT4 projection with flattened scale groups and injected storage.
+ */
 component QuantizedMatrix<ROWS: int, COLUMNS: int, GROUP_SIZE: int,
- BITS: int, FRACTION: int, SCALE_FRACTION: int, WEIGHTS: IQuantizedWeights, INPUT: IRam<int>>
+	BITS: int, FRACTION: int, SCALE_FRACTION: int, WEIGHTS: IQuantizedWeights, INPUT: IRam<int>>
 {
- static assert ROWS > 0 && ROWS <= 65536, "invalid row count"
- static assert COLUMNS > 0 && COLUMNS <= 65536, "invalid column count"
- static assert ROWS <= 2147483647 / COLUMNS, "matrix index overflows int"
- static assert GROUP_SIZE > 0 && GROUP_SIZE <= 65536, "invalid group size"
- weights: WEIGHTS
- input: INPUT
- arithmetic: FixedPointMath<BITS, FRACTION, SCALE_FRACTION>
- accumulator: FixedPointAccumulator<COLUMNS, BITS, FRACTION>
- failed: bool
- new(weights: WEIGHTS, input: INPUT)
- {
-  this.weights = weights
-  this.input = input
-  arithmetic = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
-  accumulator = new FixedPointAccumulator<COLUMNS, BITS, FRACTION>()
- }
- /** Compute one output row; storage remains external and no weight ROM is elaborated. */
- public fn Compute(row: int, inputBase: int) int
- {
-  failed = row < 0 || row >= ROWS || inputBase < 0 || inputBase > 2147483647 - COLUMNS
-  if (failed) { return 0 }
-  if (weights.WeightCount() < ROWS * COLUMNS ||
-      weights.ScaleCount() < ((ROWS * COLUMNS - 1) / GROUP_SIZE) + 1 ||
-      !input.IsValidAddress(inputBase) || !input.IsValidAddress(inputBase + COLUMNS - 1)) {
-   failed = true
-   return 0
-  }
-  accumulator.Begin()
-  var previousGroup = -1
-  var scale: logic[32] = 0
-  for (var column = 0; column < COLUMNS; column++) {
-   var index = row * COLUMNS + column
-   var group = index / GROUP_SIZE
-   if (group != previousGroup) {
-    scale = weights.ReadScale(group)
-    previousGroup = group
-   }
-   var packed = weights.ReadPacked(index / 2)
-   var code = arithmetic.SignedNibble(packed, index % 2 != 0)
-   var weight = arithmetic.Weight(code, scale)
-   if (arithmetic.Failed()) { failed = true
-    return 0 }
-   accumulator.Accumulate(input.Read(inputBase + column), weight)
-  }
-  var result = accumulator.Finish()
-  failed = accumulator.Failed()
-  return result
- }
- public fn Failed() bool { return failed }
+	static assert ROWS > 0 && ROWS <= 65536, "invalid row count"
+
+	static assert COLUMNS > 0 && COLUMNS <= 65536, "invalid column count"
+
+	static assert ROWS <= 2147483647 / COLUMNS, "matrix index overflows int"
+
+	static assert GROUP_SIZE > 0 && GROUP_SIZE <= 65536, "invalid group size"
+
+	// Borrowed packed coefficients and activation memory; keep stable during Compute.
+	weights: WEIGHTS
+	input: INPUT
+
+	// Owned arithmetic worker used by serialized operations.
+	arithmetic: FixedPointMath<BITS, FRACTION, SCALE_FRACTION>
+
+	// Owned bounded dot-product reducer.
+	accumulator: FixedPointAccumulator<COLUMNS, BITS, FRACTION>
+
+	// Validity of the latest output-row computation.
+	failed: bool
+
+	/**
+	 * Borrows packed weights and owns fixed-point reconstruction and accumulation helpers.
+	 * Keep weights and scales stable throughout each computation.
+	 */
+	new(weights: WEIGHTS, input: INPUT)
+	{
+		this.weights = weights
+		this.input = input
+		arithmetic = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
+		accumulator = new FixedPointAccumulator<COLUMNS, BITS, FRACTION>()
+	}
+
+	/**
+	 * Compute one output row; storage remains external and no weight ROM is elaborated.
+	 */
+	public fn Compute(row: int, inputBase: int) int
+	{
+		failed = row < 0 || row >= ROWS || inputBase < 0 || inputBase > 2147483647 - COLUMNS
+
+		if (failed) {
+			return 0
+		}
+
+		if (weights.WeightCount() < ROWS * COLUMNS ||
+			weights.ScaleCount() < ((ROWS * COLUMNS - 1) / GROUP_SIZE) + 1 ||
+			!input.IsValidAddress(inputBase) ||
+			!input.IsValidAddress(inputBase + COLUMNS - 1)) {
+			failed = true
+			return 0
+		}
+
+		accumulator.Begin()
+		var previousGroup = -1
+		var scale: logic[32] = 0
+
+		for (var column = 0; column < COLUMNS; column++) {
+			var index = row * COLUMNS + column
+			var group = index / GROUP_SIZE
+
+			if (group != previousGroup) {
+				scale = weights.ReadScale(group)
+				previousGroup = group
+			}
+
+			var packed = weights.ReadPacked(index / 2)
+			var code = arithmetic.SignedNibble(packed, index % 2 != 0)
+			var weight = arithmetic.Weight(code, scale)
+
+			if (arithmetic.Failed()) {
+				failed = true
+				return 0
+			}
+
+			accumulator.Accumulate(input.Read(inputBase + column), weight)
+		}
+
+		var result = accumulator.Finish()
+		failed = accumulator.Failed()
+		return result
+	}
+
+	/**
+	 * Reports whether the latest computation rejected its shape, storage, weights, or
+	 * arithmetic inputs; a failed result must be discarded.
+	 */
+	public fn Failed() bool
+	{
+		return failed
+	}
 }

@@ -19,9 +19,12 @@ using Livt.ML.Numeric
  */
 component QLinearMatMul256x10Stream
 {
+	// Weight-loading payload and toggle acknowledgment.
 	weightRequest: logic
 	weightData: logic[8]
 	weightAcknowledge: logic
+
+	// Parameter-loading payload and toggle acknowledgment.
 	scaleRequest: logic
 	scaleMultiplier: int
 	scaleDivisor: int
@@ -29,17 +32,25 @@ component QLinearMatMul256x10Stream
 	scaleWeightZeroPoint: int
 	scaleOutputZeroPoint: int
 	scaleAcknowledge: logic
+
+	// Input payload and toggle acknowledgment from the producer.
 	inputRequest: logic
 	inputData: byte
 	inputLast: logic
 	inputAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: byte
 	outputAccumulator: int
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Configuration readiness and frame-boundary error status.
 	configured: logic
 	frameError: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	weightSeen: logic
 	scaleSeen: logic
 	inputSeen: logic
@@ -47,19 +58,30 @@ component QLinearMatMul256x10Stream
 	emitting: bool
 	weightsLoaded: bool
 	scalesLoaded: bool
+
+	// Current position and bounds within the configured frame.
 	weightColumn: int
 	weightRow: int
 	scaleColumn: int
 	inputIndex: int
 	outputColumn: int
+
+	// Configured coefficients and numeric scaling parameters.
 	weights: logic[10, 256, 8]
 	multipliers: int[10]
 	divisors: int[10]
 	inputZeroPoint: int
 	weightZeroPoints: int[10]
 	outputZeroPoints: int[10]
+
+	// Wide output accumulators before final output conversion.
 	accumulators: int[10]
 
+	/**
+	 * Binds configuration, input, and output toggle-handshake ports. Callers hold each payload
+	 * until its acknowledgment matches the request; configure the worker before sending
+	 * frames.
+	 */
 	new(weightRequest: in logic, weightData: in logic[8], weightAcknowledge: out logic,
 		scaleRequest: in logic, scaleMultiplier: in int, scaleDivisor: in int,
 		scaleInputZeroPoint: in int, scaleWeightZeroPoint: in int,
@@ -92,24 +114,38 @@ component QLinearMatMul256x10Stream
 		frameError = this.frameError
 	}
 
+	/**
+	 * Accepts configuration and frame values through the toggle handshakes, evaluates the
+	 * configured operator, and holds each output until acknowledged. All connected endpoints
+	 * must share compatible clock/reset sequencing.
+	 */
 	process Main()
 	{
 		weightAcknowledge = weightSeen
 		scaleAcknowledge = scaleSeen
 		inputAcknowledge = inputSeen
 		configured = 0b0
-		if (weightsLoaded && scalesLoaded) { configured = 0b1 }
+
+		if (weightsLoaded && scalesLoaded) {
+			configured = 0b1
+		}
 
 		if (!emitting && !pending && weightRequest != weightSeen) {
 			weights[weightColumn, weightRow] = weightData
 			weightSeen = weightRequest
+
 			if (weightRow == 255) {
 				weightRow = 0
+
 				if (weightColumn == 9) {
 					weightColumn = 0
 					weightsLoaded = true
-				} else { weightColumn++ }
-			} else { weightRow++ }
+				} else {
+					weightColumn++
+				}
+			} else {
+				weightRow++
+			}
 		}
 
 		if (!emitting && !pending && scaleRequest != scaleSeen) {
@@ -119,14 +155,19 @@ component QLinearMatMul256x10Stream
 			weightZeroPoints[scaleColumn] = scaleWeightZeroPoint
 			outputZeroPoints[scaleColumn] = scaleOutputZeroPoint
 			scaleSeen = scaleRequest
+
 			if (scaleColumn == 9) {
 				scaleColumn = 0
 				scalesLoaded = true
-			} else { scaleColumn++ }
+			} else {
+				scaleColumn++
+			}
 		}
 
 		if (pending) {
-			if (outputAcknowledge == outputRequest) { pending = false }
+			if (outputAcknowledge == outputRequest) {
+				pending = false
+			}
 		} else {
 			if (emitting) {
 				outputAccumulator = accumulators[outputColumn]
@@ -134,32 +175,54 @@ component QLinearMatMul256x10Stream
 					accumulators[outputColumn], multipliers[outputColumn],
 					divisors[outputColumn], outputZeroPoints[outputColumn]) as byte
 				outputLast = 0b0
-				if (outputColumn == 9) { outputLast = 0b1 }
+
+				if (outputColumn == 9) {
+					outputLast = 0b1
+				}
+
 				outputRequest = !outputRequest
 				pending = true
+
 				if (outputColumn == 9) {
 					outputColumn = 0
 					emitting = false
-				} else { outputColumn++ }
+				} else {
+					outputColumn++
+				}
 			} else {
 				if (weightsLoaded && scalesLoaded && inputRequest != inputSeen) {
-					if (inputIndex == 0) { frameError = 0b0 }
-					if (inputLast == 0b1 && inputIndex != 255) { frameError = 0b1 }
-					if (inputIndex == 255 && inputLast != 0b1) { frameError = 0b1 }
+					if (inputIndex == 0) {
+						frameError = 0b0
+					}
+
+					if (inputLast == 0b1 && inputIndex != 255) {
+						frameError = 0b1
+					}
+
+					if (inputIndex == 255 && inputLast != 0b1) {
+						frameError = 0b1
+					}
 
 					for (var column = 0; column < 10; column++) {
 						var centeredInput = (inputData as int) - inputZeroPoint
 						var centeredWeight = (weights[column, inputIndex] as int) - weightZeroPoints[column]
 						var product = centeredInput * centeredWeight
+
 						if (inputIndex == 0) {
 							accumulators[column] = product
-						} else { accumulators[column] = accumulators[column] + product }
+						} else {
+							accumulators[column] = accumulators[column] + product
+						}
 					}
+
 					inputSeen = inputRequest
+
 					if (inputIndex == 255) {
 						inputIndex = 0
 						emitting = true
-					} else { inputIndex++ }
+					} else {
+						inputIndex++
+					}
 				}
 			}
 		}

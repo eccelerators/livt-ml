@@ -5,6 +5,7 @@ namespace Livt.ML.Classifier
  */
 component ArgMax10
 {
+	// Latest computed result, retained for the caller.
 	classId: int
 
 	/**

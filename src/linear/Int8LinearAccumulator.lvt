@@ -9,13 +9,25 @@ using Livt.Math.Arithmetic
  */
 component Int8LinearAccumulator
 {
+	// Owned arithmetic worker used by serialized operations.
 	mac: MacInt32
+
+	// Configured coefficients and numeric scaling parameters.
 	inputZeroPoint: int
 	weightZeroPoint: int
 
-	new() { this.mac = new MacInt32() }
+	/**
+	 * Creates the owned int32 MAC. Begin configures the bias and zero points for each output
+	 * reduction.
+	 */
+	new()
+	{
+		this.mac = new MacInt32()
+	}
 
-	/** Starts one output with its bias and quantization zero points. */
+	/**
+	 * Starts one output with its bias and quantization zero points.
+	 */
 	public fn Begin(bias: int, inputZeroPointValue: int, weightZeroPointValue: int)
 	{
 		this.mac.Reset()
@@ -24,12 +36,19 @@ component Int8LinearAccumulator
 		weightZeroPoint = weightZeroPointValue
 	}
 
-	/** Adds one centered activation-by-weight product. */
+	/**
+	 * Adds one centered activation-by-weight product.
+	 */
 	public fn Accumulate(activation: int, weight: int)
 	{
 		this.mac.Accumulate(activation - inputZeroPoint, weight - weightZeroPoint)
 	}
 
-	/** Returns the signed int32 accumulator. */
-	public fn GetAccumulator() int { return this.mac.GetResult() }
+	/**
+	 * Returns the signed int32 accumulator.
+	 */
+	public fn GetAccumulator() int
+	{
+		return this.mac.GetResult()
+	}
 }

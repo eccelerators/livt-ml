@@ -9,39 +9,66 @@ namespace Livt.ML.Norm
  */
 component LayerNorm64Stream
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const VECTOR_SIZE: int = 64
 	public const AFFINE_SCALE: int = 256
 
+	// Parameter-loading payload and toggle acknowledgment.
 	affineRequest: logic
 	affineGamma: int
 	affineBeta: int
 	affineEpsilon: int
 	affineAcknowledge: logic
+
+	// Input payload and toggle acknowledgment from the producer.
 	inputRequest: logic
 	inputData: int
 	inputLast: logic
 	inputAcknowledge: logic
+
+	// Output payload and toggle acknowledgment; payload stays stable while pending.
 	outputRequest: logic
 	outputData: int
 	outputLast: logic
 	outputAcknowledge: logic
+
+	// Configuration readiness and frame-boundary error status.
 	configured: logic
 	frameError: logic
+
+	// Transfer progress and retained request/acknowledgment state.
 	affineSeen: logic
 	inputSeen: logic
+
+	// Current position and bounds within the configured frame.
 	affineIndex: int
 	inputIndex: int
 	outputIndex: int
+
+	// Configured coefficients and numeric scaling parameters.
 	epsilon: int
+
+	// Input tensor storage; populate the required span before computation.
 	inputs: int[64]
+
+	// Configured coefficients and numeric scaling parameters.
 	gamma: int[64]
 	beta: int[64]
+
+	// Latest computed result, retained for the caller.
 	outputs: int[64]
+
+	// Transfer progress and retained request/acknowledgment state.
 	configurationComplete: bool
 	computing: bool
 	emitting: bool
 	pending: bool
 
+	/**
+	 * Binds configuration, input, and output toggle-handshake ports. Callers hold each payload
+	 * until its acknowledgment matches the request; configure the worker before sending
+	 * frames.
+	 */
 	new(
 		affineRequest: in logic, affineGamma: in int, affineBeta: in int,
 		affineEpsilon: in int, affineAcknowledge: out logic,
@@ -67,79 +94,135 @@ component LayerNorm64Stream
 		frameError = this.frameError
 	}
 
+	/**
+	 * Accepts configuration and frame values through the toggle handshakes, evaluates the
+	 * configured operator, and holds each output until acknowledged. All connected endpoints
+	 * must share compatible clock/reset sequencing.
+	 */
 	process Main()
 	{
 		affineAcknowledge = affineSeen
 		inputAcknowledge = inputSeen
 		configured = 0b0
-		if (configurationComplete) { configured = 0b1 }
+
+		if (configurationComplete) {
+			configured = 0b1
+		}
 
 		if (!configurationComplete && affineRequest != affineSeen) {
 			gamma[affineIndex] = affineGamma
 			beta[affineIndex] = affineBeta
 			epsilon = affineEpsilon
 			affineSeen = affineRequest
+
 			if (affineIndex == 63) {
 				affineIndex = 0
 				configurationComplete = true
-			} else { affineIndex++ }
+			} else {
+				affineIndex++
+			}
 		}
 
 		if (pending) {
-			if (outputAcknowledge == outputRequest) { pending = false }
+			if (outputAcknowledge == outputRequest) {
+				pending = false
+			}
 		} else {
 			if (emitting) {
 				outputData = outputs[outputIndex]
 				outputLast = 0b0
-				if (outputIndex == 63) { outputLast = 0b1 }
+
+				if (outputIndex == 63) {
+					outputLast = 0b1
+				}
+
 				outputRequest = !outputRequest
 				pending = true
+
 				if (outputIndex == 63) {
 					outputIndex = 0
 					emitting = false
-				} else { outputIndex++ }
+				} else {
+					outputIndex++
+				}
 			} else {
 				if (computing) {
 					var sum = 0
-					for (var index = 0; index < VECTOR_SIZE; index++) { sum = sum + inputs[index] }
+
+					for (var index = 0; index < VECTOR_SIZE; index++) {
+						sum = sum + inputs[index]
+					}
+
 					var mean = sum / VECTOR_SIZE
 					var squaredSum = 0
+
 					for (var index = 0; index < VECTOR_SIZE; index++) {
 						var centered = inputs[index] - mean
 						squaredSum = squaredSum + centered * centered
 					}
+
 					var variance = squaredSum / VECTOR_SIZE
 					var normValue = variance + epsilon
-					if (normValue < 0) { normValue = 0 }
+
+					if (normValue < 0) {
+						normValue = 0
+					}
+
 					var inverseStddev = 0
+
 					if (normValue > 0) {
 						var root = normValue
-						if (normValue > 1) { root = normValue / 2 + 1 }
+
+						if (normValue > 1) {
+							root = normValue / 2 + 1
+						}
+
 						for (var iteration = 0; iteration < 31; iteration++) {
 							var quotient = normValue / root
-							if (root > quotient) { root = (root + quotient) / 2 }
+
+							if (root > quotient) {
+								root = (root + quotient) / 2
+							}
 						}
-						if (root > normValue / root) { root-- }
+
+						if (root > normValue / root) {
+							root--
+						}
+
 						inverseStddev = (32768 + root / 2) / root
 					}
+
 					for (var index = 0; index < VECTOR_SIZE; index++) {
 						var centered = inputs[index] - mean
 						var normalized = centered * inverseStddev / 128
 						outputs[index] = normalized * gamma[index] / AFFINE_SCALE + beta[index]
 					}
+
 					computing = false
 					emitting = true
 				} else {
 					if (configurationComplete && inputRequest != inputSeen) {
-						if (inputIndex == 0) { frameError = 0b0 }
-						if (inputLast == 0b1 && inputIndex != 63) { frameError = 0b1 }
-						if (inputIndex == 63 && inputLast != 0b1) { frameError = 0b1 }
+						if (inputIndex == 0) {
+							frameError = 0b0
+						}
+
+						if (inputLast == 0b1 && inputIndex != 63) {
+							frameError = 0b1
+						}
+
+						if (inputIndex == 63 && inputLast != 0b1) {
+							frameError = 0b1
+						}
+
 						inputs[inputIndex] = inputData
 						inputSeen = inputRequest
+
 						if (inputIndex == 63) {
 							inputIndex = 0
 							computing = true
-						} else { inputIndex++ }
+						} else {
+							inputIndex++
+						}
 					}
 				}
 			}

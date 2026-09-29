@@ -7,10 +7,14 @@ component FixedTokenEmbedding
 {
 	// Number of token rows in the embedding table.
 	public const TOKEN_COUNT: int = 16
+
 	// Number of integer values in each embedding row.
 	public const VECTOR_SIZE: int = 8
 
+	// Owned token-to-vector table configured by the caller.
 	values: int[16, 8]
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**

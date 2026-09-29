@@ -11,15 +11,20 @@ component ClassProjection
 {
 	// First projected class index.
 	public const CLASS_0: int = 0
+
 	// Second projected class index.
 	public const CLASS_1: int = 1
+
 	// Third projected class index.
 	public const CLASS_2: int = 2
+
 	// Number of logits stored by Project.
 	public const CLASS_COUNT: int = 3
+
 	// Number of integer features consumed by Project.
 	public const VECTOR_SIZE: int = 8
 
+	// Latest computed result, retained for the caller.
 	logits: int[3]
 
 	/**

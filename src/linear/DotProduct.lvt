@@ -7,6 +7,7 @@ component DotProduct
 {
 	// Number of integer elements consumed from each input vector.
 	public const VECTOR_SIZE: int = 8
+
 	// Positive saturation limit for the accumulated result.
 	public const ACC_MAX: int = 32767
 

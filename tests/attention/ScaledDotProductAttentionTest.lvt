@@ -2,16 +2,28 @@ namespace Livt.ML.Tests.Attention
 
 using Livt.ML.Attention
 
+/**
+ * Exercises ScaledDotProductAttention with a shared fixture instance. Each scenario
+ * establishes the inputs and state it needs.
+ */
 @Test
 component ScaledDotProductAttentionTest
 {
+	// Shared fixture instances, signals, and observation state.
 	attn: ScaledDotProductAttention
 
+	/**
+	 * Creates the shared fixture instances (ScaledDotProductAttention). Tests initialize the
+	 * state required by their scenario.
+	 */
 	new()
 	{
 		attn = new ScaledDotProductAttention()
 	}
 
+	/**
+	 * Checks that Compute s empty cache as zero.
+	 */
 	@Test
 	fn ComputesEmptyCacheAsZero()
 	{
@@ -23,6 +35,9 @@ component ScaledDotProductAttentionTest
 		assert attn.GetOutput(7) == 0
 	}
 
+	/**
+	 * Checks that Compute s single dominant write.
+	 */
 	@Test
 	fn ComputesSingleDominantWrite()
 	{
@@ -40,6 +55,9 @@ component ScaledDotProductAttentionTest
 		assert attn.GetOutput(2) == 30
 	}
 
+	/**
+	 * Checks that Compute s two uniform scores.
+	 */
 	@Test
 	fn ComputesTwoUniformScores()
 	{
@@ -60,6 +78,9 @@ component ScaledDotProductAttentionTest
 		assert attn.GetOutput(2) == 0
 	}
 
+	/**
+	 * Checks the reports cache size and output bounds case.
+	 */
 	@Test
 	fn ReportsCacheSizeAndOutputBounds()
 	{

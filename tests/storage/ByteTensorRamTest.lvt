@@ -2,13 +2,22 @@ namespace Livt.ML.Tests.Storage
 
 using Livt.ML.Storage
 
+/**
+ * Exercises ByteTensorRam with a shared fixture instance. Each scenario establishes the
+ * inputs and state it needs.
+ */
 @Test
 component ByteTensorRamTest
 {
+	// Shared fixture instances, signals, and observation state.
 	small: ByteTensorRam2048
 	medium: ByteTensorRam4096
 	large: ByteTensorRam8192
 
+	/**
+	 * Creates the shared fixture instances (ByteTensorRam2048, ByteTensorRam4096,
+	 * ByteTensorRam8192). Tests initialize the state required by their scenario.
+	 */
 	new()
 	{
 		this.small = new ByteTensorRam2048(256)
@@ -16,6 +25,9 @@ component ByteTensorRamTest
 		this.large = new ByteTensorRam8192(6272)
 	}
 
+	/**
+	 * Checks that the component preserves logical and bank boundaries.
+	 */
 	@Test
 	fn PreservesLogicalAndBankBoundaries()
 	{
@@ -48,6 +60,9 @@ component ByteTensorRamTest
 		assert this.large.Read(6272) == 0x00
 	}
 
+	/**
+	 * Checks that the component supports repeated writes.
+	 */
 	@Test
 	fn SupportsRepeatedWrites()
 	{
@@ -57,6 +72,9 @@ component ByteTensorRamTest
 		assert this.small.Read(10) == 0xfe
 	}
 
+	/**
+	 * Checks the materializes arithmetic working set case.
+	 */
 	@Test
 	fn MaterializesArithmeticWorkingSet()
 	{
@@ -65,9 +83,11 @@ component ByteTensorRamTest
 		this.small.Write(21, 0x7f)
 		this.small.Write(22, 0x80)
 		this.small.Write(23, 0xff)
+
 		for (var index = 0; index < 4; index++) {
 			cache[index] = this.small.Read(20 + index)
 		}
+
 		assert cache[0] == 0x01
 		assert cache[1] == 0x7f
 		assert cache[2] == 0x80

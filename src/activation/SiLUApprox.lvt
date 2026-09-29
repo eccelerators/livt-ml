@@ -7,12 +7,17 @@ component SiLUApprox
 {
 	// Number of integer activations processed by Compute.
 	public const VECTOR_SIZE: int = 8
+
 	// Number of entries in the clamped sigmoid lookup table.
 	public const LUT_SIZE: int = 16
+
 	// Fixed-point scale used for sigmoid table values.
 	public const SCALE_FACTOR: int = 256
 
+	// Owned approximation table in the component numeric scale.
 	sigLut: int[16]
+
+	// Latest computed result, retained for the caller.
 	output: int[8]
 
 	/**

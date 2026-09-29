@@ -1,12 +1,20 @@
 namespace Livt.ML.Embedding
 
-/** TinyStories/GPT-2-vocabulary specialization of Embedding64Stream. */
+/**
+ * TinyStories/GPT-2-vocabulary specialization of Embedding64Stream.
+ */
 component TokenEmbedding50257x64Stream
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const TOKEN_COUNT: int = 50257
 
+	// Owned embedding worker with forwarded external handshakes.
 	stream: Embedding64Stream
 
+	/**
+	 * Owns an Embedding64Stream for 50257 rows and forwards the supplied memory and toggle-
+	 * handshake ports. External memory must be initialized before requesting a row.
+	 */
 	new(
 		tokenRequest: in logic, tokenIndex: in int, tokenAcknowledge: out logic,
 		memoryRequest: out logic, memoryAddress: out int, memoryData: in int,

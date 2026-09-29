@@ -9,36 +9,63 @@ using Livt.ML.Storage
  */
 component QLinearMatMul256x10Ram
 {
+	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 256
 	public const OUTPUT_SIZE: int = 10
+
+	// Input tensor storage; populate the required span before computation.
 	inputValues: ByteTensorRam2048
+
+	// Configured coefficients and numeric scaling parameters.
 	weights: ByteTensorRam4096
 	multipliers: int[10]
 	divisors: int[10]
 	inputZeroPoints: int[10]
 	weightZeroPoints: int[10]
 	outputZeroPoints: int[10]
+
+	// Wide output accumulators before final output conversion.
 	accumulators: int[10]
+
+	// Latest computed result, retained for the caller.
 	output: int[10]
 
+	/**
+	 * Owns input and weight RAMs plus local output accumulators. Configure weights,
+	 * quantization parameters, and the full input before Compute; RAM contents are not
+	 * initialized by construction.
+	 */
 	new()
 	{
 		this.inputValues = new ByteTensorRam2048(INPUT_SIZE)
 		this.weights = new ByteTensorRam4096(2560)
 	}
 
-	/** Stores one flattened uint8 input value and ignores an invalid index. */
+	/**
+	 * Stores one flattened uint8 input value and ignores an invalid index.
+	 */
 	public fn SetInput(index: int, value: int)
 	{
-		if (index < 0) { return }
-		if (index >= INPUT_SIZE) { return }
+		if (index < 0) {
+			return
+		}
+
+		if (index >= INPUT_SIZE) {
+			return
+		}
+
 		this.inputValues.Write(index, value as byte)
 	}
 
-	/** Clears all weights, quantization parameters, accumulators, and outputs. */
+	/**
+	 * Clears all weights, quantization parameters, accumulators, and outputs.
+	 */
 	public fn Clear()
 	{
-		for (var index = 0; index < 2560; index++) { this.weights.Write(index, 0x00) }
+		for (var index = 0; index < 2560; index++) {
+			this.weights.Write(index, 0x00)
+		}
+
 		for (var column = 0; column < OUTPUT_SIZE; column++) {
 			multipliers[column] = 0
 			divisors[column] = 1
@@ -50,23 +77,45 @@ component QLinearMatMul256x10Ram
 		}
 	}
 
-	/** Stores one signed-int8 column weight and ignores an invalid index. */
+	/**
+	 * Stores one signed-int8 column weight and ignores an invalid index.
+	 */
 	public fn SetWeight(column: int, row: int, value: int)
 	{
-		if (column < 0) { return }
-		if (column >= OUTPUT_SIZE) { return }
-		if (row < 0) { return }
-		if (row >= INPUT_SIZE) { return }
+		if (column < 0) {
+			return
+		}
+
+		if (column >= OUTPUT_SIZE) {
+			return
+		}
+
+		if (row < 0) {
+			return
+		}
+
+		if (row >= INPUT_SIZE) {
+			return
+		}
+
 		this.weights.Write(column * 256 + row, value as byte)
 	}
 
-	/** Stores the rational scale and tensor zero points for one output column. */
+	/**
+	 * Stores the rational scale and tensor zero points for one output column.
+	 */
 	public fn SetColumnParameters(
 		column: int, multiplier: int, divisor: int,
 		inputZeroPoint: int, weightZeroPoint: int, outputZeroPoint: int)
 	{
-		if (column < 0) { return }
-		if (column >= OUTPUT_SIZE) { return }
+		if (column < 0) {
+			return
+		}
+
+		if (column >= OUTPUT_SIZE) {
+			return
+		}
+
 		multipliers[column] = multiplier
 		divisors[column] = divisor
 		inputZeroPoints[column] = inputZeroPoint
@@ -74,36 +123,56 @@ component QLinearMatMul256x10Ram
 		outputZeroPoints[column] = outputZeroPoint
 	}
 
-	/** Computes ten uint8 outputs using ONNX-style centered multiplication. */
+	/**
+	 * Computes ten uint8 outputs using ONNX-style centered multiplication.
+	 */
 	public fn Compute()
 	{
 		for (var column = 0; column < OUTPUT_SIZE; column++) {
 			var accumulator = 0
+
 			for (var row = 0; row < INPUT_SIZE; row++) {
 				var activation = (this.inputValues.Read(row) as int) - inputZeroPoints[column]
 				var weightBits: logic[8] = this.weights.Read(column * 256 + row)
 				var centeredWeight = (weightBits as int) - weightZeroPoints[column]
 				accumulator = accumulator + activation * centeredWeight
 			}
+
 			accumulators[column] = accumulator
 			output[column] = RequantizeUInt8.ApplyRational(
 				accumulator, multipliers[column], divisors[column], outputZeroPoints[column])
 		}
 	}
 
-	/** Returns one int32 accumulator, or zero for an invalid index. */
+	/**
+	 * Returns one int32 accumulator, or zero for an invalid index.
+	 */
 	public fn GetAccumulator(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
+
 		return accumulators[index]
 	}
 
-	/** Returns one quantized output, or zero for an invalid index. */
+	/**
+	 * Returns one quantized output, or zero for an invalid index.
+	 */
 	public fn GetOutput(index: int) int
 	{
-		if (index < 0) { return 0 }
-		if (index >= OUTPUT_SIZE) { return 0 }
+		if (index < 0) {
+			return 0
+		}
+
+		if (index >= OUTPUT_SIZE) {
+			return 0
+		}
+
 		return output[index]
 	}
 }

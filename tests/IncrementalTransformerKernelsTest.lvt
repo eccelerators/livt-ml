@@ -1,65 +1,161 @@
 namespace Livt.ML.Tests
+
 using Livt.IO
 using Livt.ML.Storage
 using Livt.ML.Transformer
-component IncrementalWeights : IWeightTensor {
- selected: int
- override fn Select(tensor: int) bool { selected = tensor
-  return tensor >= 0 && tensor <= 2 }
- override fn Rows() int { if (selected == 0) { return 4 }
-  if (selected == 1) { return 32128 }
-  return 3 }
- override fn Columns() int { return 1 }
- override fn Read(index: int) int {
-  if (selected == 0) { return 0 }
-  if (selected == 1) { if (index >= 32126) { return 512 }
-   return -256 }
-  if (index == 0) { return -256 }
-  if (index == 1) { return 16384 }
-  return 32767
- }
- override fn Failed() bool { return false }
+
+/**
+ * Deterministic tensor-weight provider for transformer kernel tests; selection is local to
+ * this shared fixture.
+ */
+component IncrementalWeights : IWeightTensor
+{
+	// Shared fixture instances, signals, and observation state.
+	selected: int
+
+	/**
+	 * Selects a deterministic fixture tensor and reports whether its ID is supported.
+	 */
+	override fn Select(tensor: int) bool
+	{
+		selected = tensor
+		return tensor >= 0 && tensor <= 2
+	}
+
+	/**
+	 * Returns the row count of the selected fixture tensor; select a supported tensor first.
+	 */
+	override fn Rows() int
+	{
+		if (selected == 0) {
+			return 4
+		}
+
+		if (selected == 1) {
+			return 32128
+		}
+
+		return 3
+	}
+
+	/**
+	 * Returns the column count of the selected fixture tensor.
+	 */
+	override fn Columns() int
+	{
+		return 1
+	}
+
+	/**
+	 * Returns the deterministic weight for the selected fixture tensor and row-major index.
+	 * Tests supply valid indices.
+	 */
+	override fn Read(index: int) int
+	{
+		if (selected == 0) {
+			return 0
+		}
+
+		if (selected == 1) {
+			if (index >= 32126) {
+				return 512
+			}
+
+			return -256
+		}
+
+		if (index == 0) {
+			return -256
+		}
+
+		if (index == 1) {
+			return 16384
+		}
+
+		return 32767
+	}
+
+	/**
+	 * Returns false because this fixture supplies only successful weight reads.
+	 */
+	override fn Failed() bool
+	{
+		return false
+	}
 }
+
+/**
+ * Exercises IncrementalTransformerKernels with a shared fixture instance. Each scenario
+ * establishes the inputs and state it needs.
+ */
 @Test
-component IncrementalTransformerKernelsTest {
- ram: Ram<int, 128>
- weights: IncrementalWeights
- tables: SmallTransformerTables
- kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>
- new() { ram = new Ram<int, 128>()
-  weights = new IncrementalWeights()
-  tables = new SmallTransformerTables()
-  kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
- }
- @Test fn CausalDoesNotReadFutureAndCrossMasks() {
-  ram.Write(0, 0)
-  ram.Write(8, 0)
-  ram.Write(9, 2147483647)
-  ram.Write(10, 2147483647)
-  ram.Write(16, 768)
-  ram.Write(17, 2147483647)
-  ram.Write(18, 2147483647)
-  for (var i = 0; i < 3; i++) { ram.Write(32 + i, 1) }
-  for (var i = 0; i < 7; i++) { ram.Write(40 + i, 0) }
-  assert kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 0, true, 40)
-  assert ram.Read(24) == 768
-  ram.Write(9, 0)
-  ram.Write(17, 256)
-  ram.Write(34, 0)
-  assert kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
-  assert ram.Read(24) == 512
-  ram.Write(32, 0)
-  ram.Write(33, 0)
-  assert !kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
-  assert ram.Read(24) == 512
-  assert !kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 4, true, 40)
- }
- @Test fn EntireVocabularyLowestTieAndClippedLogits() {
-  ram.Write(0, 256)
-  assert kernels.ProjectArgMax(1, 0, 32128, 1) == 32126
-  ram.Write(0, 32767)
-  assert kernels.ProjectArgMax(2, 0, 3, 1) == 1
-  assert kernels.ProjectArgMax(2, 0, 4, 1) == -1
-  assert kernels.ProjectArgMax(2, 128, 3, 1) == -1
- }
+component IncrementalTransformerKernelsTest
+{
+	// Shared fixture instances, signals, and observation state.
+	ram: Ram<int, 128>
+	weights: IncrementalWeights
+	tables: SmallTransformerTables
+	kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>
+
+	/**
+	 * Creates the shared fixture instances (Ram, IncrementalWeights, SmallTransformerTables,
+	 * FixedTransformerKernels). Tests initialize the state required by their scenario.
+	 */
+	new()
+	{
+		ram = new Ram<int, 128>()
+		weights = new IncrementalWeights()
+		tables = new SmallTransformerTables()
+		kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
+	}
+
+	/**
+	 * Checks the causal does not read future and cross masks case.
+	 */
+	@Test
+	fn CausalDoesNotReadFutureAndCrossMasks()
+	{
+		ram.Write(0, 0)
+		ram.Write(8, 0)
+		ram.Write(9, 2147483647)
+		ram.Write(10, 2147483647)
+		ram.Write(16, 768)
+		ram.Write(17, 2147483647)
+		ram.Write(18, 2147483647)
+
+		for (var i = 0; i < 3; i++) {
+			ram.Write(32 + i, 1)
+		}
+
+		for (var i = 0; i < 7; i++) {
+			ram.Write(40 + i, 0)
+		}
+
+		assert kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 0, true, 40)
+		assert ram.Read(24) == 768
+		ram.Write(9, 0)
+		ram.Write(17, 256)
+		ram.Write(34, 0)
+		assert kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
+		assert ram.Read(24) == 512
+		ram.Write(32, 0)
+		ram.Write(33, 0)
+		assert !kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 3, 1, 1, 0, false, -1)
+		assert ram.Read(24) == 512
+		assert !kernels.CachedAttention(0, 0, 8, 16, 24, 32, 3, 1, 1, 4, true, 40)
+	}
+
+	/**
+	 * Checks the entire vocabulary lowest tie and clipped logits case.
+	 */
+	@Test
+	fn EntireVocabularyLowestTieAndClippedLogits()
+	{
+		ram.Write(0, 256)
+		assert kernels.ProjectArgMax(1, 0, 32128, 1) == 32126
+		ram.Write(0, 32767)
+		assert kernels.ProjectArgMax(2, 0, 3, 1) == 1
+		assert kernels.ProjectArgMax(2, 0, 4, 1) == -1
+		assert kernels.ProjectArgMax(2, 128, 3, 1) == -1
+	}
 }
