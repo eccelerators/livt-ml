@@ -9,7 +9,9 @@ path = "tests"
 components = [
     "IncrementalTransformerKernelsTest",
     "FixedTransformerKernelsTest",
-    "RequantizeUInt8Test",
+    "QuantizedTensorShapeTest",
+    "QuantizedMatrixGroupingTest",
+    "ScheduledRequantizeUInt8Test",
     "RequantizeInt8Test",
     "QLinearCnnOperatorsTest",
     "StreamingConvolutionTest",
@@ -57,7 +59,7 @@ Livt.Math = "1.3.0-dev"
 Livt.IO = "1.2.0-dev"
 
 [build.debug]
-warnings = ["all", "no-variable-divisor"]
+warnings = ["all"]
 
 [build.release]
 warnings = ["all"]

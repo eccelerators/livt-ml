@@ -1,0 +1,470 @@
+[
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 42,
+    "expression": "var r: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 57,
+    "expression": "var r: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 93,
+    "expression": "var r: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 113,
+    "expression": "var r: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 153,
+    "expression": "var r: int = value % 65536"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 168,
+    "expression": "var r: int = value % 65536"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 204,
+    "expression": "var r: int = value % 65536"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 224,
+    "expression": "var r: int = value % 65536"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 264,
+    "expression": "var bwr: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Convert.lvt",
+    "line": 279,
+    "expression": "var r: int = value % 256"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 108,
+    "expression": "var n7: int = (v / 268435456) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 109,
+    "expression": "var n6: int = (v / 16777216) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 110,
+    "expression": "var n5: int = (v / 1048576) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 111,
+    "expression": "var n4: int = (v / 65536) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 112,
+    "expression": "var n3: int = (v / 4096) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 113,
+    "expression": "var n2: int = (v / 256) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 114,
+    "expression": "var n1: int = (v / 16) % 16"
+  },
+  {
+    "repo": "livt-base",
+    "file": "src/Diagnostics.lvt",
+    "line": 115,
+    "expression": "var n0: int = v % 16"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/approximation/TanhQ15.lvt",
+    "line": 63,
+    "expression": "var index = magnitude / STEP"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/approximation/TanhQ15.lvt",
+    "line": 64,
+    "expression": "var remainder = magnitude % STEP"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/approximation/TanhQ15.lvt",
+    "line": 67,
+    "expression": "var value = lower + (upper - lower) * remainder / STEP"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/complex/ComplexQ15.lvt",
+    "line": 170,
+    "expression": "var ac: int = this.ClampQ15(acProduct / 32768)"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/complex/ComplexQ15.lvt",
+    "line": 171,
+    "expression": "var bd: int = this.ClampQ15(bdProduct / 32768)"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/complex/ComplexQ15.lvt",
+    "line": 172,
+    "expression": "var ad: int = this.ClampQ15(adProduct / 32768)"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/complex/ComplexQ15.lvt",
+    "line": 173,
+    "expression": "var bc: int = this.ClampQ15(bcProduct / 32768)"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/Q15.lvt",
+    "line": 71,
+    "expression": "var scaled: int = product / 32768"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/Q15.lvt",
+    "line": 113,
+    "expression": "var scaled: int = product / 32768"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/Q7.lvt",
+    "line": 71,
+    "expression": "var scaled: int = product / 128"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/Q7.lvt",
+    "line": 113,
+    "expression": "var scaled: int = product / 128"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/UQ8.lvt",
+    "line": 71,
+    "expression": "var scaled: int = product / 256"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/fixedpoint/UQ8.lvt",
+    "line": 113,
+    "expression": "var scaled: int = product / 256"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/random/Xorshift24.lvt",
+    "line": 76,
+    "expression": "t = s / 128"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/sqrt/SqrtNewtonRaphson.lvt",
+    "line": 44,
+    "expression": "var x: int = bounded / 2 + 1"
+  },
+  {
+    "repo": "livt-math",
+    "file": "src/sqrt/SqrtNewtonRaphson.lvt",
+    "line": 48,
+    "expression": "x = (x + quotient) / 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/activation/SiLUApprox.lvt",
+    "line": 63,
+    "expression": "output[i] = input[i] * sig / SCALE_FACTOR"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/CausalAttentionHead4Context8.lvt",
+    "line": 123,
+    "expression": "scores[source] = dot / 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/CausalAttentionHead4Context8.lvt",
+    "line": 148,
+    "expression": "var result = weighted / StableSoftmax8.OUTPUT_SCALE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/KVCache.lvt",
+    "line": 29,
+    "expression": "head = (head + 1) % CACHE_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/KVCache.lvt",
+    "line": 41,
+    "expression": "tail = (tail + 1) % CACHE_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/KVCache.lvt",
+    "line": 57,
+    "expression": "var physSlot = (head + slot) % CACHE_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/KVCache.lvt",
+    "line": 75,
+    "expression": "var physSlot = (head + slot) % CACHE_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/attention/ScaledDotProductAttention.lvt",
+    "line": 85,
+    "expression": "output[elem] = weighted / WEIGHT_SCALE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/linear/QuantizedMatrix.lvt",
+    "line": 21,
+    "expression": "static assert ROWS <= 2147483647 / COLUMNS,"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/linear/QuantizedMatrix.lvt",
+    "line": 63,
+    "expression": "weights.ScaleCount() < ((ROWS * COLUMNS - 1) / GROUP_SIZE) + 1 ||"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/linear/QuantizedMatrix.lvt",
+    "line": 83,
+    "expression": "var packed = weights.ReadPacked(index / 2)"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/linear/QuantizedMatrix.lvt",
+    "line": 84,
+    "expression": "var code = arithmetic.SignedNibble(packed, index % 2 != 0)"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/linear/QuantizedMatrix.lvt",
+    "line": 116,
+    "expression": "return index / GROUP_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64.lvt",
+    "line": 95,
+    "expression": "var mean = sum / VECTOR_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64.lvt",
+    "line": 104,
+    "expression": "var variance = squaredSum / VECTOR_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64.lvt",
+    "line": 129,
+    "expression": "var normalized = normalizationProduct / 128"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64.lvt",
+    "line": 135,
+    "expression": "var outputValue = affineProduct / AFFINE_SCALE + betaValue"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 165,
+    "expression": "var mean = sum / VECTOR_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 173,
+    "expression": "var variance = squaredSum / VECTOR_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 186,
+    "expression": "root = normValue / 2 + 1"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 193,
+    "expression": "root = (root + quotient) / 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 201,
+    "expression": "inverseStddev = divider.Divide(32768 + root / 2, root)"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 206,
+    "expression": "var normalized = centered * inverseStddev / 128"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/LayerNorm64Stream.lvt",
+    "line": 207,
+    "expression": "outputs[index] = normalized * gamma[index] / AFFINE_SCALE + beta[index]"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/norm/RMSNorm.lvt",
+    "line": 47,
+    "expression": "var meanSq = sumSq / VECTOR_SIZE"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeInt8.lvt",
+    "line": 60,
+    "expression": "var quotientParity = quotient % 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeUInt8.lvt",
+    "line": 39,
+    "expression": "var whole = (magnitude / divisor) * multiplier"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeUInt8.lvt",
+    "line": 40,
+    "expression": "var remainder = magnitude % divisor"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeUInt8.lvt",
+    "line": 42,
+    "expression": "var fraction = remainderProduct / divisor"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeUInt8.lvt",
+    "line": 43,
+    "expression": "var fractionRemainder = remainderProduct % divisor"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/RequantizeUInt8.lvt",
+    "line": 52,
+    "expression": "var parity = roundedMagnitude % 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/numeric/ScheduledRequantizeUInt8.lvt",
+    "line": 68,
+    "expression": "var parity = roundedMagnitude % 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 74,
+    "expression": "var bytes = n / 2 + n % 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 81,
+    "expression": "if (!memory.IsValidAddress(w / 4) ||"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 82,
+    "expression": "!memory.IsValidAddress((w + bytes - 1) / 4) ||"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 125,
+    "expression": "var address = codes + index / 2"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 126,
+    "expression": "var word = memory.Read(address / 4) as logic[32]"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 127,
+    "expression": "var packed = (word >> ((address % 4) * 8)) as byte"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 128,
+    "expression": "var code = fixed.SignedNibble(packed, index % 2 != 0)"
+  },
+  {
+    "repo": "livt-ml",
+    "file": "src/storage/QuantizedTensorWeights.lvt",
+    "line": 151,
+    "expression": "return index / GROUP_SIZE"
+  },
+  {
+    "repo": "livt-io",
+    "file": "src/spi/SPIMaster.lvt",
+    "line": 247,
+    "expression": "if (shiftedTransmit % 2 == 0) {"
+  },
+  {
+    "repo": "livt-io",
+    "file": "src/spi/SPIMaster.lvt",
+    "line": 286,
+    "expression": "if (nextShiftedTransmit % 2 == 0) {"
+  },
+  {
+    "repo": "livt-io",
+    "file": "src/uart/RtsCtsBufferedUart.lvt",
+    "line": 15,
+    "expression": "const RTS_HEADROOM: int = (RX_CAPACITY + 7) / 8"
+  },
+  {
+    "repo": "livt-io",
+    "file": "src/uart/UartReceiver.lvt",
+    "line": 104,
+    "expression": "if ((clock_count as uint) == TICKS_PER_BIT / 2) {"
+  }
+]

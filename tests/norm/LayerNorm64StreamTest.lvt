@@ -111,6 +111,19 @@ component LayerNorm64StreamTest
 				}
 			}
 
+			// Hold acknowledgment to verify that scheduled work never overwrites
+			// an outstanding output transfer.
+			var heldData = outputData
+			var heldLast = outputLast
+			var heldRequest = outputRequest
+			for (var stall = 0; stall < 8; stall++) {
+				state {
+					assert outputData == heldData
+					assert outputLast == heldLast
+					assert outputRequest == heldRequest
+				}
+			}
+
 			if (index < 32) {
 				assert outputData == -256
 			} else {

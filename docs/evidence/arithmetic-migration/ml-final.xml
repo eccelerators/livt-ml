@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Livt" tests="12" failures="0" skipped="0" time="2.181">
+  <testcase classname="Livt.ML.Tests.Attention.ScaledDotProductAttentionTest" name="ComputesEmptyCacheAsZero" time="0.002"></testcase>
+  <testcase classname="Livt.ML.Tests.Attention.ScaledDotProductAttentionTest" name="ComputesSingleDominantWrite" time="0.026"></testcase>
+  <testcase classname="Livt.ML.Tests.Attention.ScaledDotProductAttentionTest" name="ComputesTwoUniformScores" time="0.048"></testcase>
+  <testcase classname="Livt.ML.Tests.Attention.ScaledDotProductAttentionTest" name="ReportsCacheSizeAndOutputBounds" time="0.026"></testcase>
+  <testcase classname="Livt.ML.Tests.Norm.LayerNorm64StreamTest" name="NormalizesOneCompleteFrame" time="0.277"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="RoundsTiesToEven" time="0.024"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="SplitsLargeProductsAndClamps" time="0.019"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="HandlesInvalidScaleParameters" time="0.001"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="MatchesInlineReferenceAcrossSigns" time="1.659"></testcase>
+  <testcase classname="Livt.ML.Tests.Storage.QuantizedTensorShapeTest" name="ProductLimitsAndRecovery" time="0.039"></testcase>
+  <testcase classname="Livt.ML.Tests.Storage.QuantizedTensorShapeTest" name="RejectsNonpositiveDimensions" time="0.018"></testcase>
+  <testcase classname="Livt.ML.Tests.Storage.QuantizedTensorShapeTest" name="NonPowerOfTwoGroups" time="0.042"></testcase>
+</testsuite>

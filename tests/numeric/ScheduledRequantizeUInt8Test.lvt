@@ -1,0 +1,96 @@
+namespace Livt.ML.Tests.Numeric
+
+using Livt.ML.Numeric
+
+/**
+ * Verifies unsigned rational requantization and saturation behavior.
+ */
+@Test
+component ScheduledRequantizeUInt8Test
+{
+	// Owned subject; requests are serialized.
+	worker: ScheduledRequantizeUInt8
+
+	/**
+	 * Owns the scheduled numeric subject.
+	 */
+	new()
+	{
+		worker = new ScheduledRequantizeUInt8()
+	}
+
+	/**
+	 * Rounds exact half values to the nearest even integer.
+	 */
+	@Test
+	fn RoundsTiesToEven()
+	{
+		assert worker.ApplyRational(5, 1, 2, 0) == 2
+		assert worker.ApplyRational(7, 1, 2, 0) == 4
+		assert worker.ApplyRational(-5, 1, 2, 112) == 110
+		assert worker.ApplyRational(-7, 1, 2, 112) == 108
+	}
+
+	/**
+	 * Handles split multiplication and clamps both uint8 boundaries.
+	 */
+	@Test
+	fn SplitsLargeProductsAndClamps()
+	{
+		assert worker.ApplyRational(1000000, 1964, 900715, 0) == 255
+		assert worker.ApplyRational(-1000000, 1964, 900715, 112) == 0
+		assert worker.ApplyRational(1000, 29, 29867, 112) == 113
+	}
+
+	/**
+	 * Invalid scale parameters return the clamped output zero point.
+	 */
+	@Test
+	fn HandlesInvalidScaleParameters()
+	{
+		assert worker.ApplyRational(10, -1, 2, 300) == 255
+		assert worker.ApplyRational(10, 1, 0, -4) == 0
+		assert worker.Clamp(127) == 127
+	}
+
+	/**
+	 * Checks against a bounded subtraction-based numeric oracle independent of
+	 * the production split-product division algorithm.
+	 */
+	@Test
+	fn MatchesNumericReferenceAcrossSigns()
+	{
+		for (var value = -20; value <= 20; value++) {
+			for (var divisor = 1; divisor <= 7; divisor++) {
+				var expected = this.Reference(value, divisor)
+				assert worker.ApplyRational(value, 3, divisor, 112) == expected
+			}
+		}
+	}
+
+	/**
+	 * Computes the small-domain reference for multiplier three and zero point 112.
+	 * Inputs are -20..20 and divisors 1..7; the result never needs saturation.
+	 */
+	fn Reference(value: int, divisor: int) int
+	{
+		var magnitude = value * 3
+		if (magnitude < 0) {
+			magnitude = 0 - magnitude
+		}
+		var quotient = 0
+		while (magnitude >= divisor) {
+			magnitude = magnitude - divisor
+			quotient++
+		}
+		if (magnitude * 2 > divisor ||
+			(magnitude * 2 == divisor && (quotient & 1) != 0)) {
+			quotient++
+		}
+		if (value < 0) {
+			return 112 - quotient
+		}
+		return 112 + quotient
+	}
+
+}

@@ -1,0 +1,4 @@
+{
+  "src/numeric/ScheduledRequantizeUInt8.lvt": "00101e24e3721dea16e2eaca909b1bbfb6cd2c824aa47352175620f9a6359a27",
+  "tests/numeric/ScheduledRequantizeUInt8Test.lvt": "de1a267bccb8cdee0c906cbadc57005c78e80f49671900ac686943546665ac1c"
+}

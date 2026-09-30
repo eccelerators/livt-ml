@@ -19,6 +19,9 @@ using Livt.ML.Numeric
  */
 component QLinearMatMul256x10Stream
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Weight-loading payload and toggle acknowledgment.
 	weightRequest: logic
 	weightData: logic[8]
@@ -91,6 +94,7 @@ component QLinearMatMul256x10Stream
 		outputAccumulator: out int, outputLast: out logic, outputAcknowledge: in logic,
 		configured: out logic, frameError: out logic)
 	{
+		requantize = new ScheduledRequantizeUInt8()
 		this.weightRequest = weightRequest
 		this.weightData = weightData
 		weightAcknowledge = this.weightAcknowledge
@@ -171,7 +175,7 @@ component QLinearMatMul256x10Stream
 		} else {
 			if (emitting) {
 				outputAccumulator = accumulators[outputColumn]
-				outputData = RequantizeUInt8.ApplyRational(
+				outputData = requantize.ApplyRational(
 					accumulators[outputColumn], multipliers[outputColumn],
 					divisors[outputColumn], outputZeroPoints[outputColumn]) as byte
 				outputLast = 0b0

@@ -11,6 +11,9 @@ using Livt.ML.Numeric
  */
 component QLinearConv1x8Same5x5
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 784
 	public const OUTPUT_SIZE: int = 6272
@@ -31,6 +34,14 @@ component QLinearConv1x8Same5x5
 
 	// Latest computed result, retained for the caller.
 	output: int[6272]
+
+	/**
+	 * Owns one scheduled requantizer for serialized processing.
+	 */
+	new()
+	{
+		requantize = new ScheduledRequantizeUInt8()
+	}
 
 	/**
 	 * Clears all learned parameters and output activations.
@@ -153,7 +164,7 @@ component QLinearConv1x8Same5x5
 
 					state {
 						var outputIndex = channel * 784 + row * 28 + column
-						output[outputIndex] = RequantizeUInt8.ApplyRational(
+						output[outputIndex] = requantize.ApplyRational(
 							accumulator, multipliers[channel], divisors[channel], outputZeroPoints[channel])
 					}
 				}

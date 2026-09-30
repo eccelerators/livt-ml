@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "runtime_limit_seconds": 600,
+  "seconds": 148.23051526400013,
+  "entity": "livt_ml_numeric_scheduledrequantizeuint8",
+  "state_counts": {
+    "t_applyrational_state": 78,
+    "t_clamp_state": 9
+  },
+  "command": [
+    "/home/vagrant/git/livt/livt-flan-t5-arty-a7-100t/scripts/run_build_bounded.sh",
+    "/usr/bin/time",
+    "-v",
+    "-o",
+    "/tmp/livt-arithmetic-audit/requantize-synthesis-complete/resources.txt",
+    "/tools/Xilinx/2026.1/Vivado/bin/vivado",
+    "-mode",
+    "batch",
+    "-notrace",
+    "-nojournal",
+    "-log",
+    "/tmp/livt-arithmetic-audit/requantize-synthesis-complete/vivado.log",
+    "-source",
+    "/tmp/livt-arithmetic-audit/requantize-synthesis-complete/synth.tcl"
+  ],
+  "input_sha256": {
+    "Livt.Lang.IComponent.Package.vhd": "935dcde1687a58ce93b113dce81b59ee43c144352972936fec8c00f03e2690cd",
+    "Livt.Lang.IContext.Package.vhd": "31d05e3466fc9ab82eb76f4373f29af260514785648a24b2d03a08831fd86a80",
+    "Livt.Lang.Package.vhd": "d5d9e1fb4cf1bdb15fc5a4d95022c23f2bdcef76f207dfcee54bca37c99c344c",
+    "Livt.ML.Numeric.ScheduledRequantizeUInt8.Package.vhd": "ad8293319a4fe25ab264c067462d381fc75528d36e9dbc8295fd07d7aa84d1aa",
+    "Livt.ML.Numeric.ScheduledRequantizeUInt8.vhd": "acaa2376cace24f261e3809baf9dbc55854a3fa280a1bc3df17b217ce3855436",
+    "Livt.Math.Arithmetic.IIntegerDivision_g_integer_sig_aa273db78b38.Package.vhd": "309e90320be1bdaffd635bca6c965c0922d307728a0e29e1a4c997da306a4790",
+    "Livt.Math.Arithmetic.IIntegerDivision_g_unsignedinteger_sig_809b61f6ff02.Package.vhd": "8fc385677e75970242ffe7eb88a3ff74cbd4bccb7921a130e48f251bca48a7ce",
+    "Livt.Math.Arithmetic.IntegerDivision_g_32_sig_4fa0a627f162.Package.vhd": "ac5b3f9172467de416639891fd4738a851c5729b2f9446b1918b4b869804573e",
+    "Livt.Math.Arithmetic.IntegerDivision_g_32_sig_4fa0a627f162.vhd": "fe093f098f51ec435cabcec872c9d92d15c3738dde6a560f1cf80a5343d54b1b",
+    "Livt.Math.Arithmetic.UnsignedDivision_g_32_sig_db0f7854530e.Package.vhd": "a9e6aa570eab73abeecdb5b8d27cd10f2bb31ce430b5fb5de2403157ac473eae",
+    "Livt.Math.Arithmetic.UnsignedDivision_g_32_sig_db0f7854530e.vhd": "1c376da3cccb9d4a16824759c94d2942d2df1034f558452ba43be3f60abe3800"
+  }
+}

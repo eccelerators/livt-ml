@@ -1,5 +1,6 @@
 namespace Livt.ML.Linear
 
+using Livt.Math.Arithmetic
 using Livt.ML.Numeric
 using Livt.ML.Storage
 using Livt.IO
@@ -10,6 +11,9 @@ using Livt.IO
 component QuantizedMatrix<ROWS: int, COLUMNS: int, GROUP_SIZE: int,
 	BITS: int, FRACTION: int, SCALE_FRACTION: int, WEIGHTS: IQuantizedWeights, INPUT: IRam<int>>
 {
+	// Shared worker for non-power-of-two scale groups.
+	divider: UnsignedDivision<31>
+
 	static assert ROWS > 0 && ROWS <= 65536, "invalid row count"
 
 	static assert COLUMNS > 0 && COLUMNS <= 65536, "invalid column count"
@@ -37,6 +41,7 @@ component QuantizedMatrix<ROWS: int, COLUMNS: int, GROUP_SIZE: int,
 	 */
 	new(weights: WEIGHTS, input: INPUT)
 	{
+		divider = new UnsignedDivision<31>()
 		this.weights = weights
 		this.input = input
 		arithmetic = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
@@ -68,7 +73,7 @@ component QuantizedMatrix<ROWS: int, COLUMNS: int, GROUP_SIZE: int,
 
 		for (var column = 0; column < COLUMNS; column++) {
 			var index = row * COLUMNS + column
-			var group = index / GROUP_SIZE
+			var group = this.ScaleGroup(index)
 
 			if (group != previousGroup) {
 				scale = weights.ReadScale(group)
@@ -99,5 +104,18 @@ component QuantizedMatrix<ROWS: int, COLUMNS: int, GROUP_SIZE: int,
 	public fn Failed() bool
 	{
 		return failed
+	}
+
+	/**
+	 * Maps a nonnegative element index to its scale group. Power-of-two
+	 * specialization retains cheap constant arithmetic; other sizes are scheduled.
+	 */
+	fn ScaleGroup(index: int) int
+	{
+		static if ((GROUP_SIZE & (GROUP_SIZE - 1)) == 0) {
+			return index / GROUP_SIZE
+		} else {
+			return divider.Divide(index as uint, GROUP_SIZE as uint) as int
+		}
 	}
 }

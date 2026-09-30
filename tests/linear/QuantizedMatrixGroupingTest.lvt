@@ -1,0 +1,128 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.IO
+using Livt.ML.Linear
+using Livt.ML.Storage
+
+/**
+ * Eight unit INT4 codes with distinguishable group scales.
+ */
+component GroupingWeights : IQuantizedWeights
+{
+	/**
+	 * Returns two unit weights.
+	 */
+	override fn ReadPacked(byteIndex: int) byte
+	{
+		return 0x11
+	}
+
+	/**
+
+	 * Returns a raw scale of groupIndex + 1 at fractional precision zero.
+
+	 */
+	override fn ReadScale(groupIndex: int) logic[32]
+	{
+		return (groupIndex + 1) as logic[32]
+	}
+
+	/**
+
+	 * Returns eight coefficients for two rows.
+
+	 */
+	override fn WeightCount() int
+	{
+		return 8
+	}
+
+	/**
+
+	 * Three groups cover eight values with group size three.
+
+	 */
+	override fn ScaleCount() int
+	{
+		return 3
+	}
+}
+
+/**
+ * Four unit inputs; no writes are needed for these grouping checks.
+ */
+component GroupingInput : IRam<int>
+{
+	/**
+	 * Returns a unit input.
+	 */
+	override fn Read(address: int) int
+	{
+		return 1
+	}
+
+	/**
+
+	 * Ignores writes to the immutable fixture.
+
+	 */
+	override fn Write(address: int, value: int)
+	{
+	}
+
+	/**
+
+	 * Bounds the four-element input.
+
+	 */
+	override fn IsValidAddress(address: int) bool
+	{
+		return address >= 0 && address < 4
+	}
+}
+
+/**
+ * Verifies group boundaries within and across rows for both specializations.
+ */
+@Test
+component QuantizedMatrixGroupingTest
+{
+	// Owned fixtures and serialized projection workers.
+	weights: GroupingWeights
+	input: GroupingInput
+	odd: QuantizedMatrix<2, 4, 3, 16, 0, 0, GroupingWeights, GroupingInput>
+	even: QuantizedMatrix<2, 4, 4, 16, 0, 0, GroupingWeights, GroupingInput>
+
+	/**
+
+	 * Owns both group-size specializations over the same immutable inputs.
+
+	 */
+	new()
+	{
+		weights = new GroupingWeights()
+		input = new GroupingInput()
+		odd = new QuantizedMatrix<2, 4, 3, 16, 0, 0, GroupingWeights, GroupingInput>(weights, input)
+		even = new QuantizedMatrix<2, 4, 4, 16, 0, 0, GroupingWeights, GroupingInput>(weights, input)
+	}
+
+	/**
+
+	 * Checks results rather than mirroring the division implementation.
+
+	 */
+	@Test
+	fn RespectsFlattenedScaleGroups()
+	{
+		assert odd.Compute(0, 0) == 5
+		assert !odd.Failed()
+		assert odd.Compute(1, 0) == 10
+		assert !odd.Failed()
+		assert even.Compute(0, 0) == 4
+		assert even.Compute(1, 0) == 8
+		assert odd.Compute(2, 0) == 0
+		assert odd.Failed()
+		assert odd.Compute(0, 0) == 5
+		assert !odd.Failed()
+	}
+}

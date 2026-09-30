@@ -1,0 +1,816 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (lin64) Build 6511674 Tue Jun 16 11:01:26 MDT 2026
+| Date         : Wed Sep 30 13:38:32 2026
+| Host         : vagrant-devbox running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_timing_summary -report_unconstrained -check_timing_verbose -file /tmp/livt-arithmetic-audit/requantize-synthesis-complete/timing.rpt
+| Design       : livt_ml_numeric_scheduledrequantizeuint8_slice
+| Device       : 7a100t-csg324
+| Speed File   : -1  PRODUCTION 1.23 2018-06-13
+| Design State : Synthesized
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Summary Report
+
+------------------------------------------------------------------------------------------------
+| Timer Settings
+| --------------
+------------------------------------------------------------------------------------------------
+
+  Enable Multi Corner Analysis               :  Yes
+  Enable Pessimism Removal                   :  Yes
+  Pessimism Removal Resolution               :  Nearest Common Node
+  Enable Input Delay Default Clock           :  No
+  Enable Preset / Clear Arcs                 :  No
+  Disable Flight Delays                      :  No
+  Ignore I/O Paths                           :  No
+  Timing Early Launch at Borrowing Latches   :  No
+  Borrow Time for Max Delay Exceptions       :  Yes
+  Merge Timing Exceptions                    :  Yes
+  Inter-SLR Compensation                     :  Conservative
+
+  Corner  Analyze    Analyze    
+  Name    Max Paths  Min Paths  
+  ------  ---------  ---------  
+  Slow    Yes        Yes        
+  Fast    Yes        Yes        
+
+
+------------------------------------------------------------------------------------------------
+| Report Methodology
+| ------------------
+------------------------------------------------------------------------------------------------
+
+No report available as report_methodology has not been run prior. Run report_methodology on the current design for the summary of methodology violations.
+
+
+
+check_timing report
+
+Table of Contents
+-----------------
+1. checking no_clock (0)
+2. checking constant_clock (0)
+3. checking pulse_width_clock (0)
+4. checking unconstrained_internal_endpoints (0)
+5. checking no_input_delay (163)
+6. checking no_output_delay (66)
+7. checking multiple_clock (0)
+8. checking generated_clocks (0)
+9. checking loops (0)
+10. checking partial_input_delay (0)
+11. checking partial_output_delay (0)
+12. checking latch_loops (0)
+
+1. checking no_clock (0)
+------------------------
+ There are 0 register/latch pins with no clock.
+
+
+2. checking constant_clock (0)
+------------------------------
+ There are 0 register/latch pins with constant_clock.
+
+
+3. checking pulse_width_clock (0)
+---------------------------------
+ There are 0 register/latch pins which need pulse_width check
+
+
+4. checking unconstrained_internal_endpoints (0)
+------------------------------------------------
+ There are 0 pins that are not constrained for maximum delay.
+
+ There are 0 pins that are not constrained for maximum delay due to constant clock.
+
+
+5. checking no_input_delay (163)
+--------------------------------
+ There are 163 input ports with no input delay specified. (HIGH)
+
+Rst
+applyrational_in[divisor][0]
+applyrational_in[divisor][10]
+applyrational_in[divisor][11]
+applyrational_in[divisor][12]
+applyrational_in[divisor][13]
+applyrational_in[divisor][14]
+applyrational_in[divisor][15]
+applyrational_in[divisor][16]
+applyrational_in[divisor][17]
+applyrational_in[divisor][18]
+applyrational_in[divisor][19]
+applyrational_in[divisor][1]
+applyrational_in[divisor][20]
+applyrational_in[divisor][21]
+applyrational_in[divisor][22]
+applyrational_in[divisor][23]
+applyrational_in[divisor][24]
+applyrational_in[divisor][25]
+applyrational_in[divisor][26]
+applyrational_in[divisor][27]
+applyrational_in[divisor][28]
+applyrational_in[divisor][29]
+applyrational_in[divisor][2]
+applyrational_in[divisor][30]
+applyrational_in[divisor][31]
+applyrational_in[divisor][3]
+applyrational_in[divisor][4]
+applyrational_in[divisor][5]
+applyrational_in[divisor][6]
+applyrational_in[divisor][7]
+applyrational_in[divisor][8]
+applyrational_in[divisor][9]
+applyrational_in[multiplier][0]
+applyrational_in[multiplier][10]
+applyrational_in[multiplier][11]
+applyrational_in[multiplier][12]
+applyrational_in[multiplier][13]
+applyrational_in[multiplier][14]
+applyrational_in[multiplier][15]
+applyrational_in[multiplier][16]
+applyrational_in[multiplier][17]
+applyrational_in[multiplier][18]
+applyrational_in[multiplier][19]
+applyrational_in[multiplier][1]
+applyrational_in[multiplier][20]
+applyrational_in[multiplier][21]
+applyrational_in[multiplier][22]
+applyrational_in[multiplier][23]
+applyrational_in[multiplier][24]
+applyrational_in[multiplier][25]
+applyrational_in[multiplier][26]
+applyrational_in[multiplier][27]
+applyrational_in[multiplier][28]
+applyrational_in[multiplier][29]
+applyrational_in[multiplier][2]
+applyrational_in[multiplier][30]
+applyrational_in[multiplier][31]
+applyrational_in[multiplier][3]
+applyrational_in[multiplier][4]
+applyrational_in[multiplier][5]
+applyrational_in[multiplier][6]
+applyrational_in[multiplier][7]
+applyrational_in[multiplier][8]
+applyrational_in[multiplier][9]
+applyrational_in[outputzeropoint][0]
+applyrational_in[outputzeropoint][10]
+applyrational_in[outputzeropoint][11]
+applyrational_in[outputzeropoint][12]
+applyrational_in[outputzeropoint][13]
+applyrational_in[outputzeropoint][14]
+applyrational_in[outputzeropoint][15]
+applyrational_in[outputzeropoint][16]
+applyrational_in[outputzeropoint][17]
+applyrational_in[outputzeropoint][18]
+applyrational_in[outputzeropoint][19]
+applyrational_in[outputzeropoint][1]
+applyrational_in[outputzeropoint][20]
+applyrational_in[outputzeropoint][21]
+applyrational_in[outputzeropoint][22]
+applyrational_in[outputzeropoint][23]
+applyrational_in[outputzeropoint][24]
+applyrational_in[outputzeropoint][25]
+applyrational_in[outputzeropoint][26]
+applyrational_in[outputzeropoint][27]
+applyrational_in[outputzeropoint][28]
+applyrational_in[outputzeropoint][29]
+applyrational_in[outputzeropoint][2]
+applyrational_in[outputzeropoint][30]
+applyrational_in[outputzeropoint][31]
+applyrational_in[outputzeropoint][3]
+applyrational_in[outputzeropoint][4]
+applyrational_in[outputzeropoint][5]
+applyrational_in[outputzeropoint][6]
+applyrational_in[outputzeropoint][7]
+applyrational_in[outputzeropoint][8]
+applyrational_in[outputzeropoint][9]
+applyrational_in[run]
+applyrational_in[value][0]
+applyrational_in[value][10]
+applyrational_in[value][11]
+applyrational_in[value][12]
+applyrational_in[value][13]
+applyrational_in[value][14]
+applyrational_in[value][15]
+applyrational_in[value][16]
+applyrational_in[value][17]
+applyrational_in[value][18]
+applyrational_in[value][19]
+applyrational_in[value][1]
+applyrational_in[value][20]
+applyrational_in[value][21]
+applyrational_in[value][22]
+applyrational_in[value][23]
+applyrational_in[value][24]
+applyrational_in[value][25]
+applyrational_in[value][26]
+applyrational_in[value][27]
+applyrational_in[value][28]
+applyrational_in[value][29]
+applyrational_in[value][2]
+applyrational_in[value][30]
+applyrational_in[value][31]
+applyrational_in[value][3]
+applyrational_in[value][4]
+applyrational_in[value][5]
+applyrational_in[value][6]
+applyrational_in[value][7]
+applyrational_in[value][8]
+applyrational_in[value][9]
+clamp_in[run]
+clamp_in[value][0]
+clamp_in[value][10]
+clamp_in[value][11]
+clamp_in[value][12]
+clamp_in[value][13]
+clamp_in[value][14]
+clamp_in[value][15]
+clamp_in[value][16]
+clamp_in[value][17]
+clamp_in[value][18]
+clamp_in[value][19]
+clamp_in[value][1]
+clamp_in[value][20]
+clamp_in[value][21]
+clamp_in[value][22]
+clamp_in[value][23]
+clamp_in[value][24]
+clamp_in[value][25]
+clamp_in[value][26]
+clamp_in[value][27]
+clamp_in[value][28]
+clamp_in[value][29]
+clamp_in[value][2]
+clamp_in[value][30]
+clamp_in[value][31]
+clamp_in[value][3]
+clamp_in[value][4]
+clamp_in[value][5]
+clamp_in[value][6]
+clamp_in[value][7]
+clamp_in[value][8]
+clamp_in[value][9]
+
+ There are 0 input ports with no input delay but user has a false path constraint.
+
+
+6. checking no_output_delay (66)
+--------------------------------
+ There are 66 ports with no output delay specified. (HIGH)
+
+applyrational_out[busy]
+applyrational_out[return_value][0]
+applyrational_out[return_value][10]
+applyrational_out[return_value][11]
+applyrational_out[return_value][12]
+applyrational_out[return_value][13]
+applyrational_out[return_value][14]
+applyrational_out[return_value][15]
+applyrational_out[return_value][16]
+applyrational_out[return_value][17]
+applyrational_out[return_value][18]
+applyrational_out[return_value][19]
+applyrational_out[return_value][1]
+applyrational_out[return_value][20]
+applyrational_out[return_value][21]
+applyrational_out[return_value][22]
+applyrational_out[return_value][23]
+applyrational_out[return_value][24]
+applyrational_out[return_value][25]
+applyrational_out[return_value][26]
+applyrational_out[return_value][27]
+applyrational_out[return_value][28]
+applyrational_out[return_value][29]
+applyrational_out[return_value][2]
+applyrational_out[return_value][30]
+applyrational_out[return_value][31]
+applyrational_out[return_value][3]
+applyrational_out[return_value][4]
+applyrational_out[return_value][5]
+applyrational_out[return_value][6]
+applyrational_out[return_value][7]
+applyrational_out[return_value][8]
+applyrational_out[return_value][9]
+clamp_out[busy]
+clamp_out[return_value][0]
+clamp_out[return_value][10]
+clamp_out[return_value][11]
+clamp_out[return_value][12]
+clamp_out[return_value][13]
+clamp_out[return_value][14]
+clamp_out[return_value][15]
+clamp_out[return_value][16]
+clamp_out[return_value][17]
+clamp_out[return_value][18]
+clamp_out[return_value][19]
+clamp_out[return_value][1]
+clamp_out[return_value][20]
+clamp_out[return_value][21]
+clamp_out[return_value][22]
+clamp_out[return_value][23]
+clamp_out[return_value][24]
+clamp_out[return_value][25]
+clamp_out[return_value][26]
+clamp_out[return_value][27]
+clamp_out[return_value][28]
+clamp_out[return_value][29]
+clamp_out[return_value][2]
+clamp_out[return_value][30]
+clamp_out[return_value][31]
+clamp_out[return_value][3]
+clamp_out[return_value][4]
+clamp_out[return_value][5]
+clamp_out[return_value][6]
+clamp_out[return_value][7]
+clamp_out[return_value][8]
+clamp_out[return_value][9]
+
+ There are 0 ports with no output delay but user has a false path constraint
+
+ There are 0 ports with no output delay but with a timing clock defined on it or propagating through it
+
+
+7. checking multiple_clock (0)
+------------------------------
+ There are 0 register/latch pins with multiple clocks.
+
+
+8. checking generated_clocks (0)
+--------------------------------
+ There are 0 generated clocks that are not connected to a clock source.
+
+
+9. checking loops (0)
+---------------------
+ There are 0 combinational loops in the design.
+
+
+10. checking partial_input_delay (0)
+------------------------------------
+ There are 0 input ports with partial input delay specified.
+
+
+11. checking partial_output_delay (0)
+-------------------------------------
+ There are 0 ports with partial output delay specified.
+
+
+12. checking latch_loops (0)
+----------------------------
+ There are 0 combinational latch loops in the design through latch input
+
+
+
+------------------------------------------------------------------------------------------------
+| Design Timing Summary
+| ---------------------
+------------------------------------------------------------------------------------------------
+
+    WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+    -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+     10.528        0.000                      0                 4135        0.256        0.000                      0                 4135        9.500        0.000                       0                  2189  
+
+
+All user specified timing constraints are met.
+
+
+------------------------------------------------------------------------------------------------
+| Clock Summary
+| -------------
+------------------------------------------------------------------------------------------------
+
+Clock          Waveform(ns)       Period(ns)      Frequency(MHz)
+-----          ------------       ----------      --------------
+context_clock  {0.000 10.000}     20.000          50.000          
+
+
+------------------------------------------------------------------------------------------------
+| Intra Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+Clock              WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+-----              -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+context_clock       10.528        0.000                      0                 4135        0.256        0.000                      0                 4135        9.500        0.000                       0                  2189  
+
+
+------------------------------------------------------------------------------------------------
+| Inter Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| Other Path Groups Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock          WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints      WHS(ns)      THS(ns)  THS Failing Endpoints  THS Total Endpoints  
+----------    ----------    --------          -------      -------  ---------------------  -------------------      -------      -------  ---------------------  -------------------  
+
+
+------------------------------------------------------------------------------------------------
+| User Ignored Path Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group    From Clock    To Clock    
+----------    ----------    --------    
+
+
+------------------------------------------------------------------------------------------------
+| Unconstrained Path Table
+| ------------------------
+------------------------------------------------------------------------------------------------
+
+Path Group     From Clock     To Clock     
+----------     ----------     --------     
+(none)         context_clock                 
+(none)                        context_clock  
+
+
+------------------------------------------------------------------------------------------------
+| Timing Details
+| --------------
+------------------------------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  context_clock
+  To Clock:  context_clock
+
+Setup :            0  Failing Endpoints,  Worst Slack       10.528ns,  Total Violation        0.000ns
+Hold  :            0  Failing Endpoints,  Worst Slack        0.256ns,  Total Violation        0.000ns
+PW    :            0  Failing Endpoints,  Worst Slack        9.500ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             10.528ns  (required time - arrival time)
+  Source:                 dut/ARG__5/CLK
+                            (rising edge-triggered cell DSP48E1 clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Destination:            dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/D
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Path Group:             context_clock
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            20.000ns  (context_clock rise@20.000ns - context_clock rise@0.000ns)
+  Data Path Delay:        9.432ns  (logic 8.181ns (86.738%)  route 1.251ns (13.262%))
+  Logic Levels:           15  (CARRY4=12 DSP48E1=1 LUT2=2)
+  Clock Path Skew:        -0.049ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.924ns = ( 20.924 - 20.000 ) 
+    Source Clock Delay      (SCD):    0.973ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.035ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.071ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.973     0.973    dut/Clk
+                         DSP48E1                                      r  dut/ARG__5/CLK
+  -------------------------------------------------------------------    -------------------
+                         DSP48E1 (Prop_dsp48e1_CLK_PCOUT[47])
+                                                      4.206     5.179 r  dut/ARG__5/PCOUT[47]
+                         net (fo=1, unplaced)         0.000     5.179    dut/ARG__5_n_106
+                         DSP48E1 (Prop_dsp48e1_PCIN[47]_P[0])
+                                                      1.518     6.697 r  dut/ARG__6/P[0]
+                         net (fo=2, unplaced)         0.803     7.500    dut/ARG__6_n_105
+                         LUT2 (Prop_lut2_I0_O)        0.124     7.624 r  dut/i__carry_i_3__0/O
+                         net (fo=1, unplaced)         0.000     7.624    dut/i__carry_i_3__0_n_0
+                         CARRY4 (Prop_carry4_S[1]_CO[3])
+                                                      0.533     8.157 r  dut/ARG_inferred__0/i__carry/CO[3]
+                         net (fo=1, unplaced)         0.000     8.157    dut/ARG_inferred__0/i__carry_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.274 r  dut/ARG_inferred__0/i__carry__0/CO[3]
+                         net (fo=1, unplaced)         0.000     8.274    dut/ARG_inferred__0/i__carry__0_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.391 r  dut/ARG_inferred__0/i__carry__1/CO[3]
+                         net (fo=1, unplaced)         0.000     8.391    dut/ARG_inferred__0/i__carry__1_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.508 r  dut/ARG_inferred__0/i__carry__2/CO[3]
+                         net (fo=1, unplaced)         0.000     8.508    dut/ARG_inferred__0/i__carry__2_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.625 r  dut/ARG_inferred__0/i__carry__3/CO[3]
+                         net (fo=1, unplaced)         0.000     8.625    dut/ARG_inferred__0/i__carry__3_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.742 r  dut/ARG_inferred__0/i__carry__4/CO[3]
+                         net (fo=1, unplaced)         0.000     8.742    dut/ARG_inferred__0/i__carry__4_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.859 r  dut/ARG_inferred__0/i__carry__5/CO[3]
+                         net (fo=1, unplaced)         0.000     8.859    dut/ARG_inferred__0/i__carry__5_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.976 r  dut/ARG_inferred__0/i__carry__6/CO[3]
+                         net (fo=1, unplaced)         0.000     8.976    dut/ARG_inferred__0/i__carry__6_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     9.093 r  dut/ARG_inferred__0/i__carry__7/CO[3]
+                         net (fo=1, unplaced)         0.000     9.093    dut/ARG_inferred__0/i__carry__7_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     9.210 r  dut/ARG_inferred__0/i__carry__8/CO[3]
+                         net (fo=1, unplaced)         0.000     9.210    dut/ARG_inferred__0/i__carry__8_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     9.327 r  dut/ARG_inferred__0/i__carry__9/CO[3]
+                         net (fo=1, unplaced)         0.000     9.327    dut/ARG_inferred__0/i__carry__9_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.331     9.658 r  dut/ARG_inferred__0/i__carry__10/O[3]
+                         net (fo=1, unplaced)         0.448    10.106    dut/in18[31]
+                         LUT2 (Prop_lut2_I1_O)        0.299    10.405 r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct[31]_i_2/O
+                         net (fo=1, unplaced)         0.000    10.405    dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct[31]_i_2_n_0
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock context_clock rise edge)
+                                                     20.000    20.000 r  <hidden>
+                                                      0.000    20.000 r  Clk
+                         net (fo=2196, unset)         0.924    20.924    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/C
+                         clock pessimism              0.000    20.924    <hidden>
+                         clock uncertainty           -0.035    20.889    <hidden>
+                         FDRE (Setup_fdre_C_D)        0.044    20.933    dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]
+  -------------------------------------------------------------------
+                         required time                         20.933    <hidden>
+                         arrival time                         -10.405    <hidden>
+  -------------------------------------------------------------------
+                         slack                                 10.528    <hidden>
+
+
+
+
+
+Min Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             0.256ns  (arrival time - required time)
+  Source:                 dut/applyrational_fn_reset_sync.applyrational_fn.fractionremainder_reg[9]/C
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Destination:            dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder_reg[10]/D
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Path Group:             context_clock
+  Path Type:              Hold (Min at Fast Process Corner)
+  Requirement:            0.000ns  (context_clock rise@0.000ns - context_clock rise@0.000ns)
+  Data Path Delay:        0.376ns  (logic 0.245ns (65.144%)  route 0.131ns (34.856%))
+  Logic Levels:           1  (LUT2=1)
+  Clock Path Skew:        0.022ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.432ns
+    Source Clock Delay      (SCD):    0.410ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.410     0.410    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.fractionremainder_reg[9]/C
+  -------------------------------------------------------------------    -------------------
+                         FDRE (Prop_fdre_C_Q)         0.147     0.557 r  dut/applyrational_fn_reset_sync.applyrational_fn.fractionremainder_reg[9]/Q
+                         net (fo=1, unplaced)         0.131     0.688    dut/in22[10]
+                         LUT2 (Prop_lut2_I1_O)        0.098     0.786 r  dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder[10]_i_1/O
+                         net (fo=1, unplaced)         0.000     0.786    dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder0_in[10]
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder_reg[10]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.432     0.432    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder_reg[10]/C
+                         clock pessimism              0.000     0.432    <hidden>
+                         FDRE (Hold_fdre_C_D)         0.099     0.531    dut/applyrational_fn_reset_sync.applyrational_fn.doubledremainder_reg[10]
+  -------------------------------------------------------------------
+                         required time                         -0.531    <hidden>
+                         arrival time                           0.786    <hidden>
+  -------------------------------------------------------------------
+                         slack                                  0.256    <hidden>
+
+
+
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         context_clock
+Waveform(ns):       { 0.000 10.000 }
+Period(ns):         20.000
+Sources:            { Clk }
+
+Check Type        Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
+Min Period        n/a     FDSE/C   n/a            1.000         20.000      19.000               dut/FSM_onehot_clamp_fn_reset_sync.this_clamp_lvt_state_reg[0]/C
+Low Pulse Width   Slow    FDSE/C   n/a            0.500         10.000      9.500                dut/FSM_onehot_clamp_fn_reset_sync.this_clamp_lvt_state_reg[0]/C
+High Pulse Width  Slow    FDSE/C   n/a            0.500         10.000      9.500                dut/FSM_onehot_clamp_fn_reset_sync.this_clamp_lvt_state_reg[0]/C
+
+
+
+--------------------------------------------------------------------------------------
+Path Group:  (none)
+From Clock:  context_clock
+  To Clock:  
+
+Max Delay            66 Endpoints
+Min Delay            66 Endpoints
+--------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack:                    inf
+  Source:                 dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/C
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Destination:            applyrational_out[busy]
+                            (output port)
+  Path Group:             (none)
+  Path Type:              Max at Slow Process Corner
+  Data Path Delay:        1.451ns  (logic 0.478ns (32.943%)  route 0.973ns (67.057%))
+  Logic Levels:           0  
+  Clock Uncertainty:      0.025ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.050ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.973     0.973    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/C
+  -------------------------------------------------------------------    -------------------
+                         FDRE (Prop_fdre_C_Q)         0.478     1.451 r  dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/Q
+                         net (fo=1, unset)            0.973     2.424    applyrational_out[busy]
+                                                                      r  applyrational_out[busy]
+  -------------------------------------------------------------------    -------------------
+
+
+
+
+
+Min Delay Paths
+--------------------------------------------------------------------------------------
+Slack:                    inf
+  Source:                 dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/C
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Destination:            applyrational_out[busy]
+                            (output port)
+  Path Group:             (none)
+  Path Type:              Min at Fast Process Corner
+  Data Path Delay:        0.557ns  (logic 0.147ns (26.385%)  route 0.410ns (73.615%))
+  Logic Levels:           0  
+  Clock Uncertainty:      0.025ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.050ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.410     0.410    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/C
+  -------------------------------------------------------------------    -------------------
+                         FDRE (Prop_fdre_C_Q)         0.147     0.557 r  dut/applyrational_fn_reset_sync.this_applyrational_out_reg[busy]/Q
+                         net (fo=1, unset)            0.410     0.967    applyrational_out[busy]
+                                                                      r  applyrational_out[busy]
+  -------------------------------------------------------------------    -------------------
+
+
+
+
+
+--------------------------------------------------------------------------------------
+Path Group:  (none)
+From Clock:  
+  To Clock:  context_clock
+
+Max Delay          2824 Endpoints
+Min Delay          2824 Endpoints
+--------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack:                    inf
+  Source:                 applyrational_in[multiplier][16]
+                            (input port)
+  Destination:            dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/D
+                            (rising edge-triggered cell FDRE clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Path Group:             (none)
+  Path Type:              Setup (Max at Slow Process Corner)
+  Data Path Delay:        10.050ns  (logic 7.826ns (77.872%)  route 2.224ns (22.128%))
+  Logic Levels:           16  (CARRY4=12 DSP48E1=2 LUT2=2)
+  Clock Path Skew:        0.924ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    0.924ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    0.000ns
+  Clock Uncertainty:      0.025ns  ((TSJ^2 + TIJ^2)^1/2 + DJ) / 2 + PE
+    Total System Jitter     (TSJ):    0.050ns
+    Total Input Jitter      (TIJ):    0.000ns
+    Discrete Jitter          (DJ):    0.000ns
+    Phase Error              (PE):    0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                                                      0.000     0.000 r  applyrational_in[multiplier][16]
+                         net (fo=3, unset)            0.973     0.973    dut/applyrational_in[multiplier][16]
+                         DSP48E1 (Prop_dsp48e1_B[16]_PCOUT[47])
+                                                      3.851     4.824 r  dut/ARG__5/PCOUT[47]
+                         net (fo=1, unplaced)         0.000     4.824    dut/ARG__5_n_106
+                         DSP48E1 (Prop_dsp48e1_PCIN[47]_P[0])
+                                                      1.518     6.342 r  dut/ARG__6/P[0]
+                         net (fo=2, unplaced)         0.803     7.145    dut/ARG__6_n_105
+                         LUT2 (Prop_lut2_I0_O)        0.124     7.269 r  dut/i__carry_i_3__0/O
+                         net (fo=1, unplaced)         0.000     7.269    dut/i__carry_i_3__0_n_0
+                         CARRY4 (Prop_carry4_S[1]_CO[3])
+                                                      0.533     7.802 r  dut/ARG_inferred__0/i__carry/CO[3]
+                         net (fo=1, unplaced)         0.000     7.802    dut/ARG_inferred__0/i__carry_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     7.919 r  dut/ARG_inferred__0/i__carry__0/CO[3]
+                         net (fo=1, unplaced)         0.000     7.919    dut/ARG_inferred__0/i__carry__0_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.036 r  dut/ARG_inferred__0/i__carry__1/CO[3]
+                         net (fo=1, unplaced)         0.000     8.036    dut/ARG_inferred__0/i__carry__1_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.153 r  dut/ARG_inferred__0/i__carry__2/CO[3]
+                         net (fo=1, unplaced)         0.000     8.153    dut/ARG_inferred__0/i__carry__2_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.270 r  dut/ARG_inferred__0/i__carry__3/CO[3]
+                         net (fo=1, unplaced)         0.000     8.270    dut/ARG_inferred__0/i__carry__3_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.387 r  dut/ARG_inferred__0/i__carry__4/CO[3]
+                         net (fo=1, unplaced)         0.000     8.387    dut/ARG_inferred__0/i__carry__4_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.504 r  dut/ARG_inferred__0/i__carry__5/CO[3]
+                         net (fo=1, unplaced)         0.000     8.504    dut/ARG_inferred__0/i__carry__5_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.621 r  dut/ARG_inferred__0/i__carry__6/CO[3]
+                         net (fo=1, unplaced)         0.000     8.621    dut/ARG_inferred__0/i__carry__6_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.738 r  dut/ARG_inferred__0/i__carry__7/CO[3]
+                         net (fo=1, unplaced)         0.000     8.738    dut/ARG_inferred__0/i__carry__7_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.855 r  dut/ARG_inferred__0/i__carry__8/CO[3]
+                         net (fo=1, unplaced)         0.000     8.855    dut/ARG_inferred__0/i__carry__8_n_0
+                         CARRY4 (Prop_carry4_CI_CO[3])
+                                                      0.117     8.972 r  dut/ARG_inferred__0/i__carry__9/CO[3]
+                         net (fo=1, unplaced)         0.000     8.972    dut/ARG_inferred__0/i__carry__9_n_0
+                         CARRY4 (Prop_carry4_CI_O[3])
+                                                      0.331     9.303 r  dut/ARG_inferred__0/i__carry__10/O[3]
+                         net (fo=1, unplaced)         0.448     9.751    dut/in18[31]
+                         LUT2 (Prop_lut2_I1_O)        0.299    10.050 r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct[31]_i_2/O
+                         net (fo=1, unplaced)         0.000    10.050    dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct[31]_i_2_n_0
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.924     0.924    dut/Clk
+                         FDRE                                         r  dut/applyrational_fn_reset_sync.applyrational_fn.remainderproduct_reg[31]/C
+
+
+
+
+
+Min Delay Paths
+--------------------------------------------------------------------------------------
+Slack:                    inf
+  Source:                 Rst
+                            (input port)
+  Destination:            dut/ARG__3/RSTB
+                            (rising edge-triggered cell DSP48E1 clocked by context_clock  {rise@0.000ns fall@10.000ns period=20.000ns})
+  Path Group:             (none)
+  Path Type:              Hold (Min at Fast Process Corner)
+  Data Path Delay:        0.410ns  (logic 0.000ns (0.000%)  route 0.410ns (100.000%))
+  Logic Levels:           0  
+  Clock Path Skew:        0.432ns (DCD - SCD - CPR)
+    Destination Clock Delay (DCD):    0.432ns
+    Source Clock Delay      (SCD):    0.000ns
+    Clock Pessimism Removal (CPR):    -0.000ns
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                                                      0.000     0.000 r  Rst
+                         net (fo=2187, unset)         0.410     0.410    dut/Rst
+                         DSP48E1                                      r  dut/ARG__3/RSTB
+  -------------------------------------------------------------------    -------------------
+
+                         (clock context_clock rise edge)
+                                                      0.000     0.000 r  <hidden>
+                                                      0.000     0.000 r  Clk
+                         net (fo=2196, unset)         0.432     0.432    dut/Clk
+                         DSP48E1                                      r  dut/ARG__3/CLK
+
+
+
+
+

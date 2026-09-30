@@ -9,6 +9,9 @@ using Livt.ML.Storage
  */
 component QLinearMatMul256x10Ram
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 256
 	public const OUTPUT_SIZE: int = 10
@@ -37,6 +40,7 @@ component QLinearMatMul256x10Ram
 	 */
 	new()
 	{
+		requantize = new ScheduledRequantizeUInt8()
 		this.inputValues = new ByteTensorRam2048(INPUT_SIZE)
 		this.weights = new ByteTensorRam4096(2560)
 	}
@@ -139,7 +143,7 @@ component QLinearMatMul256x10Ram
 			}
 
 			accumulators[column] = accumulator
-			output[column] = RequantizeUInt8.ApplyRational(
+			output[column] = requantize.ApplyRational(
 				accumulator, multipliers[column], divisors[column], outputZeroPoints[column])
 		}
 	}

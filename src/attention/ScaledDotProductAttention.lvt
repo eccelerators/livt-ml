@@ -1,5 +1,6 @@
 namespace Livt.ML.Attention
 
+using Livt.Math.Arithmetic
 using Livt.ML.Activation
 
 /**
@@ -20,6 +21,7 @@ component ScaledDotProductAttention
 	public const WEIGHT_SCALE: int = 256
 
 	// Owned inference subcomponents sharing the caller clock/reset context.
+	divider: IntegerDivision<32>
 	kvcache: KVCache
 	softmax: SoftmaxApprox
 
@@ -27,10 +29,11 @@ component ScaledDotProductAttention
 	output: int[8]
 
 	/**
-	 * Creates the owned cache and softmax approximation components.
+	 * Owns cache, softmax, and scheduled score division; serialize operations.
 	 */
 	new()
 	{
+		divider = new IntegerDivision<32>()
 		kvcache = new KVCache()
 		softmax = new SoftmaxApprox()
 	}
@@ -67,7 +70,7 @@ component ScaledDotProductAttention
 				dot = dot + query[elem] * kvcache.GetKeyElement(slot, elem)
 			}
 
-			scores[slot] = dot / SCORE_SCALE
+			scores[slot] = divider.Divide(dot, SCORE_SCALE)
 		}
 
 		softmax.ComputeCount(scores, activeCount)

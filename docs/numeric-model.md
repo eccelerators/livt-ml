@@ -49,7 +49,9 @@ but must produce identical results.
 ## Unsigned ONNX activations
 
 The CNN reference operators represent ONNX uint8 tensor values as Livt `int`
-values constrained to `[0, 255]`. `RequantizeUInt8.ApplyRational` computes:
+values constrained to `[0, 255]`. Own a `ScheduledRequantizeUInt8` instance and
+call its `ApplyRational` method; calls wait for completion and must be serialized.
+The former static `RequantizeUInt8` class is removed. The instance method computes:
 
 ```text
 round_ties_even(value * multiplier / divisor) + outputZeroPoint

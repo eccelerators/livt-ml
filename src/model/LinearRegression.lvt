@@ -1,10 +1,18 @@
 namespace Livt.ML.Model
 
+using Livt.Math.Arithmetic
+
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Fits a small integer linear regression model with fixed-point slope.
  */
 component LinearRegression
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
 	// Maximum number of samples accepted by Fit.
 	public const MAX_SAMPLES: int = 32
 
@@ -14,6 +22,14 @@ component LinearRegression
 	// Fitted slope and intercept retained for predictions.
 	aFixed: int
 	b: int
+
+	/**
+	 * Owns the scheduled arithmetic worker; serialize public operations.
+	 */
+	new()
+	{
+		divider = new IntegerDivision<32>()
+	}
 
 	/**
 	 * Fits y = a*x + b from n samples, clearing coefficients on invalid input.
@@ -49,8 +65,8 @@ component LinearRegression
 			return
 		}
 
-		aFixed = (n * sumXY - sumX * sumY) * SCALE / denom
-		b = (sumY - (aFixed * sumX) / SCALE) / n
+		aFixed = divider.Divide((n * sumXY - sumX * sumY) * SCALE, denom)
+		b = divider.Divide(sumY - divider.Divide(aFixed * sumX, SCALE), n)
 	}
 
 	/**
@@ -58,7 +74,7 @@ component LinearRegression
 	 */
 	public fn Predict(x: int) int
 	{
-		return (aFixed * x) / SCALE + b
+		return divider.Divide(aFixed * x, SCALE) + b
 	}
 
 	/**

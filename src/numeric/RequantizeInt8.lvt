@@ -1,6 +1,11 @@
 namespace Livt.ML.Numeric
 
+using Livt.Math.Arithmetic
+
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Requantizes an integer accumulator into signed int8 range.
  *
  * Division rounds to nearest with exact ties going to the even result. The
@@ -9,11 +14,22 @@ namespace Livt.ML.Numeric
  */
 component RequantizeInt8
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
 	// Minimum value represented by a signed int8 tensor element.
 	public const MIN_VALUE: int = -128
 
 	// Maximum value represented by a signed int8 tensor element.
 	public const MAX_VALUE: int = 127
+
+	/**
+	 * Owns the scheduled arithmetic worker; serialize public operations.
+	 */
+	new()
+	{
+		divider = new IntegerDivision<32>()
+	}
 
 	/**
 	 * Divides value by divisor, adds outputZeroPoint, and clamps to int8.
@@ -31,8 +47,9 @@ component RequantizeInt8
 			magnitude = 0 - value
 		}
 
-		var quotient = magnitude / divisor
-		var remainder = magnitude % divisor
+		divider.Compute(magnitude, divisor)
+		var quotient = divider.GetQuotient()
+		var remainder = divider.GetRemainder()
 		var doubledRemainder = remainder * 2
 
 		if (doubledRemainder > divisor) {

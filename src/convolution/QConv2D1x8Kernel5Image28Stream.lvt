@@ -14,6 +14,9 @@ using Livt.ML.Numeric
  */
 component QConv2D1x8Kernel5Image28Stream
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Weight-loading payload and toggle acknowledgment.
 	weightRequest: logic
 	weightData: logic[8]
@@ -90,6 +93,7 @@ component QConv2D1x8Kernel5Image28Stream
 		outputData: out byte, outputLast: out logic, outputAcknowledge: in logic,
 		configured: out logic, frameError: out logic)
 	{
+		requantize = new ScheduledRequantizeUInt8()
 		this.weightRequest = weightRequest
 		this.weightData = weightData
 		weightAcknowledge = this.weightAcknowledge
@@ -227,7 +231,7 @@ component QConv2D1x8Kernel5Image28Stream
 				var candidate = QConv2D1x8Kernel5Image28Stream.ComputeAccumulator(
 					inputs, weights, biases[outputChannel], inputZeroPoints[outputChannel],
 					weightZeroPoints[outputChannel], outputChannel, outputRow, outputColumn)
-				var finished = RequantizeUInt8.ApplyRational(candidate,
+				var finished = requantize.ApplyRational(candidate,
 					multipliers[outputChannel], divisors[outputChannel],
 					outputZeroPoints[outputChannel])
 				outputData = finished as byte

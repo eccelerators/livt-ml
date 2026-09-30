@@ -1,6 +1,7 @@
 namespace Livt.ML.Storage
 
 using Livt.IO
+using Livt.Math.Arithmetic
 using Livt.ML.Numeric
 
 /**
@@ -15,8 +16,9 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 	catalog: CATALOG
 	memory: MEMORY
 
-	// Owned fixed-point reconstruction worker.
+	// Owned fixed-point reconstruction and shape-validation workers.
 	fixed: FixedPointMath<BITS, FRACTION, SCALE_FRACTION>
+	divider: UnsignedDivision<31>
 
 	// Selected tensor dimensions and flattened element count.
 	rows: int
@@ -34,7 +36,7 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 
 	/**
 	 * Borrows the immutable catalog and word-addressed memory; owns the fixed-point
-	 * reconstruction worker. Load external storage and successfully Select a tensor before
+	 * reconstruction and shape-division workers. Load external storage and successfully Select before
 	 * reading.
 	 */
 	new(catalog: CATALOG, memory: MEMORY)
@@ -42,6 +44,7 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 		this.catalog = catalog
 		this.memory = memory
 		fixed = new FixedPointMath<BITS, FRACTION, SCALE_FRACTION>()
+		divider = new UnsignedDivision<31>()
 	}
 
 	/**
@@ -61,7 +64,7 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 			return false
 		}
 
-		if (r > 2147483647 / c) {
+		if (r > (divider.Divide(2147483647 as uint, c as uint) as int)) {
 			return false
 		}
 
@@ -69,7 +72,7 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 		var w = catalog.WeightByteAddress(tensor)
 		var s = catalog.ScaleWordAddress(tensor)
 		var bytes = n / 2 + n % 2
-		var groups = (n - 1) / GROUP_SIZE + 1
+		var groups = this.ScaleGroup(n - 1) + 1
 
 		if (w < 0 || w > 2147483647 - bytes || s < 0 || s > 2147483647 - groups) {
 			return false
@@ -123,7 +126,7 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 		var word = memory.Read(address / 4) as logic[32]
 		var packed = (word >> ((address % 4) * 8)) as byte
 		var code = fixed.SignedNibble(packed, index % 2 != 0)
-		var scale = memory.Read(scales + index / GROUP_SIZE) as logic[32]
+		var scale = memory.Read(scales + this.ScaleGroup(index)) as logic[32]
 		var value = fixed.Weight(code, scale)
 		failed = fixed.Failed()
 		return value
@@ -136,5 +139,18 @@ component QuantizedTensorWeights<BITS: int, FRACTION: int, SCALE_FRACTION: int,
 	override fn Failed() bool
 	{
 		return failed
+	}
+
+	/**
+	 * Maps a nonnegative element index to its scale group. Power-of-two
+	 * specialization retains cheap constant arithmetic; other sizes are scheduled.
+	 */
+	fn ScaleGroup(index: int) int
+	{
+		static if ((GROUP_SIZE & (GROUP_SIZE - 1)) == 0) {
+			return index / GROUP_SIZE
+		} else {
+			return divider.Divide(index as uint, GROUP_SIZE as uint) as int
+		}
 	}
 }

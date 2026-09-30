@@ -1,6 +1,11 @@
 namespace Livt.ML.Norm
 
+using Livt.Math.Arithmetic
+
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Toggle-stream implementation of the LayerNorm64 numeric contract.
  *
  * Sixty-four Q8.8 gamma/beta records configure the component. Each input frame
@@ -9,6 +14,9 @@ namespace Livt.ML.Norm
  */
 component LayerNorm64Stream
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
 	// Compile-time dimensions, bounds, and numeric constants.
 	public const VECTOR_SIZE: int = 64
 	public const AFFINE_SCALE: int = 256
@@ -77,6 +85,7 @@ component LayerNorm64Stream
 		outputData: out int, outputLast: out logic, outputAcknowledge: in logic,
 		configured: out logic, frameError: out logic)
 	{
+		divider = new IntegerDivision<32>()
 		this.affineRequest = affineRequest
 		this.affineGamma = affineGamma
 		this.affineBeta = affineBeta
@@ -178,18 +187,18 @@ component LayerNorm64Stream
 						}
 
 						for (var iteration = 0; iteration < 31; iteration++) {
-							var quotient = normValue / root
+							var quotient = divider.Divide(normValue, root)
 
 							if (root > quotient) {
 								root = (root + quotient) / 2
 							}
 						}
 
-						if (root > normValue / root) {
+						if (root > divider.Divide(normValue, root)) {
 							root--
 						}
 
-						inverseStddev = (32768 + root / 2) / root
+						inverseStddev = divider.Divide(32768 + root / 2, root)
 					}
 
 					for (var index = 0; index < VECTOR_SIZE; index++) {

@@ -8,6 +8,9 @@ using Livt.ML.Storage
  */
 component QLinearConv8x16Same5x5Ram
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 1568
 	public const OUTPUT_SIZE: int = 3136
@@ -37,6 +40,7 @@ component QLinearConv8x16Same5x5Ram
 	 */
 	new()
 	{
+		requantize = new ScheduledRequantizeUInt8()
 		this.inputValues = new ByteTensorRam2048(INPUT_SIZE)
 		this.weights = new ByteTensorRam4096(3200)
 		this.outputValues = new ByteTensorRam4096(OUTPUT_SIZE)
@@ -174,7 +178,7 @@ component QLinearConv8x16Same5x5Ram
 						}
 					}
 
-					var quantized = RequantizeUInt8.ApplyRational(
+					var quantized = requantize.ApplyRational(
 						accumulator, multipliers[outputChannel], divisors[outputChannel], outputZeroPoints[outputChannel])
 					this.outputValues.Write(outputChannel * 196 + row * 14 + column, quantized as byte)
 				}

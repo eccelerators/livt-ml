@@ -28,7 +28,7 @@ have been folded into `Livt.ML` or deliberately left elsewhere.
 | `Livt.ML.Linear.Int8Linear4x8` | first-layer int8 projection with int32 accumulation for tiny imported models |
 | `Livt.ML.Linear.Int8Linear8x3` | int8 three-class projection with int32 accumulation for tiny imported models |
 | `Livt.ML.Numeric.RequantizeInt8` | explicit ties-to-even int32-to-int8 scale transition |
-| `Livt.ML.Numeric.RequantizeUInt8` | rational ties-to-even uint8 scale transitions for imported ONNX graphs |
+| `Livt.ML.Numeric.ScheduledRequantizeUInt8` | rational ties-to-even uint8 scale transitions for imported ONNX graphs |
 | `Livt.ML.Convolution.QLinearConv1x8Same5x5` | first fixed quantized CNN layer required by the MNIST vertical slice |
 | `Livt.ML.Convolution.QLinearConv8x16Same5x5` | second fixed quantized CNN layer required by the MNIST vertical slice |
 | `Livt.ML.Pooling.MaxPool8x28To14` | fixed 2x2 pooling for the imported CNN |

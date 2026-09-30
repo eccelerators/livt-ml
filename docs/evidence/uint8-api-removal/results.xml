@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Livt" tests="4" failures="0" skipped="0" time="1.872">
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="RoundsTiesToEven" time="0.023"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="SplitsLargeProductsAndClamps" time="0.017"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="HandlesInvalidScaleParameters" time="0.0"></testcase>
+  <testcase classname="Livt.ML.Tests.Numeric.ScheduledRequantizeUInt8Test" name="MatchesNumericReferenceAcrossSigns" time="1.832"></testcase>
+</testsuite>

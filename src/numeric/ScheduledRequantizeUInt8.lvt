@@ -1,29 +1,45 @@
 namespace Livt.ML.Numeric
 
+using Livt.Math.Arithmetic
+
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Provides ONNX-compatible rational requantization into unsigned int8 range.
  *
  * The multiplier and divisor must be non-negative, and their product must fit
  * in a signed Livt int. Division rounds to nearest with exact ties going to
  * the even result. Invalid scale parameters return the clamped zero point.
  */
-class RequantizeUInt8
+component ScheduledRequantizeUInt8
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
+	/**
+	 * Owns the scheduled arithmetic worker; serialize public operations.
+	 */
+	new()
+	{
+		divider = new IntegerDivision<32>()
+	}
+
 	/**
 	 * Computes round(value * multiplier / divisor) plus outputZeroPoint.
 	 */
-	public static inline fn ApplyRational(
+	public fn ApplyRational(
 		value: int,
 		multiplier: int,
 		divisor: int,
 		outputZeroPoint: int) int
 	{
 		if (multiplier < 0) {
-			return RequantizeUInt8.Clamp(outputZeroPoint)
+			return this.Clamp(outputZeroPoint)
 		}
 
 		if (divisor <= 0) {
-			return RequantizeUInt8.Clamp(outputZeroPoint)
+			return this.Clamp(outputZeroPoint)
 		}
 
 		var negative = value < 0
@@ -34,11 +50,13 @@ class RequantizeUInt8
 		}
 
 		// Splitting the value before multiplication avoids int32 overflow.
-		var whole = (magnitude / divisor) * multiplier
-		var remainder = magnitude % divisor
+		divider.Compute(magnitude, divisor)
+		var whole = divider.GetQuotient() * multiplier
+		var remainder = divider.GetRemainder()
 		var remainderProduct = remainder * multiplier
-		var fraction = remainderProduct / divisor
-		var fractionRemainder = remainderProduct % divisor
+		divider.Compute(remainderProduct, divisor)
+		var fraction = divider.GetQuotient()
+		var fractionRemainder = divider.GetRemainder()
 		var roundedMagnitude = whole + fraction
 		var doubledRemainder = fractionRemainder * 2
 
@@ -61,13 +79,13 @@ class RequantizeUInt8
 		}
 
 		var shifted = rounded + outputZeroPoint
-		return RequantizeUInt8.Clamp(shifted)
+		return this.Clamp(shifted)
 	}
 
 	/**
 	 * Clamps one integer to the ONNX uint8 tensor range.
 	 */
-	public static inline fn Clamp(value: int) int
+	public fn Clamp(value: int) int
 	{
 		if (value < 0) {
 			return 0

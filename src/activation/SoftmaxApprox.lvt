@@ -1,10 +1,18 @@
 namespace Livt.ML.Activation
 
+using Livt.Math.Arithmetic
+
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Computes an 8-element integer softmax approximation with scaled outputs.
  */
 component SoftmaxApprox
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
 	// Number of logits processed by Compute.
 	public const VECTOR_SIZE: int = 8
 
@@ -25,6 +33,7 @@ component SoftmaxApprox
 	 */
 	new()
 	{
+		divider = new IntegerDivision<32>()
 		expLut[0] = 1
 		expLut[1] = 2
 		expLut[2] = 7
@@ -106,7 +115,7 @@ component SoftmaxApprox
 			}
 
 			var ev = expLut[clampedB]
-			output[i] = ev * SCALE_FACTOR / sumExp
+			output[i] = divider.Divide(ev * SCALE_FACTOR, sumExp)
 		}
 	}
 

@@ -28,7 +28,7 @@ workspace dependency snapshots; published dependency pins are unchanged.
 | Namespace | Component | Purpose |
 |---|---|---|
 | `Livt.ML.Numeric` | `RequantizeInt8` | Converts int32 accumulators to signed int8 with ties-to-even rounding and saturation |
-| `Livt.ML.Numeric` | `RequantizeUInt8` | Stateless rational uint8 requantization with ties-to-even rounding and saturation |
+| `Livt.ML.Numeric` | `ScheduledRequantizeUInt8` | Scheduled rational uint8 requantization with ties-to-even rounding and saturation |
 | `Livt.ML.Convolution` | `QLinearConv1x8Same5x5` | Quantized convolution from one 28x28 plane to eight planes |
 | `Livt.ML.Convolution` | `QLinearConv8x16Same5x5` | Quantized convolution from eight 14x14 planes to sixteen planes |
 | `Livt.ML.Convolution` | `QLinearConv1x8Same5x5Ram` | RAM-backed non-streaming reference for the first MNIST convolution |
@@ -254,3 +254,13 @@ feeding `StreamingArgMax`, preserves lowest-index ties, and returns -1 on error.
 It allocates no output-logit tensor. Tests cover a full 32,128-row scan, clipping
 that creates a tie, poisoned masked/future cache entries, Q8 and existing kernel
 contracts. Model cache addresses and lifecycle policy stay in application code.
+
+## Scheduled integer division
+
+[Division policy and migration status](docs/integer-division.md) describe the
+shared Livt.Math quotient/remainder API and its use in transformer shape checks.
+Runtime division is explicitly scheduled; compile-time arithmetic and existing
+fixed-point rounding retain their own contracts.
+
+The [arithmetic migration audit](docs/arithmetic-migration.md) records runtime
+division changes, compatibility exceptions, and validation across base libraries.

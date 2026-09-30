@@ -38,8 +38,9 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	tables: TABLES
 	memory: MEMORY
 
-	// Owned arithmetic and streaming argmax workers.
+	// Owned wide arithmetic, shape division, and streaming argmax workers.
 	math: WideArithmetic<BITS>
+	divider: UnsignedDivision<31>
 	argmax: StreamingArgMax
 
 	// Per-query scratch rows; storage scales with MAX_TOKENS, not model size.
@@ -48,7 +49,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 
 	/**
 	 * Borrows weights, tables, and word-addressed memory for the instance lifetime. Owns one
-	 * arithmetic worker, an argmax reducer, and two MAX_TOKENS scratch rows; serialize all
+	 * wide worker, a shape divider, an argmax reducer, and two MAX_TOKENS scratch rows; serialize all
 	 * operations.
 	 */
 	new(weights: WEIGHTS, tables: TABLES, memory: MEMORY)
@@ -57,6 +58,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 		this.tables = tables
 		this.memory = memory
 		math = new WideArithmetic<BITS>()
+		divider = new UnsignedDivision<31>()
 		argmax = new StreamingArgMax()
 	}
 
@@ -333,7 +335,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if (heads <= 0 || heads > MAX_WIDTH / width) {
+		if (heads <= 0 || heads > (divider.Divide(MAX_WIDTH as uint, width as uint) as int)) {
 			return false
 		}
 
@@ -471,7 +473,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if (heads <= 0 || heads > MAX_WIDTH / width) {
+		if (heads <= 0 || heads > (divider.Divide(MAX_WIDTH as uint, width as uint) as int)) {
 			return false
 		}
 
@@ -632,9 +634,12 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return -1
 		}
 
-		// No rows-by-columns int multiplication can overflow at these bounds.
-		if (rows > 2147483647 / columns) {
-			return -1
+		// The earlier row bound is 65536. Smaller configured widths prove safety
+		// at compile time; larger configurations retain an exact scheduled guard.
+		static if (MAX_WIDTH > 32767) {
+			if (rows > (divider.Divide(2147483647 as uint, columns as uint) as int)) {
+				return -1
+			}
 		}
 
 		argmax.Reset()

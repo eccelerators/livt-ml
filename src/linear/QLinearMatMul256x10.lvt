@@ -7,6 +7,9 @@ using Livt.ML.Numeric
  */
 component QLinearMatMul256x10
 {
+	// Owned scheduled requantizer; processing holds input acceptance until completion.
+	requantize: ScheduledRequantizeUInt8
+
 	// Compile-time dimensions, bounds, and numeric constants.
 	public const INPUT_SIZE: int = 256
 	public const OUTPUT_SIZE: int = 10
@@ -27,6 +30,14 @@ component QLinearMatMul256x10
 
 	// Latest computed result, retained for the caller.
 	output: int[10]
+
+	/**
+	 * Owns one scheduled requantizer for serialized processing.
+	 */
+	new()
+	{
+		requantize = new ScheduledRequantizeUInt8()
+	}
 
 	/**
 	 * Stores one flattened uint8 input value and ignores an invalid index.
@@ -129,7 +140,7 @@ component QLinearMatMul256x10
 
 			state {
 				accumulators[column] = accumulator
-				output[column] = RequantizeUInt8.ApplyRational(
+				output[column] = requantize.ApplyRational(
 					accumulator, multipliers[column], divisors[column], outputZeroPoints[column])
 			}
 		}

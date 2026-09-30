@@ -1,0 +1,195 @@
+namespace Livt.ML.Tests.Storage
+
+using Livt.IO
+using Livt.ML.Storage
+
+/**
+
+ * Configurable descriptor used only between serialized selection calls.
+
+ */
+component ShapeCatalog : ITensorCatalog
+{
+	// Shape supplied by the next test scenario.
+	rows: int
+	columns: int
+
+	/**
+
+	 * Sets the descriptor before a selection request.
+
+	 */
+	public fn SetShape(rows: int, columns: int)
+	{
+		this.rows = rows
+		this.columns = columns
+	}
+
+	/**
+
+	 * Returns the configured row count.
+
+	 */
+	override fn Rows(tensor: int) int
+	{
+		return rows
+	}
+
+	/**
+
+	 * Returns the configured column count.
+
+	 */
+	override fn Columns(tensor: int) int
+	{
+		return columns
+	}
+
+	/**
+
+	 * Uses a valid zero-based packed span.
+
+	 */
+	override fn WeightByteAddress(tensor: int) int
+	{
+		return 0
+	}
+
+	/**
+
+	 * Uses a valid zero-based scale span; payload reads are outside this fixture.
+
+	 */
+	override fn ScaleWordAddress(tensor: int) int
+	{
+		return 0
+	}
+}
+
+/**
+
+ * Address-only fixture avoids allocating payload memory for boundary-sized shapes.
+
+ */
+component ShapeMemory : IRam<int>
+{
+	/**
+	 * Payload is not used in shape-validation tests.
+	 */
+	override fn Read(address: int) int
+	{
+		return 0
+	}
+
+	/**
+
+	 * Payload writes are not used.
+
+	 */
+	override fn Write(address: int, value: int)
+	{
+	}
+
+	/**
+
+	 * Accepts every nonnegative signed-int word address.
+
+	 */
+	override fn IsValidAddress(address: int) bool
+	{
+		return address >= 0
+	}
+}
+
+/**
+
+ * Boundary cases for scheduled product-overflow validation and failure recovery.
+
+ */
+@Test
+component QuantizedTensorShapeTest
+{
+	// Owned descriptors, address-only memory, and real tensor-selection implementation.
+	catalog: ShapeCatalog
+	memory: ShapeMemory
+	oddGroups: QuantizedTensorWeights<24, 12, 20, 3, ShapeCatalog, ShapeMemory>
+	weights: QuantizedTensorWeights<24, 12, 20, 64, ShapeCatalog, ShapeMemory>
+
+	/**
+
+	 * Creates the validation fixture without model-sized memory.
+
+	 */
+	new()
+	{
+		catalog = new ShapeCatalog()
+		memory = new ShapeMemory()
+		oddGroups = new QuantizedTensorWeights<24, 12, 20, 3, ShapeCatalog, ShapeMemory>(catalog, memory)
+		weights = new QuantizedTensorWeights<24, 12, 20, 64, ShapeCatalog, ShapeMemory>(catalog, memory)
+	}
+
+	/**
+
+	 * Product boundaries are accepted/rejected before packed-span arithmetic.
+
+	 */
+	@Test
+	fn ProductLimitsAndRecovery()
+	{
+		catalog.SetShape(2147483647, 1)
+		assert weights.Select(0)
+		assert weights.Rows() == 2147483647
+		assert !weights.Failed()
+		catalog.SetShape(2147483647, 2)
+		assert !weights.Select(0)
+		assert weights.Rows() == 0
+		assert weights.Columns() == 0
+		assert weights.Failed()
+		catalog.SetShape(46340, 46340)
+		assert weights.Select(0)
+		catalog.SetShape(46341, 46341)
+		assert !weights.Select(0)
+		catalog.SetShape(1, 2147483647)
+		assert weights.Select(0)
+		assert !weights.Failed()
+	}
+
+	/**
+
+	 * Zero and negative dimensions fail before invoking division.
+
+	 */
+	@Test
+	fn RejectsNonpositiveDimensions()
+	{
+		catalog.SetShape(1, 0)
+		assert !weights.Select(0)
+		catalog.SetShape(0, 1)
+		assert !weights.Select(0)
+		catalog.SetShape(-1, 1)
+		assert !weights.Select(0)
+		catalog.SetShape(1, -1)
+		assert !weights.Select(0)
+		catalog.SetShape(1, 1)
+		assert weights.Select(0)
+		assert !weights.Failed()
+	}
+	/**
+	 * Exercises the scheduled non-power-of-two grouping specialization.
+	 */
+	@Test
+	fn NonPowerOfTwoGroups()
+	{
+		catalog.SetShape(7, 5)
+		assert oddGroups.Select(0)
+		assert oddGroups.Rows() == 7
+		assert oddGroups.Columns() == 5
+		catalog.SetShape(2147483647, 1)
+		assert oddGroups.Select(0)
+		catalog.SetShape(0, 1)
+		assert !oddGroups.Select(0)
+		catalog.SetShape(1, 1)
+		assert oddGroups.Select(0)
+	}
+
+}

@@ -1,12 +1,20 @@
 namespace Livt.ML.Norm
 
+using Livt.Math.Arithmetic
+
 using Livt.Math.Sqrt
 
 /**
+ * Runtime division is scheduled; completion latency increases with work.
+ * Serialize operations and keep inputs stable until the call or handshake completes.
+ *
  * Computes integer RMS normalization for a fixed 8-element vector.
  */
 component RMSNorm
 {
+	// Owned divider; calls complete before this component advances.
+	divider: IntegerDivision<32>
+
 	// Number of integer elements processed by Compute.
 	public const VECTOR_SIZE: int = 8
 
@@ -21,6 +29,7 @@ component RMSNorm
 	 */
 	new()
 	{
+		divider = new IntegerDivision<32>()
 		this.sqrtNr = new SqrtNewtonRaphson()
 	}
 
@@ -43,7 +52,7 @@ component RMSNorm
 		}
 
 		for (var i = 0; i < VECTOR_SIZE; i++) {
-			this.output[i] = input[i] / rms
+			this.output[i] = divider.Divide(input[i], rms)
 		}
 	}
 

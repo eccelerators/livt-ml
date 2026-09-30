@@ -1,0 +1,33 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (lin64) Build 6511674 Tue Jun 16 11:01:26 MDT 2026
+| Date         : Wed Sep 30 13:38:24 2026
+| Host         : vagrant-devbox running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -hierarchical -file /tmp/livt-arithmetic-audit/requantize-synthesis-complete/utilization.rpt
+| Design       : livt_ml_numeric_scheduledrequantizeuint8_slice
+| Device       : xc7a100tcsg324-1
+| Speed File   : -1
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------------------------+-------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|                    Instance                    |                            Module                           | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------------------------+-------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| livt_ml_numeric_scheduledrequantizeuint8_slice |                                                       (top) |       1925 |       1925 |       0 |    0 | 2189 |      0 |      0 |          8 |
+|   dut                                          |                    livt_ml_numeric_scheduledrequantizeuint8 |       1925 |       1925 |       0 |    0 | 2189 |      0 |      0 |          8 |
+|     (dut)                                      |                    livt_ml_numeric_scheduledrequantizeuint8 |        633 |        633 |       0 |    0 |  715 |      0 |      0 |          8 |
+|     divider_instance                           |  livt_math_arithmetic_integerdivision_g_32_sig_4fa0a627f162 |       1292 |       1292 |       0 |    0 | 1474 |      0 |      0 |          0 |
+|       (divider_instance)                       |  livt_math_arithmetic_integerdivision_g_32_sig_4fa0a627f162 |        644 |        644 |       0 |    0 |  809 |      0 |      0 |          0 |
+|       magnitude_instance                       | livt_math_arithmetic_unsigneddivision_g_32_sig_db0f7854530e |        648 |        648 |       0 |    0 |  665 |      0 |      0 |          0 |
++------------------------------------------------+-------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+
