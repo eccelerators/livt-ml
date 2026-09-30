@@ -17,8 +17,8 @@ component FixedPointMath<BITS: int = 24, FRACTION: int = 12, SCALE_FRACTION: int
 	public const LIMIT: int = (1 << (BITS - 1)) - 1
 	public const ONE: int = 1 << FRACTION
 
-	// Owned arithmetic worker used by serialized operations.
-	math: WideArithmetic<BITS>
+	// Multiply/add/divide/clamp worker; square-root hardware is excluded.
+	math: WideArithmetic<BITS, 23>
 
 	// Validity of the latest checked numeric conversion.
 	failed: bool
@@ -29,7 +29,7 @@ component FixedPointMath<BITS: int = 24, FRACTION: int = 12, SCALE_FRACTION: int
 	 */
 	new()
 	{
-		math = new WideArithmetic<BITS>()
+		math = new WideArithmetic<BITS, 23>()
 	}
 
 	/**
