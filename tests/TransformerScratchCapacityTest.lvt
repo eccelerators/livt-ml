@@ -1,0 +1,46 @@
+namespace Livt.ML.Tests
+
+using Livt.IO
+using Livt.ML.Transformer
+
+/**
+ * Rejects insufficient scratch without changing the destination or scratch cells.
+ */
+@Test
+component TransformerScratchCapacityTest
+{
+	memory: Ram<int, 128, MemoryStyle.Block>
+	scratch: Ram<int, 7, MemoryStyle.Block>
+	weights: SmallTransformerWeights
+	tables: SmallTransformerTables
+	kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1,
+		SmallTransformerWeights, SmallTransformerTables, Ram<int, 128, MemoryStyle.Block>, Ram<int, 7, MemoryStyle.Block>>
+
+	/**
+	 * Supplies one word less than the two four-word scratch rows require.
+	 */
+	new()
+	{
+		memory = new Ram<int, 128, MemoryStyle.Block>()
+		scratch = new Ram<int, 7, MemoryStyle.Block>()
+		weights = new SmallTransformerWeights()
+		tables = new SmallTransformerTables()
+		kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1,
+			SmallTransformerWeights, SmallTransformerTables, Ram<int, 128, MemoryStyle.Block>, Ram<int, 7, MemoryStyle.Block>>(
+			weights, tables, memory, scratch)
+	}
+
+	/**
+	 * Both attention entry points must reject capacity before reading other inputs.
+	 */
+	@Test
+	fn RejectsUndersizedScratch()
+	{
+		memory.Write(24, 12345)
+		scratch.Write(0, 6789)
+		assert !kernels.Attention(2, 0, 8, 16, 24, 32, 4, 1, 1)
+		assert !kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 4, 1, 1, 0, false, -1)
+		assert memory.Read(24) == 12345
+		assert scratch.Read(0) == 6789
+	}
+}

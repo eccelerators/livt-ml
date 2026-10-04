@@ -9,6 +9,7 @@ path = "tests"
 components = [
     "IncrementalTransformerKernelsTest",
     "FixedTransformerKernelsTest",
+    "TransformerScratchCapacityTest",
     "QuantizedTensorShapeTest",
     "QuantizedMatrixGroupingTest",
     "ScheduledRequantizeUInt8Test",

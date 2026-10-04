@@ -1,0 +1,5 @@
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3481:65:@115ns:(report note): LIVT_TEST_START:AlternateFormatAndDimensions
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3492:65:@52925ns:(report note): LIVT_TEST_PASS:AlternateFormatAndDimensions
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3497:65:@52935ns:(report note): LIVT_TEST_START:IndividuallyRoundedProbabilitiesAreNotRenormalized
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3508:65:@161175ns:(report note): LIVT_TEST_PASS:IndividuallyRoundedProbabilitiesAreNotRenormalized
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3516:57:@161195ns:(report note): Simulation finished

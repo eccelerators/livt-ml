@@ -1,0 +1,90 @@
+Build memory limit: 20G aggregate, swap disabled
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.IRam_g_integer_sig_3556f9c1c440.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_8_enum_memorystyle_block_sig_b4f263665d1b.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_8_enum_memorystyle_block_sig_9eb5a6c4f6f8.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.BlockRam_g_integer_8_sig_d5f3a45151fd.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_auto_sig_5a312e0783d1.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_auto_sig_5c8e76b92f61.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.IContext.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.IComponent.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.ITestComponent.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.TestContextProvider.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Storage.IWeightTensor.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.IFixedTransformerTables.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerTables.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerWeights.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.IIntegerDivision_g_unsignedinteger_sig_809b61f6ff02.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.UnsignedDivision_g_31_sig_00e979e2352c.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmeticPrimitive.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmetic_g_16_31_sig_e2a79c0c06c4.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Classifier.StreamingArgMax.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.ITransformerKernels.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.IIncrementalTransformerKernels.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_2abb81a75841.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.TestContextProvider.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.ISynchronousRam_g_integer_logic_array_7_ramgeometry_128_sig_b6283748e364.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_4454f689db47.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_auto_sig_5a312e0783d1.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_4454f689db47.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_auto_sig_5c8e76b92f61.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.ISynchronousRam_g_integer_logic_array_3_ramgeometry_8_sig_e118310dd2e0.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_8_synchronousram_integer_logic_array_3_8_enum_memorystyle_bloc_sig_f8471ff3459c.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_8_enum_memorystyle_block_sig_b4f263665d1b.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_8_synchronousram_integer_logic_array_3_8_enum_memorystyle_bloc_sig_f8471ff3459c.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.BlockRam_g_integer_8_sig_d5f3a45151fd.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerWeights.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerTables.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/WideArithmeticPrimitive.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmetic_g_16_31_sig_e2a79c0c06c4.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.UnsignedDivision_g_31_sig_00e979e2352c.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Classifier.StreamingArgMax.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_2abb81a75841.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd
+elaborate livt_ml_tests_fixedtransformerkernelstest
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3481:65:@115ns:(report note): LIVT_TEST_START:AlternateFormatAndDimensions
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3492:65:@52925ns:(report note): LIVT_TEST_PASS:AlternateFormatAndDimensions
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3497:65:@52935ns:(report note): LIVT_TEST_START:IndividuallyRoundedProbabilitiesAreNotRenormalized
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3508:65:@161175ns:(report note): LIVT_TEST_PASS:IndividuallyRoundedProbabilitiesAreNotRenormalized
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3516:57:@161195ns:(report note): Simulation finished
+
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalWeights.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_incrementalweights_smalltransformertables_ram_integer_128_sig_cdc2784d3783.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalWeights.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_incrementalweights_smalltransformertables_ram_integer_128_sig_cdc2784d3783.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd
+elaborate livt_ml_tests_incrementaltransformerkernelstest
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4765:65:@115ns:(report note): LIVT_TEST_START:CausalDoesNotReadFutureAndCrossMasks
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4776:65:@68305ns:(report note): LIVT_TEST_PASS:CausalDoesNotReadFutureAndCrossMasks
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4816:57:@68345ns:(report note): Simulation finished
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4816:57:@68355ns:(report note): Simulation finished
+
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4797:65:@135ns:(report note): LIVT_TEST_START:SharedScratchReuseAfterFailure
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4808:65:@394055ns:(report note): LIVT_TEST_PASS:SharedScratchReuseAfterFailure
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4816:57:@394075ns:(report note): Simulation finished
+
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_block_sig_95f9097f9994.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_block_sig_6a4b83c4bf2b.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_7_enum_memorystyle_block_sig_c97d3d6864b8.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_7_enum_memorystyle_block_sig_fa941ad8d729.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_bf82f70bbd61.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.TransformerScratchCapacityTest.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_d8faa6e93411.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_block_sig_95f9097f9994.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_d8faa6e93411.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_block_sig_6a4b83c4bf2b.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.ISynchronousRam_g_integer_logic_array_3_ramgeometry_7_sig_c9d5c758b1e3.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_7_synchronousram_integer_logic_array_3_7_enum_memorystyle_bloc_sig_9cf5a78dcf65.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_7_enum_memorystyle_block_sig_c97d3d6864b8.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_7_synchronousram_integer_logic_array_3_7_enum_memorystyle_bloc_sig_9cf5a78dcf65.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_7_enum_memorystyle_block_sig_fa941ad8d729.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_bf82f70bbd61.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.TransformerScratchCapacityTest.vhd
+elaborate livt_ml_tests_transformerscratchcapacitytest
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.TransformerScratchCapacityTest.vhd:2259:65:@115ns:(report note): LIVT_TEST_START:RejectsUndersizedScratch
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.TransformerScratchCapacityTest.vhd:2270:65:@2265ns:(report note): LIVT_TEST_PASS:RejectsUndersizedScratch
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.TransformerScratchCapacityTest.vhd:2278:57:@2285ns:(report note): Simulation finished
+
+PASS focused transformer scratch: rounding/shape, masks, reuse/failure, capacity

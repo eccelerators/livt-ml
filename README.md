@@ -221,6 +221,12 @@ weights and activation tables are generic parameters. One worker can serve every
 layer. This is a serial correctness implementation, not a throughput or FPGA
 resource guarantee.
 
+Attention scratch is an explicit generic `IRam<int>` dependency with at least
+`2 * MAX_TOKENS` words. See [scratch storage and API migration](docs/transformer-scratch.md)
+for ownership, reset, capacity and latency contracts.
+See [kernel scheduling](docs/transformer-scheduling.md) for pure checks, scheduled
+arithmetic and the completion contract.
+
 `QuantizedTensorWeights` selects immutable `ITensorCatalog` records and reads
 low-nibble-first packed INT4 codes and unsigned scale words from external memory.
 Addresses count int32 words except catalog packed-code addresses, which count

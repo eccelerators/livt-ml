@@ -8,11 +8,12 @@ using Livt.ML.Classifier
 /**
  * Serial correctness implementation over external memory; one instance serves all layers.
  * Unscaled attention, affine RMSNorm, separately rounded GELU/gate and residuals.
- * Does not allocate model-sized on-chip arrays. Only two MAX_TOKENS row buffers.
+ * Does not allocate model-sized on-chip arrays. Two scratch rows use borrowed scheduled RAM, never function-local arrays.
  */
 component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	FRACTION: int, PROB_FRACTION: int, EPSILON: int,
-	WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>> : IIncrementalTransformerKernels
+	WEIGHTS: IWeightTensor, TABLES: IFixedTransformerTables, MEMORY: IRam<int>,
+	SCRATCH: IRam<int>> : IIncrementalTransformerKernels
 {
 	static assert MAX_TOKENS > 0 && MAX_TOKENS <= 1024, "invalid token capacity"
 
@@ -43,20 +44,23 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	divider: UnsignedDivision<31>
 	argmax: StreamingArgMax
 
-	// Per-query scratch rows; storage scales with MAX_TOKENS, not model size.
-	scores: int[MAX_TOKENS]
-	probabilities: int[MAX_TOKENS]
+	// Exclusive scratch: scores at 0, probabilities at MAX_TOKENS.
+	scratch: SCRATCH
 
 	/**
-	 * Borrows weights, tables, and word-addressed memory for the instance lifetime. Owns one
-	 * wide worker, a shape divider, an argmax reducer, and two MAX_TOKENS scratch rows; serialize all
-	 * operations.
+	 * Borrows providers, activation memory and exclusive scratch for the instance lifetime.
+	 * Scratch must expose contiguous addresses 0..2*MAX_TOKENS-1 and must not alias activation
+	 * memory. Serialize every kernel operation and all scratch access. Reads/writes complete
+	 * through the scheduled IRam contract; storage latency changes cycles, not arithmetic.
+	 * Reset caller and RAM transaction state together. Cells need no reset: each attention
+	 * query writes every consumed slot before reading it, including after failure/reset.
 	 */
-	new(weights: WEIGHTS, tables: TABLES, memory: MEMORY)
+	new(weights: WEIGHTS, tables: TABLES, memory: MEMORY, scratch: SCRATCH)
 	{
 		this.weights = weights
 		this.tables = tables
 		this.memory = memory
+		this.scratch = scratch
 		math = new WideArithmetic<BITS>()
 		divider = new UnsignedDivision<31>()
 		argmax = new StreamingArgMax()
@@ -65,7 +69,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	/**
 	 * Checks the symmetric raw activation range -LIMIT..LIMIT.
 	 */
-	fn ValueValid(x: int) bool
+	static fn ValueValid[](x: int) bool
 	{
 		return x >= -LIMIT && x <= LIMIT
 	}
@@ -86,7 +90,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	/**
 	 * Tests intersection of two half-open word spans whose endpoints were validated by Span.
 	 */
-	fn Overlap(a: int, na: int, b: int, nb: int) bool
+	static fn Overlap[](a: int, na: int, b: int, nb: int) bool
 	{
 		return a < b + nb && b < a + na
 	}
@@ -94,7 +98,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	/**
 	 * Checks positive token and vector dimensions against MAX_TOKENS and MAX_WIDTH.
 	 */
-	fn Shape(length: int, width: int) bool
+	static fn Shape[](length: int, width: int) bool
 	{
 		return length > 0 && length <= MAX_TOKENS && width > 0 && width <= MAX_WIDTH
 	}
@@ -159,7 +163,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	 */
 	override fn Linear(tensor: int, source: int, target: int, length: int, rows: int, columns: int) bool
 	{
-		if (!Shape(length, rows) || !Shape(length, columns)) {
+		var rowsValid = Shape(length, rows)
+		var columnsValid = Shape(length, columns)
+
+		if (!rowsValid || !columnsValid) {
 			return false
 		}
 
@@ -183,7 +190,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 					var x = memory.Read(source + t * columns + c)
 					var w = weights.Read(r * columns + c)
 
-					if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) {
+					var xValid = ValueValid(x)
+					var wValid = ValueValid(w)
+
+					if (weights.Failed() || !xValid || !wValid) {
 						return false
 					}
 
@@ -265,7 +275,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if ((a != target && Overlap(a, count, target, count)) || (b != target && Overlap(b, count, target, count))) {
+		var aOverlaps = Overlap(a, count, target, count)
+		var bOverlaps = Overlap(b, count, target, count)
+
+		if ((a != target && aOverlaps) || (b != target && bOverlaps)) {
 			return false
 		}
 
@@ -273,7 +286,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			var x = memory.Read(a + i)
 			var y = memory.Read(b + i)
 
-			if (!ValueValid(x) || !ValueValid(y)) {
+			var xValid = ValueValid(x)
+			var yValid = ValueValid(y)
+
+			if (!xValid || !yValid) {
 				return false
 			}
 
@@ -298,7 +314,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if (Overlap(a, count, target, count) || Overlap(b, count, target, count)) {
+		var aOverlaps = Overlap(a, count, target, count)
+		var bOverlaps = Overlap(b, count, target, count)
+
+		if (aOverlaps || bOverlaps) {
 			return false
 		}
 
@@ -306,7 +325,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			var x = memory.Read(a + i)
 			var y = memory.Read(b + i)
 
-			if (!ValueValid(x) || !ValueValid(y)) {
+			var xValid = ValueValid(x)
+			var yValid = ValueValid(y)
+
+			if (!xValid || !yValid) {
 				return false
 			}
 
@@ -331,6 +353,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	override fn Attention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
 		length: int, heads: int, width: int) bool
 	{
+		if (!scratch.IsValidAddress(0) || !scratch.IsValidAddress(2 * MAX_TOKENS - 1)) {
+			return false
+		}
+
 		if (!Shape(length, width)) {
 			return false
 		}
@@ -346,10 +372,12 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if (Overlap(q, count, target, count) ||
-			Overlap(k, count, target, count) ||
-			Overlap(v, count, target, count) ||
-			Overlap(masks, length, target, count)) {
+		var qOverlaps = Overlap(q, count, target, count)
+		var kOverlaps = Overlap(k, count, target, count)
+		var vOverlaps = Overlap(v, count, target, count)
+		var masksOverlaps = Overlap(masks, length, target, count)
+
+		if (qOverlaps || kOverlaps || vOverlaps || masksOverlaps) {
 			return false
 		}
 
@@ -380,7 +408,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 						var x = memory.Read(q + t * features + h * width + d)
 						var y = memory.Read(k + j * features + h * width + d)
 
-						if (!ValueValid(x) || !ValueValid(y)) {
+						var xValid = ValueValid(x)
+						var yValid = ValueValid(y)
+
+						if (!xValid || !yValid) {
 							return false
 						}
 
@@ -401,7 +432,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 
 					var score = Round(sum, FRACTION)
 					score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
-					scores[j] = score
+					scratch.Write(j, score)
 
 					if (memory.Read(masks + j) != 0 && score > maximum) {
 						maximum = score
@@ -414,14 +445,14 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 					var exponent = 0
 
 					if (memory.Read(masks + j) != 0) {
-						exponent = tables.Exponent(maximum - scores[j])
+						exponent = tables.Exponent(maximum - scratch.Read(j))
 
 						if (exponent < 0) {
 							return false
 						}
 					}
 
-					probabilities[j] = exponent
+					scratch.Write(MAX_TOKENS + j, exponent)
 					denominator = math.Add(denominator, exponent as logic[64])
 				}
 
@@ -430,10 +461,11 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 				}
 
 				for (var j = 0; j < length; j++) {
-					var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
-					probabilities[j] = math.DivideEven(numerator, denominator) as int
+					var numerator = math.Multiply(scratch.Read(MAX_TOKENS + j) as logic[64], (1 << PROB_FRACTION) as logic[64])
+					var probability = math.DivideEven(numerator, denominator) as int
+					scratch.Write(MAX_TOKENS + j, probability)
 
-					if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) {
+					if (probability < 0 || probability > (1 << PROB_FRACTION)) {
 						return false
 					}
 				}
@@ -448,7 +480,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 							return false
 						}
 
-						contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
+						contextSum = math.Add(contextSum, math.Multiply(scratch.Read(MAX_TOKENS + j) as logic[64], value as logic[64]))
 					}
 
 					memory.Write(target + t * features + h * width + d, Round(contextSum, PROB_FRACTION))
@@ -469,6 +501,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 	override fn CachedAttention(tensor: int, q: int, k: int, v: int, target: int, masks: int,
 		length: int, heads: int, width: int, position: int, causal: bool, buckets: int) bool
 	{
+		if (!scratch.IsValidAddress(0) || !scratch.IsValidAddress(2 * MAX_TOKENS - 1)) {
+			return false
+		}
+
 		if (!Shape(length, width) || position < 0 || position >= MAX_TOKENS || tensor < -1) {
 			return false
 		}
@@ -484,10 +520,12 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			return false
 		}
 
-		if (Overlap(q, features, target, features) ||
-			Overlap(k, count, target, features) ||
-			Overlap(v, count, target, features) ||
-			Overlap(masks, length, target, features)) {
+		var qOverlaps = Overlap(q, features, target, features)
+		var kOverlaps = Overlap(k, count, target, features)
+		var vOverlaps = Overlap(v, count, target, features)
+		var masksOverlaps = Overlap(masks, length, target, features)
+
+		if (qOverlaps || kOverlaps || vOverlaps || masksOverlaps) {
 			return false
 		}
 
@@ -521,7 +559,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			var maximum = -LIMIT
 
 			for (var j = 0; j < length; j++) {
-				scores[j] = 0
+				scratch.Write(j, 0)
 
 				if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
 					var sum: logic[64] = 0
@@ -530,7 +568,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 						var x = memory.Read(q + h * width + d)
 						var y = memory.Read(k + j * features + h * width + d)
 
-						if (!ValueValid(x) || !ValueValid(y)) {
+						var xValid = ValueValid(x)
+						var yValid = ValueValid(y)
+
+						if (!xValid || !yValid) {
 							return false
 						}
 
@@ -555,7 +596,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 						score = math.Clamp(math.Add(score as logic[64], bias as logic[64]))
 					}
 
-					scores[j] = score
+					scratch.Write(j, score)
 
 					if (score > maximum) {
 						maximum = score
@@ -569,14 +610,14 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 				var exponent = 0
 
 				if ((!causal || j <= position) && memory.Read(masks + j) != 0) {
-					exponent = tables.Exponent(maximum - scores[j])
+					exponent = tables.Exponent(maximum - scratch.Read(j))
 
 					if (exponent < 0) {
 						return false
 					}
 				}
 
-				probabilities[j] = exponent
+				scratch.Write(MAX_TOKENS + j, exponent)
 				denominator = math.Add(denominator, exponent as logic[64])
 			}
 
@@ -585,10 +626,11 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 			}
 
 			for (var j = 0; j < length; j++) {
-				var numerator = math.Multiply(probabilities[j] as logic[64], (1 << PROB_FRACTION) as logic[64])
-				probabilities[j] = math.DivideEven(numerator, denominator) as int
+				var numerator = math.Multiply(scratch.Read(MAX_TOKENS + j) as logic[64], (1 << PROB_FRACTION) as logic[64])
+				var probability = math.DivideEven(numerator, denominator) as int
+				scratch.Write(MAX_TOKENS + j, probability)
 
-				if (probabilities[j] < 0 || probabilities[j] > (1 << PROB_FRACTION)) {
+				if (probability < 0 || probability > (1 << PROB_FRACTION)) {
 					return false
 				}
 			}
@@ -604,7 +646,7 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 							return false
 						}
 
-						contextSum = math.Add(contextSum, math.Multiply(probabilities[j] as logic[64], value as logic[64]))
+						contextSum = math.Add(contextSum, math.Multiply(scratch.Read(MAX_TOKENS + j) as logic[64], value as logic[64]))
 					}
 				}
 
@@ -651,7 +693,10 @@ component FixedTransformerKernels<MAX_TOKENS: int, MAX_WIDTH: int, BITS: int,
 				var x = memory.Read(source + c)
 				var w = weights.Read(row * columns + c)
 
-				if (weights.Failed() || !ValueValid(x) || !ValueValid(w)) {
+				var xValid = ValueValid(x)
+				var wValid = ValueValid(w)
+
+				if (weights.Failed() || !xValid || !wValid) {
 					return -1
 				}
 

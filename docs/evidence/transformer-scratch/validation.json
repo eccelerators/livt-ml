@@ -1,0 +1,13 @@
+{
+  "base_commit": "4bdfbd030f656cd6811e743bfebe560d955cbe87",
+  "source_sha256": {
+    "src/transformer/FixedTransformerKernels.lvt": "b12dc899cdf1f83a5e0c2dbbb480313d95427211f895112cedb3c0a253e5c75e",
+    "livt.toml": "c446b262a11096cf805a11a893fefc33e890c7437e856c61c52bb41bb2c6a8eb",
+    "scripts/test_transformer_scratch.py": "49adb1c69f3f11edafd762bb3c012a5d84fe57dd65fd5397dd2fe2fe048fd73a",
+    "scripts/test_transformer_scratch_reset.py": "d6d7410e01316a77d3315c6ed3103d44872f71fff7abca215501e04774706a26",
+    "tests/IncrementalTransformerKernelsTest.lvt": "21bb214b880d7e61374ba39288e48118ff3e0354bf4a1af16ccdd3c836a5f71f",
+    "tests/TransformerScratchCapacityTest.lvt": "e3ee35ea728aefe8737ae2f08c3ed61542278026b3b225df338487ed98acaabc",
+    "tests/FixedTransformerKernelsTest.lvt": "49c9e7d71511bfa8db004b030eca3fc366fa0670e055fb6de35545cc94662b04"
+  },
+  "result": "Five focused cases and active-attention reset recovery in both reset modes passed. Full-vocabulary run interrupted; no full-suite pass claimed."
+}

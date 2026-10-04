@@ -93,9 +93,11 @@ component IncrementalTransformerKernelsTest
 {
 	// Shared fixture instances, signals, and observation state.
 	ram: Ram<int, 128>
+	scratch: BlockRam<int, 8>
+	scratchAccess: IRam<int>
 	weights: IncrementalWeights
 	tables: SmallTransformerTables
-	kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>
+	kernels: FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>, BlockRam<int, 8>>
 
 	/**
 	 * Creates the shared fixture instances (Ram, IncrementalWeights, SmallTransformerTables,
@@ -104,9 +106,11 @@ component IncrementalTransformerKernelsTest
 	new()
 	{
 		ram = new Ram<int, 128>()
+		scratch = new BlockRam<int, 8>()
+		scratchAccess = scratch
 		weights = new IncrementalWeights()
 		tables = new SmallTransformerTables()
-		kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>>(weights, tables, ram)
+		kernels = new FixedTransformerKernels<4, 8, 16, 8, 8, 1, IncrementalWeights, SmallTransformerTables, Ram<int, 128>, BlockRam<int, 8>>(weights, tables, ram, scratch)
 	}
 
 	/**
@@ -158,4 +162,63 @@ component IncrementalTransformerKernelsTest
 		assert kernels.ProjectArgMax(2, 0, 4, 1) == -1
 		assert kernels.ProjectArgMax(2, 128, 3, 1) == -1
 	}
+
+	/**
+	 * Shares full-capacity scratch across encoder/cached attention, failures and new masks.
+	 * Distinct scores select the last valid value; poison detects stale array contents.
+	 */
+	@Test
+	fn SharedScratchReuseAfterFailure()
+	{
+		for (var i = 0; i < 8; i++) {
+			scratchAccess.Write(i, 2147483647)
+		}
+
+		for (var i = 0; i < 4; i++) {
+			ram.Write(i, 256)
+			ram.Write(8 + i, i * 256)
+			ram.Write(16 + i, (i + 1) * 256)
+			ram.Write(32 + i, 1)
+		}
+
+		assert kernels.Attention(0, 0, 8, 16, 24, 32, 4, 1, 1)
+
+		for (var i = 0; i < 4; i++) {
+			assert ram.Read(24 + i) == 1024
+		}
+
+		ram.Write(11, 32768)
+		assert !kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 4, 1, 1, 0, false, -1)
+		ram.Write(35, 0)
+		assert kernels.CachedAttention(-1, 0, 8, 16, 24, 32, 4, 1, 1, 0, false, -1)
+		assert ram.Read(24) == 768
+		ram.Write(11, 768)
+
+		for (var i = 1; i < 4; i++) {
+			ram.Write(32 + i, 0)
+		}
+
+		assert kernels.Attention(0, 0, 8, 16, 24, 32, 4, 1, 1)
+
+		for (var i = 0; i < 4; i++) {
+			assert ram.Read(24 + i) == 256
+		}
+	}
+
+	/**
+	 * Checks projection clipping, lowest-index ties, invalid spans and invalid activation reuse.
+	 */
+	@Test
+	fn SmallProjectionBoundsAndClippedTie()
+	{
+		ram.Write(0, 32767)
+		assert kernels.ProjectArgMax(2, 0, 3, 1) == 1
+		assert kernels.ProjectArgMax(2, 0, 4, 1) == -1
+		assert kernels.ProjectArgMax(2, 128, 3, 1) == -1
+		ram.Write(0, 32768)
+		assert kernels.ProjectArgMax(2, 0, 3, 1) == -1
+		ram.Write(0, 32767)
+		assert kernels.ProjectArgMax(2, 0, 3, 1) == 1
+	}
+
 }

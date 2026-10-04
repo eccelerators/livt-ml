@@ -1,0 +1,102 @@
+Build memory limit: 20G aggregate, swap disabled
+Discovering tests... · 0s
+Resolving Livt.Math@1.3.0-dev... · 0s
+Syncing Livt.Math@1.3.0-dev
+Downloading Livt.Math@1.3.0-dev  0 / 41 · 0s
+Downloading Livt.Math@1.3.0-dev  41 / 41 · 6s
+Resolving Livt.IO@1.2.0-dev... · 0s
+Syncing Livt.IO@1.2.0-dev
+Downloading Livt.IO@1.2.0-dev  0 / 63 · 0s
+Downloading Livt.IO@1.2.0-dev  52 / 63 · 10s  tests/uart/LoopbackUartTest.lvt
+Downloading Livt.IO@1.2.0-dev  63 / 63 · 11s
+Resolving Livt.Base@1.1.0... · 0s
+Syncing Livt.Base@1.1.0
+Downloading Livt.Base@1.1.0  0 / 29 · 0s
+Downloading Livt.Base@1.1.0  29 / 29 · 4s
+Resolving Livt.Collections@1.1.0-dev... · 0s
+Syncing Livt.Collections@1.1.0-dev
+Downloading Livt.Collections@1.1.0-dev  0 / 47 · 0s
+Downloading Livt.Collections@1.1.0-dev  47 / 47 · 6s
+Preparing compilation... · 0s
+Using extension VHDL v0.0.0-0000000 for compilation.
+Initializing compiler... · 0s
+Loading sources... · 0s
+Specializing design... · 0s
+Specializing design... · 10s
+Validating design... · 0s
+Validating design  216 / 216 · 6s
+Checking backend capabilities... · 0s
+Preparing hardware... · 0s
+Generating VHDL  0 / 216 · 0s  Livt.HxS.lvt
+Generating VHDL  23 / 216 · 10s  src/convolution/QLinearConv1x8Same5x5.lvt
+Generating VHDL  51 / 216 · 20s  src/norm/LayerNorm64Stream.lvt
+Generating VHDL  71 / 216 · 30s  src/transformer/FixedTransformerKernels.lvt
+Generating VHDL  71 / 216 · 40s  src/transformer/FixedTransformerKernels.lvt
+Generating VHDL  71 / 216 · 50s  src/transformer/FixedTransformerKernels.lvt
+Generating VHDL  71 / 216 · 60s  src/transformer/FixedTransformerKernels.lvt
+Generating VHDL  71 / 216 · 70s  src/transformer/FixedTransformerKernels.lvt
+Generating VHDL  77 / 216 · 80s  tests/IncrementalTransformerKernelsTest.lvt
+Generating VHDL  102 / 216 · 90s  tests/linear/Linear8x8Test.lvt
+Generating VHDL  127 / 216 · 100s  .livt/deps/Livt.Math-1.3.0-dev/src/arithmetic/UnsignedDivision.lvt
+Generating VHDL  145 / 216 · 110s  .livt/deps/Livt.IO-1.2.0-dev/src/i2c/I2CSlave.lvt
+Generating VHDL  178 / 216 · 120s  .livt/deps/Livt.Base-1.1.0/src/Diagnostics.lvt
+Generating VHDL  187 / 216 · 130s  .livt/deps/Livt.Base-1.1.0/src/String.lvt
+Generating VHDL  216 / 216 · 140s
+Using extension HxS v0.0.0-0000000 for compilation.
+Initializing HxS compiler... · 0s
+Loading sources... · 0s
+Copying source VHDL  0 / 3 · 0s
+Copying source VHDL  3 / 3 · 0s
+Finalizing compilation... · 0s
+Compiling simulation... · 0s
+Elaborating simulation... · 0s  FixedTransformerKernelsTest
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.IRam_g_integer_sig_3556f9c1c440.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_8_enum_memorystyle_block_sig_b4f263665d1b.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_8_enum_memorystyle_block_sig_9eb5a6c4f6f8.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.BlockRam_g_integer_8_sig_d5f3a45151fd.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_auto_sig_5a312e0783d1.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_auto_sig_5c8e76b92f61.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.IContext.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.IComponent.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.ITestComponent.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.TestContextProvider.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Storage.IWeightTensor.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.IFixedTransformerTables.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerTables.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerWeights.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.IIntegerDivision_g_unsignedinteger_sig_809b61f6ff02.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.UnsignedDivision_g_31_sig_00e979e2352c.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmeticPrimitive.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmetic_g_16_31_sig_e2a79c0c06c4.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Classifier.StreamingArgMax.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.ITransformerKernels.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.IIncrementalTransformerKernels.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_2abb81a75841.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/lib/Livt.Lang.TestContextProvider.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.ISynchronousRam_g_integer_logic_array_7_ramgeometry_128_sig_b6283748e364.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_4454f689db47.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_7_128_enum_memorystyle_auto_sig_5a312e0783d1.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_7_128_synchronousram_integer_logic_array_7_128_enum_memorystyle_sig_4454f689db47.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.Ram_g_integer_128_enum_memorystyle_auto_sig_5c8e76b92f61.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.ISynchronousRam_g_integer_logic_array_3_ramgeometry_8_sig_e118310dd2e0.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_8_synchronousram_integer_logic_array_3_8_enum_memorystyle_bloc_sig_f8471ff3459c.Package.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.SynchronousRam_g_integer_logic_array_3_8_enum_memorystyle_block_sig_b4f263665d1b.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.RamAccess_g_integer_logic_array_3_8_synchronousram_integer_logic_array_3_8_enum_memorystyle_bloc_sig_f8471ff3459c.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.IO.BlockRam_g_integer_8_sig_d5f3a45151fd.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerWeights.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.SmallTransformerTables.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/WideArithmeticPrimitive.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.WideArithmetic_g_16_31_sig_e2a79c0c06c4.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.Math.Arithmetic.UnsignedDivision_g_31_sig_00e979e2352c.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Classifier.StreamingArgMax.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/main/Livt.ML.Transformer.FixedTransformerKernels_g_4_8_16_8_8_1_smalltransformerweights_smalltransformertables_ram_intege_sig_2abb81a75841.vhd
+analyze /home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd
+Elaborating simulation... · 10s  FixedTransformerKernelsTest
+elaborate livt_ml_tests_fixedtransformerkernelstest
+Running tests  0 / 2 · 0s  FixedTransformerKernelsTest
+Running tests  2 / 2 · 0s
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.FixedTransformerKernelsTest.vhd:3516:57:@161195ns:(report note): Simulation finished
+2 passed, 0 failed, 0 skipped
+Finished in 210.40s

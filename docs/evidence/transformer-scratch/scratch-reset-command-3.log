@@ -1,0 +1,5 @@
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4876:57:@135ns:(report note): LIVT_TEST_START:SharedScratchReuseAfterFailure
+/home/vagrant/git/livt/livt-ml/out/scratch-reset/Livt.Lang.TestContextProvider.vhd:103:9:@17157ns:(report note): INJECT reset after scratch write during active attention
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4876:57:@17295ns:(report note): LIVT_TEST_START:SharedScratchReuseAfterFailure
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4887:57:@411215ns:(report note): LIVT_TEST_PASS:SharedScratchReuseAfterFailure
+/home/vagrant/git/livt/livt-ml/out/debug/tests/Livt.ML.Tests.IncrementalTransformerKernelsTest.vhd:4895:49:@411235ns:(report note): Simulation finished
