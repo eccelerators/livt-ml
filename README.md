@@ -13,7 +13,7 @@ inspect.
 
 ```toml
 [dependencies]
-"Livt.ML" = "1.0.1"
+"Livt.ML" = "1.4.1"
 ```
 
 `Livt.ML` uses `Livt.Math` for reusable arithmetic primitives such as integer
@@ -197,7 +197,7 @@ implementation notes belong in `docs/`.
 
 ## 🚀 Outlook
 
-`Livt.ML` 1.0.1 is a broad fixed-size package. Future work should add more
+`Livt.ML` 1.4.1 is a broad fixed-size package. Future work should add more
 hardware-optimized variants, shared fixed-point helpers through `Livt.Math`,
 and stronger model-weight loading patterns.
 
@@ -207,11 +207,11 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Generic wide fixed-point operators
 
-Version 1.3.0-dev adds streamed INT4 projection, fixed-point RMSNorm, masked
+Version 1.3.0 adds streamed INT4 projection, fixed-point RMSNorm, masked
 softmax and lookup activation with explicit formats and injected storage.
 See [contracts](docs/FixedPointOperators.md). Existing operator semantics are unchanged.
 
-## Generic fixed-point transformer operations (1.4.0-dev)
+## Generic fixed-point transformer operations (1.4.0)
 
 `ITransformerKernels` and `FixedTransformerKernels` provide serialized embedding,
 affine RMS normalization, matrix projection, unscaled masked attention with
@@ -241,7 +241,7 @@ partial overlap is rejected. The caller owns serialization and result validity.
 `FixedTransformerKernelsTest` covers a different Q8 format and shape from FLAN-T5,
 including the deliberate lack of probability-sum correction.
 
-## Incremental transformer operations (1.4.1-dev)
+## Incremental transformer operations (1.4.1)
 
 `IIncrementalTransformerKernels` extends the existing encoder interface with
 single-query `CachedAttention` and `ProjectArgMax`; existing implementations of
