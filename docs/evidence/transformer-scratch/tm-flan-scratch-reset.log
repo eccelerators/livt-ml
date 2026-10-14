@@ -1,2 +1,0 @@
-Build memory limit: 20G aggregate, swap disabled
-PASS shared scratch reset during attention: synchronous and asynchronous
