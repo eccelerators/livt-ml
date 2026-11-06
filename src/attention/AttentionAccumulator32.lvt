@@ -1,0 +1,71 @@
+namespace Livt.ML.Attention
+
+using Livt.Math.Arithmetic
+
+/**
+ * Exact integer Q.K and weighted-V accumulation for a 32-element attention head.
+ * Owns one block arithmetic engine; all methods require one serialized caller.
+ * No scaling, softmax, division or rounding is performed here. Two little-endian
+ * int32 blocks form a vector. Failed results carry bit 64; lower bits are zero.
+ */
+component AttentionAccumulator32<PRODUCT_STAGES: int = 1>
+{
+	static assert PRODUCT_STAGES == 1 || PRODUCT_STAGES == 2, "product stages must be 1 or 2"
+
+	// Query and weighted sums stay inside the owned engine between token blocks.
+	mac: CheckedBlockMac32<32, 32, 64, PRODUCT_STAGES>
+	queryValid: bool
+
+	new()
+	{
+		mac = new CheckedBlockMac32<32, 32, 64, PRODUCT_STAGES>()
+	}
+
+	/** Loads all 32 query values before scoring; partial query loads are not exposed. */
+	public fn LoadQuery(low: logic[512], high: logic[512]) bool
+	{
+		queryValid = false
+		var first = mac.LoadLeft(0, low)
+		var second = mac.LoadLeft(1, high)
+		queryValid = first && second
+		return queryValid
+	}
+
+	/** Returns an exact int64 dot product plus failure status; preserves prefix overflow. */
+	public fn Score(low: logic[512], high: logic[512]) logic[65]
+	{
+		if (!queryValid) {
+			return (1 as logic[65]) << 64
+		}
+
+		var first = mac.Dot(0, low, 0)
+
+		if ((first >> 64) != 0) {
+			return first
+		}
+
+		return mac.Dot(1, high, first as logic[64])
+	}
+
+	/** Starts a new weighted-value reduction; preserves the loaded query. */
+	public fn ClearValues() bool
+	{
+		return mac.Clear()
+	}
+
+	/** Adds one token's probability times its V vector without changing fixed-point scale. */
+	public fn Accumulate(probability: int, low: logic[512], high: logic[512]) bool
+	{
+		if (!mac.Accumulate(0, probability, low)) {
+			return false
+		}
+
+		return mac.Accumulate(1, probability, high)
+	}
+
+	/** Reads one numerator at index 0..31; the caller applies its original denominator. */
+	public fn Read(index: int) logic[65]
+	{
+		return mac.Read(index)
+	}
+}

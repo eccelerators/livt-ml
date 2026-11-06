@@ -1,0 +1,170 @@
+namespace Livt.ML.Attention
+
+using Livt.Math.Arithmetic
+
+/**
+ * Checked 32-element attention with a live sixteen-lane input port.
+ * Owns the same Math arithmetic primitive as AttentionAccumulator32, without
+ * copying 512-bit rows through scheduled argument frames. One caller must hold
+ * values stable until each method returns. Blocks 0 then 1 form each vector.
+ * Reset cancels work; the producer must stop driving transactions during reset.
+ * No scaling, softmax, division, saturation or rounding is performed here.
+ */
+component AttentionAccumulator32Port<PRODUCT_STAGES: int = 1>
+{
+	static assert PRODUCT_STAGES == 1 || PRODUCT_STAGES == 2, "product stages must be 1 or 2"
+
+	// Live input: sixteen little-endian signed int32 lanes; lane zero is low.
+	public values: in logic[512]
+
+	// Owned checked arithmetic and completion phase; status is retained by the core.
+	primitive: CheckedBlockMacPrimitive
+	request: logic
+	queryFirst: bool
+	queryValid: bool
+	scorePending: bool
+	scoreSum: logic[64]
+	valuePending: bool
+	valueFailed: bool
+	valueProbability: int
+
+	/**
+	 * Owns one 32x32/64-bit primitive in the caller's clock/reset context.
+	 */
+	new()
+	{
+		primitive = new CheckedBlockMacPrimitive()
+	}
+
+	/**
+	 * Waits for one completed block. Caller controls and input remain stable.
+	 */
+	fn Submit(operation: int, index: int)
+	{
+		state {
+			primitive.operation = operation
+			primitive.index = index
+		}
+
+		request = !request
+		primitive.request = request
+
+		while (primitive.acknowledge != request) {
+			state {}
+		}
+
+	}
+
+	/**
+	 * Loads query blocks in order 0,1. Invalid/partial loads prevent scoring.
+	 */
+	public fn LoadQueryBlock(block: int) bool
+	{
+		scorePending = false
+		queryValid = false
+
+		if (block == 0) {
+			Submit(0, 0)
+			queryFirst = (primitive.result >> 64) == 0
+			return queryFirst
+		}
+
+		if (block != 1 || !queryFirst) {
+			queryFirst = false
+			return false
+		}
+
+		queryFirst = false
+		Submit(0, 1)
+		queryValid = (primitive.result >> 64) == 0
+		return queryValid
+	}
+
+	/**
+	 * Scores K blocks in order 0,1. Block 0 returns the checked partial sum;
+	 * block 1 returns the full dot product. Bit 64 is failure; failed low bits
+	 * are zero. An invalid sequence cannot expose an old accumulated score.
+	 */
+	public fn ScoreBlock(block: int) logic[65]
+	{
+		if (!queryValid || block < 0 || block > 1 || (block == 1 && !scorePending)) {
+			scorePending = false
+			return (1 as logic[65]) << 64
+		}
+
+		primitive.seed = 0
+
+		if (block == 1) {
+			primitive.seed = scoreSum
+		}
+
+		scorePending = false
+		Submit(1, block)
+		var result = primitive.result
+
+		if ((result >> 64) == 0 && block == 0) {
+			scoreSum = result as logic[64]
+			scorePending = true
+		}
+
+		return result
+	}
+
+	/**
+	 * Clears weighted sums, partial-pair state and failure; preserves the query.
+	 */
+	public fn ClearValues() bool
+	{
+		valuePending = false
+		Submit(2, 0)
+		valueFailed = (primitive.result >> 64) != 0
+		return !valueFailed
+	}
+
+	/**
+	 * Updates V blocks 0 then 1 using the same probability for both halves.
+	 * Invalid order, changed probability or arithmetic failure poisons reads
+	 * and updates until ClearValues/reset. No partial vector is readable.
+	 */
+	public fn AccumulateBlock(block: int, probability: int) bool
+	{
+		if (valueFailed || block < 0 || block > 1 || (block == 0 && valuePending)
+			|| (block == 1 && (!valuePending || probability != valueProbability))) {
+			valueFailed = true
+			return false
+		}
+
+		primitive.scalar = probability
+		valueProbability = probability
+		Submit(3, block)
+		valueFailed = (primitive.result >> 64) != 0
+		valuePending = block == 0
+		return !valueFailed
+	}
+
+	/**
+	 * Reads an int64 numerator at 0..31 with failure in bit 64. Scaling and
+	 * division remain the caller's responsibility. Failed low bits are zero.
+	 */
+	public fn Read(index: int) logic[65]
+	{
+		if (valuePending || valueFailed) {
+			return (1 as logic[65]) << 64
+		}
+
+		Submit(4, index)
+		return primitive.result
+	}
+
+	/**
+	 * Shares the stable input row directly with the checked arithmetic core.
+	 */
+	process ConnectValues[]()
+	{
+		primitive.values = values
+		primitive.aBits = 32
+		primitive.bBits = 32
+		primitive.accumulatorBits = 64
+		primitive.productStages = PRODUCT_STAGES
+	}
+}

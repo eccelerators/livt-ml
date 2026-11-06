@@ -1,12 +1,13 @@
 [project]
 name = "Livt.ML"
-version = "1.4.1"
+version = "1.5.0"
 path = "src"
 outdir = "out"
 
 [tests]
 path = "tests"
 components = [
+    "AttentionAccumulator32Test",
     "IncrementalTransformerKernelsTest",
     "FixedTransformerKernelsTest",
     "TransformerScratchCapacityTest",
@@ -56,7 +57,7 @@ components = [
 ]
 
 [dependencies]
-Livt.Math = "1.3.0"
+"Livt.Math" = "1.7.0"
 Livt.IO = "1.3.0"
 
 [build.debug]

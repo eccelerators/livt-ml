@@ -13,15 +13,17 @@ inspect.
 
 ```toml
 [dependencies]
-"Livt.ML" = "1.4.1"
+"Livt.ML" = "1.5.0"
 ```
 
-`Livt.ML` uses `Livt.Math` for reusable arithmetic primitives such as integer
-square root and `Livt.IO` for RAM-backed tensor storage. Current memory sources
+`Livt.ML 1.5.0` depends on `Livt.Math 1.7.0` for reusable arithmetic and
+`Livt.IO 1.3.0` for RAM-backed tensor storage. See [CHANGELOG.md](CHANGELOG.md)
+for release notes and compatibility guidance. Current memory sources
 target the generic Livt.IO development API: byte tensors use scheduled
 `BlockRam<byte, 2048>` banks, and causal attention uses
 `AsynchronousDistributedRam32x32`. Verify these source changes with coherent
-workspace dependency snapshots; published dependency pins are unchanged.
+workspace dependency snapshots. Install or publish `Livt.Math 1.7.0` before
+resolving this version of `Livt.ML`.
 
 ## 📚 API Overview
 
@@ -73,6 +75,8 @@ workspace dependency snapshots; published dependency pins are unchanged.
 | `Livt.ML.Embedding` | `Embedding64Stream` | External-memory base for streaming a 64-value row |
 | `Livt.ML.Embedding` | `TokenEmbedding50257x64Stream` | GPT-2-vocabulary specialization without an internal table |
 | `Livt.ML.Embedding` | `PositionEmbedding8x64Stream` | Context-eight position specialization |
+| `Livt.ML.Attention` | `AttentionAccumulator32` | Checked 32-element Q.K scores and retained weighted-V numerators using paired input rows |
+| `Livt.ML.Attention` | `AttentionAccumulator32Port` | The same checked arithmetic with live input rows and ordered block-pair control |
 | `Livt.ML.Attention` | `KVCache` | Four-slot key/value cache |
 | `Livt.ML.Attention` | `ScaledDotProductAttention` | Attention over the fixed key/value cache |
 | `Livt.ML.Attention` | `CausalAttentionHead4Context8` | One reusable GPT-Neo causal head for context 8 and width 4 |
@@ -270,3 +274,32 @@ fixed-point rounding retain their own contracts.
 
 The [arithmetic migration audit](docs/arithmetic-migration.md) records runtime
 division changes, compatibility exceptions, and validation across base libraries.
+
+## Checked block attention
+
+`Attention.AttentionAccumulator32<PRODUCT_STAGES>` retains a 32-element query
+and computes exact Q.K scores and weighted-V numerators through
+`Livt.Math.Arithmetic.CheckedBlockMac32`. Each vector is supplied as two packed
+512-bit blocks of sixteen signed int32 lanes. Results contain a checked int64
+sum and a failure flag. Scaling, softmax and final division stay with the caller.
+
+`AttentionAccumulator32Port<PRODUCT_STAGES>` accepts a live 512-bit `values`
+input and schedules control operations, avoiding full-row argument copies.
+Hold each row stable until the method returns and submit blocks in order 0, 1.
+Invalid query/score order fails; invalid or overflowing weighted updates poison
+reads until clear/reset. Both variants require a single owner and serialized
+calls. `PRODUCT_STAGES` selects 1 (default) or 2 without changing arithmetic.
+
+These additions preserve existing INT8/16-bit kernel APIs and defaults. See
+[the attention contract](docs/block-attention.md) for row lifetime, block ordering,
+overflow and reset behavior. Run the paired-row generated-wrapper regression
+with the Livt compiler/simulator:
+
+```sh
+livt test --run AttentionAccumulator32Test
+```
+
+The Metis integration additionally validates the live-row adapter against scalar
+integer results and on the Arty A7-100T at 100 MHz. Resource use and timing remain
+properties of each consumer's complete design; see the changelog for the scope
+of the recorded integration checks.

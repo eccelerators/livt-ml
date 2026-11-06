@@ -1,0 +1,49 @@
+namespace Livt.ML.Tests
+
+using Livt.ML.Attention
+
+/** Checks two-block ordering, Q20 products, retained sums and wrapper failure. */
+@Test
+component AttentionAccumulator32Test
+{
+	attention: AttentionAccumulator32<1>
+
+	new()
+	{
+		attention = new AttentionAccumulator32<1>()
+	}
+
+	fn Repeated(value: int) logic[512]
+	{
+		var row: logic[512] = 0
+
+		for (var i = 0; i < 16; i++) {
+			row = (row << 32) | ((value as logic[32]) as logic[512])
+		}
+
+		return row
+	}
+
+	@Test
+	fn AttentionBlocks()
+	{
+		var positive = Repeated(1048576)
+		var negative = Repeated(-1048576)
+		assert (attention.Score(positive, negative) >> 64) != 0
+		assert attention.LoadQuery(positive, negative)
+		assert attention.Score(positive, positive) == 0
+		assert attention.Score(positive, negative) == ((32 as logic[65]) << 40)
+		assert attention.ClearValues()
+		assert attention.Accumulate(524288, positive, negative)
+		assert attention.Accumulate(262144, positive, positive)
+
+		for (var i = 0; i < 16; i++) {
+			assert attention.Read(i) == ((3 as logic[65]) << 38)
+			var high = attention.Read(i + 16)
+			assert (high >> 64) == 0
+			assert (high as logic[64]) == (((-1) as logic[64]) << 38)
+		}
+
+		assert (attention.Read(-1) >> 64) != 0
+	}
+}
