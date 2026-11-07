@@ -1,0 +1,149 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+/**
+ * Tests the scheduled batch wrapper with an independent clocked row producer.
+ * Each test initializes the shared fixture explicitly before exercising the API.
+ */
+@Test
+component Int8MatrixAccumulator32StreamTest
+{
+	// Shared activation input and producer configuration; only the producer owns sent.
+	activation: logic[512]
+	enabled: bool
+	cancel: bool
+	limit: int
+	sent: int
+	matrix: Int8MatrixAccumulator32Stream<32, 2>
+
+	/**
+	 * Owns a stage-two stream core and a producer in the same clock/reset domain.
+	 */
+	new()
+	{
+		matrix = new Int8MatrixAccumulator32Stream<32, 2>()
+	}
+
+	/**
+	 * Counts transfers at rising edges; valid never depends on ready.
+	 */
+	process Producer()
+	{
+		state {
+			if (!enabled) {
+				sent = 0
+			} elif (matrix.ready == 0b1 && sent < limit) {
+				sent++
+			}
+		}
+	}
+
+	/**
+	 * Holds alternating homogeneous INT8 rows stable until their transfer edge.
+	 */
+	process Connect[]()
+	{
+		matrix.values = activation
+		matrix.valid = 0b0
+		matrix.streamError = 0b0
+
+		if (enabled && sent < limit) {
+			matrix.valid = 0b1
+			matrix.values = 0x01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101
+
+			if (sent % 2 != 0) {
+				matrix.values = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+			}
+		}
+
+		if (cancel) {
+			matrix.streamError = 0b1
+		}
+	}
+
+	/**
+	 * Establishes zeroed sums and four blocks of Q20-one activations.
+	 */
+	fn Initialize(rows: int)
+	{
+		enabled = false
+		cancel = false
+		assert matrix.Begin(rows)
+		activation = 0x00100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000
+
+		for (var block = 0; block < 4; block++) {
+			assert matrix.LoadActivations(block)
+		}
+	}
+
+	/**
+	 * Batches update distinct rows in order, preserve neighbors and accumulate chunks.
+	 */
+	@Test
+	fn OrderedRowsAndImmediateReads()
+	{
+		Initialize(19)
+		limit = 16
+		enabled = true
+		assert matrix.AccumulateRows(2, 16)
+		assert sent == 16
+		enabled = false
+		assert matrix.Read(0) == 0
+		assert matrix.Read(1) == 0
+		assert matrix.Read(18) == 0
+
+		for (var row = 0; row < 16; row++) {
+			var expected: int = 67108864
+
+			if (row % 2 != 0) {
+				expected = -67108864
+			}
+
+			assert matrix.Read(2 + row) == ((expected as logic[64]) as logic[65])
+		}
+
+		enabled = true
+		assert matrix.AccumulateRows(2, 16)
+		enabled = false
+		assert matrix.Read(2) == (134217728 as logic[65])
+	}
+
+	/**
+	 * Invalid spans poison sums and cannot be hidden by later valid updates.
+	 */
+	@Test
+	fn InvalidSpanAndRecovery()
+	{
+		Initialize(2)
+		assert !matrix.AccumulateRows(1, 2)
+		assert matrix.failed == 0b1
+		assert (matrix.Read(0) >> 64) != 0
+		assert !matrix.Seed(0, 0)
+		Initialize(2)
+		assert matrix.failed == 0b0
+		assert matrix.Read(0) == 0
+		assert !matrix.AccumulateRows(0, 0)
+	}
+
+	/**
+	 * Source cancellation terminates a batch without waiting indefinitely for valid.
+	 */
+	@Test
+	fn SourceFailureAndOverflow()
+	{
+		Initialize(2)
+		cancel = true
+		assert !matrix.AccumulateRows(0, 2)
+		assert (matrix.Read(0) >> 64) != 0
+		Initialize(2)
+		assert matrix.Seed(0, 0x7fffffffffffffff)
+		limit = 2
+		enabled = true
+		assert !matrix.AccumulateRows(0, 2)
+		enabled = false
+		assert (matrix.Read(1) >> 64) != 0
+		Initialize(1)
+		assert matrix.Read(0) == 0
+	}
+}

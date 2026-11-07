@@ -2,6 +2,35 @@
 
 All notable changes to this package are documented here.
 
+## 1.6.0 - 2026-11-07
+
+### Added
+
+- `Linear.Int8MatrixAccumulator32<ACTIVATION_BITS, PRODUCT_STAGES>` for
+  64-column INT8 matrix chunks with signed int32 activations and up to 1,024
+  retained BRAM-backed int64 sums. Supports bias seeding and checked updates.
+- `Linear.Int8MatrixAccumulator32Stream` for ordered ready/valid row batches
+  over the same native core. Eight multiply lanes overlap row feeding,
+  reduction and BRAM commits without a second 512-bit weight-row buffer.
+- Checked activation ranges from 2 to 32 bits and one- or two-stage product
+  pipelines with identical arithmetic. Overflow and source failures invalidate
+  retained sums until explicit recovery.
+- Public Livt regressions and a matrix contract documenting packing, ownership,
+  acceptance, completion, cancellation, reset and failure recovery.
+
+### Compatibility
+
+- Existing APIs and defaults are unchanged. Dependencies remain
+  `Livt.Math 1.7.0` and `Livt.IO 1.3.0`.
+- Serialize scheduled calls. A successful batch returns only after every row
+  has committed. The producer must retain each valid row until its transfer
+  edge and report unavailable sources through `streamError`; there is no
+  implicit timeout.
+- The native core uses synchronous active-high reset. Reset producer and
+  consumer together across a rising clock edge, then call `Begin` before use.
+  RAM payload is not reset. Model layout, memory transport, scaling and
+  rounding remain caller responsibilities.
+
 ## 1.5.0 - 2026-11-06
 
 ### Added
@@ -14,8 +43,7 @@ All notable changes to this package are documented here.
   poisoned weighted-sum recovery. Results carry the checked int64 sum and a
   failure flag together; reset cancels pending work.
 - One- and two-stage product configurations with identical arithmetic, and a
-  generated-wrapper regression for the paired-row API. The Metis integration
-  also validates live-row ordering, failure recovery and numeric parity.
+  generated-wrapper regression for the paired-row API.
 
 ### Changed
 
@@ -30,14 +58,6 @@ All notable changes to this package are documented here.
 - Score scaling, softmax, final division, fixed-point rounding and external
   memory layout remain the caller's responsibility. Serialize operations;
   live-row inputs must remain stable until the scheduled call returns.
-
-### Validation
-
-- The Metis integration passes 1,854 exact attention comparisons and runs at
-  100 MHz on the Arty A7-100T with routed setup/hold slack +0.103/+0.010 ns.
-- The same integration passes 187 board checks, including 972 exact numeric
-  values and 30 unchanged reference replies, plus 22 latency checks. These
-  are integration results, not timing or throughput guarantees for other designs.
 
 ## Earlier releases
 

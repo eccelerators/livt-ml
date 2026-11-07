@@ -1,0 +1,156 @@
+namespace Livt.ML.Linear
+
+/**
+ * Retained INT8 matrix sums with signed int32 activations and checked int64 updates.
+ * One owner serializes commands in one clock/reset domain. A separate producer holds
+ * each valid 512-bit weight row stable until a rising-edge valid/ready transfer.
+ * The core reads the retained row over eight cycles before asserting ready. It may
+ * inspect data before acceptance; the producer must not wait for ready to assert valid.
+ * Complete all writes before changing activations or starting another batch. Reset
+ * cancels the batch and invalidates activations/sums; Begin recovers a poisoned bank.
+ * The native core uses synchronous active-high reset; reset all participants
+ * across a rising edge. Call Begin before use after construction or reset.
+ * Numeric scaling, weight layout and memory transport belong to the caller.
+ */
+component Int8MatrixAccumulator32Stream<ACTIVATION_BITS: int = 32, PRODUCT_STAGES: int = 1>
+{
+	static assert ACTIVATION_BITS >= 2 && ACTIVATION_BITS <= 32, "activation range must be 2..32 bits"
+	static assert PRODUCT_STAGES == 1 || PRODUCT_STAGES == 2, "product stages must be 1 or 2"
+
+	// Physical bank capacity; Begin selects the number of accessible output rows.
+	public const MAX_ROWS: int = 1024
+
+	// Commands shared with the native worker.
+	const OP_BEGIN: int = 0
+	const OP_LOAD: int = 1
+	const OP_ACCUMULATE: int = 2
+	const OP_READ: int = 3
+	const OP_SEED: int = 4
+	const OP_BATCH: int = 5
+
+	// Four sixteen-int32 blocks load activations; a weight row holds 64 signed bytes.
+	public values: in logic[512]
+	public busy: out logic
+
+	// Stream shares values with activation loading; valid is used only during batches.
+	public valid: in logic
+	public ready: out logic
+	public streamError: in logic
+	public failed: out logic
+
+	// Owned native arithmetic, storage and producer completion phase.
+	primitive: Int8MatrixAccumulator32Primitive
+	request: logic
+
+	/**
+	 * Owns one worker in the caller's clock/reset domain; Begin initializes its bank.
+	 */
+	new()
+	{
+		primitive = new Int8MatrixAccumulator32Primitive()
+	}
+
+	/**
+	 * Waits for completion without copying a wide result through the dispatcher.
+	 */
+	fn Submit(operation: int, index: int)
+	{
+		state {
+			primitive.operation = operation
+			primitive.index = index
+		}
+
+		request = !request
+		primitive.request = request
+
+		while (primitive.acknowledge != request) {
+			state {
+			}
+		}
+	}
+
+	/**
+	 * Clears 1..MAX_ROWS sums, invalidates activations and recovers from failure.
+	 * Invalid row counts invalidate the bank. Completion includes all RAM writes.
+	 */
+	public fn Begin(rows: int) bool
+	{
+		Submit(OP_BEGIN, rows)
+		return (primitive.result >> 64) == 0
+	}
+
+	/**
+	 * Loads block 0..3 from values; every lane must fit ACTIVATION_BITS.
+	 * Rejected loads invalidate the selected block. Load all four before updates.
+	 */
+	public fn LoadActivations(block: int) bool
+	{
+		Submit(OP_LOAD, block)
+		return (primitive.result >> 64) == 0
+	}
+
+	/**
+	 * Adds one exact 64-element dot product to row 0..rows-1 of the active bank.
+	 * Requires four valid activation blocks; true means the write has committed.
+	 * Overflow is checked at the block-update boundary. Failure poisons the bank
+	 * until Begin/reset, so a later cancelling update cannot hide an overflow.
+	 */
+	public fn Accumulate(row: int) bool
+	{
+		Submit(OP_ACCUMULATE, row)
+		return (primitive.result >> 64) == 0
+	}
+
+	/**
+	 * Adds count consecutive 64-weight rows to sums starting at first (0-based).
+	 * Requires loaded activations and 1..MAX_ROWS rows wholly inside the active bank.
+	 * Waits until all accepted rows are committed to BRAM; true means completion.
+	 * Producer gaps are allowed between rows. There is no implicit timeout: the owner
+	 * must assert streamError on an unavailable source. Error poisons the bank, cancels
+	 * pending work and returns false; earlier commits may remain but cannot be read.
+	 * Producer observes failed and stops; only Begin/reset permits reuse.
+	 */
+	public fn AccumulateRows(first: int, count: int) bool
+	{
+		primitive.count = count
+		Submit(OP_BATCH, first)
+		return (primitive.result >> 64) == 0
+	}
+
+	/**
+	 * Waits for row 0..rows-1 of the active bank and returns its signed int64 sum.
+	 * Bit 64 reports failure; failed payloads are zero.
+	 * An invalid read fails without poisoning an otherwise valid bank.
+	 */
+	public fn Read(row: int) logic[65]
+	{
+		Submit(OP_READ, row)
+		return primitive.result
+	}
+
+	/**
+	 * Sets row 0..rows-1 of the active bank to a signed int64 bias bit pattern.
+	 * True means the write has committed; invalid writes poison the bank.
+	 */
+	public fn Seed(row: int, value: logic[64]) bool
+	{
+		primitive.seed = value
+		Submit(OP_SEED, row)
+		return (primitive.result >> 64) == 0
+	}
+
+	/**
+	 * Shares a retained caller row and immutable numeric configuration.
+	 */
+	process Connect[]()
+	{
+		primitive.values = values
+		primitive.activationBits = ACTIVATION_BITS
+		primitive.productStages = PRODUCT_STAGES
+		primitive.rowValid = valid
+		primitive.streamError = streamError
+		ready = primitive.rowReady
+		failed = primitive.streamFailed
+		busy = primitive.busy
+	}
+}

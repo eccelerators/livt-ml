@@ -13,16 +13,16 @@ inspect.
 
 ```toml
 [dependencies]
-"Livt.ML" = "1.5.0"
+"Livt.ML" = "1.6.0"
 ```
 
-`Livt.ML 1.5.0` depends on `Livt.Math 1.7.0` for reusable arithmetic and
+`Livt.ML 1.6.0` depends on `Livt.Math 1.7.0` for reusable arithmetic and
 `Livt.IO 1.3.0` for RAM-backed tensor storage. See [CHANGELOG.md](CHANGELOG.md)
-for release notes and compatibility guidance. Current memory sources
-target the generic Livt.IO development API: byte tensors use scheduled
+for release notes and compatibility guidance. Memory sources
+use the generic Livt.IO API: byte tensors use scheduled
 `BlockRam<byte, 2048>` banks, and causal attention uses
-`AsynchronousDistributedRam32x32`. Verify these source changes with coherent
-workspace dependency snapshots. Install or publish `Livt.Math 1.7.0` before
+`AsynchronousDistributedRam32x32`. Run `livt sync` after updating dependencies.
+`Livt.Math 1.7.0` must be available in your registry or local workspace before
 resolving this version of `Livt.ML`.
 
 ## 📚 API Overview
@@ -57,6 +57,8 @@ resolving this version of `Livt.ML`.
 | `Livt.ML.Linear` | `Int8Mac8` | Context-free eight-lane signed-int8 MAC for memory-fed datapaths |
 | `Livt.ML.Linear` | `Int8BroadcastMac64x8` | Pipelined 64-output matrix-row accumulator using eight signed 16x8 lanes |
 | `Livt.ML.Linear` | `Int8Dot64x8` | Pipelined 64-element dot product using eight signed 16x8 lanes |
+| `Livt.ML.Linear` | `Int8MatrixAccumulator32` | Signed int32 × INT8, 64-column chunks and up to 1,024 BRAM sums |
+| `Livt.ML.Linear` | `Int8MatrixAccumulator32Stream` | Ordered retained-row batches over the same checked matrix core |
 | `Livt.ML.Storage` | `ByteTensorRam2048` | Byte tensor storage backed by one Livt.IO RAM bank |
 | `Livt.ML.Storage` | `ByteTensorRam4096` | Byte tensor storage backed by two Livt.IO RAM banks |
 | `Livt.ML.Storage` | `ByteTensorRam8192` | Byte tensor storage backed by four Livt.IO RAM banks |
@@ -90,8 +92,10 @@ resolving this version of `Livt.ML`.
 
 Most stateful components follow the same call shape: configure any stored
 weights or tables, call `Compute(...)`, then read results with `GetOutput(...)`.
-Out-of-range getters return `0`; out-of-range setters ignore the write.
-Optimized components ending in `Stream` instead use the documented toggle
+For the simple fixed-size components, out-of-range getters return `0` and
+setters ignore the write. Checked matrix and attention APIs instead report
+failure explicitly and may invalidate retained results; follow their contracts.
+Optimized components ending in `Stream` use their documented toggle or ready/valid
 handshake and bounded internal storage; see
 [`docs/streaming.md`](docs/streaming.md).
 
@@ -191,17 +195,17 @@ Test namespaces mirror the same structure below `Livt.ML.Tests`.
 - [Usage examples](docs/usage.md)
 - [Numeric model](docs/numeric-model.md)
 - [Package boundaries](docs/package-boundaries.md)
-- [Migration status](docs/migration-status.md)
 - [Hardware notes](docs/hardware-notes.md)
 - [Streaming inference](docs/streaming.md)
-- [TinyStories/GPT-Neo primitives](docs/tinystories-primitives.md)
+- [Checked INT8 matrix accumulation](docs/checked-int8-matrix.md)
+- [Checked block attention](docs/block-attention.md)
 
 Compiler bugs should be recorded only in `COMPILER.md`. Hardware tradeoffs and
 implementation notes belong in `docs/`.
 
 ## 🚀 Outlook
 
-`Livt.ML` 1.4.1 is a broad fixed-size package. Future work should add more
+`Livt.ML` provides a broad set of fixed-size components. Future work should add more
 hardware-optimized variants, shared fixed-point helpers through `Livt.Math`,
 and stronger model-weight loading patterns.
 
@@ -226,10 +230,10 @@ layer. This is a serial correctness implementation, not a throughput or FPGA
 resource guarantee.
 
 Attention scratch is an explicit generic `IRam<int>` dependency with at least
-`2 * MAX_TOKENS` words. See [scratch storage and API migration](docs/transformer-scratch.md)
-for ownership, reset, capacity and latency contracts.
-See [kernel scheduling](docs/transformer-scheduling.md) for pure checks, scheduled
-arithmetic and the completion contract.
+`2 * MAX_TOKENS` words. See the source contracts in
+[`ITransformerKernels`](src/transformer/ITransformerKernels.lvt) and
+[`FixedTransformerKernels`](src/transformer/FixedTransformerKernels.lvt) for
+ownership, reset, capacity, scheduling and completion requirements.
 
 `QuantizedTensorWeights` selects immutable `ITensorCatalog` records and reads
 low-nibble-first packed INT4 codes and unsigned scale words from external memory.
@@ -272,8 +276,22 @@ shared Livt.Math quotient/remainder API and its use in transformer shape checks.
 Runtime division is explicitly scheduled; compile-time arithmetic and existing
 fixed-point rounding retain their own contracts.
 
-The [arithmetic migration audit](docs/arithmetic-migration.md) records runtime
-division changes, compatibility exceptions, and validation across base libraries.
+## Checked INT8 matrix kernel (1.6.0)
+
+`Linear.Int8MatrixAccumulator32<ACTIVATION_BITS, PRODUCT_STAGES>` adds signed
+int32 activations, INT8 weights and checked int64 output sums retained inside
+the engine. Four packed activation loads configure a 64-column chunk; live
+weight rows then update up to 1,024 output sums without returning partial dots
+to the caller. Product stages 1 and 2 preserve identical arithmetic.
+
+The caller owns memory transport, row layout, final scaling and rounding.
+Existing 16-bit kernels remain unchanged. See
+[the matrix contract](docs/checked-int8-matrix.md)
+for packing, bias, overflow, ownership, reset and validation details.
+
+```sh
+livt test --run Int8MatrixAccumulator32Test
+```
 
 ## Checked block attention
 
@@ -299,7 +317,22 @@ with the Livt compiler/simulator:
 livt test --run AttentionAccumulator32Test
 ```
 
-The Metis integration additionally validates the live-row adapter against scalar
-integer results and on the Arty A7-100T at 100 MHz. Resource use and timing remain
-properties of each consumer's complete design; see the changelog for the scope
-of the recorded integration checks.
+## Batched INT8 matrix interface (1.6.0)
+
+`Linear.Int8MatrixAccumulator32Stream<ACTIVATION_BITS, PRODUCT_STAGES>` shares
+its checked core with the existing blocking interface and adds
+`AccumulateRows(first, count)`. A ready/valid producer retains each packed
+64-byte weight row until acceptance. Eight lanes feed continuously within a
+batch while completed rows update BRAM; model layout, memory transport and
+final scaling remain caller responsibilities. No DDR or board dependency is
+introduced. See [the stream contract](docs/checked-int8-matrix.md#streaming-batches).
+
+```sh
+livt test --run Int8MatrixAccumulator32StreamTest
+```
+
+The producer must retain valid/data until the transfer edge; ready releases
+its row storage after eight feeding cycles. Batch completion includes all BRAM
+writes. Source failures and overflow invalidate the bank until `Begin` or reset.
+The native core uses synchronous active-high reset; reset both ends together
+across a rising edge and call `Begin` before reuse.

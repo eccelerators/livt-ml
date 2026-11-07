@@ -1,0 +1,37 @@
+namespace Livt.ML.Linear
+
+/**
+ * Single-owner 64-column INT8 matrix worker with 1024 retained int64 sums.
+ * Constant configuration and command fields remain stable until completion.
+ * Scheduled values stay stable until completion; batch values follow rowValid/
+ * rowReady transfers after eight feeding cycles. streamError cancels a batch.
+ * Synchronous active-high reset cancels work and invalidates access without
+ * clearing payload RAM; reset producer/consumer together and then issue Begin.
+ * Request/acknowledge toggles denote completion, not early acceptance.
+ */
+@Opaque
+component Int8MatrixAccumulator32Primitive
+{
+	// Compile-time configuration driven by the scheduled wrapper.
+	public activationBits: in int
+	public productStages: in int
+
+	// Commands: begin=0, activation block=1, accumulate=2, read=3, seed=4, batch=5.
+	public request: in logic
+	public operation: in int
+	public index: in int
+	public values: in logic[512]
+	public seed: in logic[64]
+
+	// Optional ordered stream: index is the first row, count is the row count.
+	public count: in int
+	public rowValid: in logic
+	public streamError: in logic
+	public rowReady: out logic
+	public streamFailed: out logic
+
+	// Bit 64 reports failure; bits 63..0 contain a retained signed result.
+	public acknowledge: out logic
+	public result: out logic[65]
+	public busy: out logic
+}

@@ -1,0 +1,241 @@
+namespace Livt.ML.Tests.Linear
+
+using Livt.ML.Linear
+
+/**
+ * Checks the scheduled live-row API, exact wide values and retained bank failures.
+ */
+@Test
+component Int8MatrixAccumulator32Test
+{
+	// Input is shared only between serialized calls in these tests.
+	values: logic[512]
+	matrix: Int8MatrixAccumulator32<32, 1>
+	staged: Int8MatrixAccumulator32<32, 2>
+	narrow: Int8MatrixAccumulator32<8, 1>
+
+	/**
+	 * Owns independent workers for each supported product pipeline and range checks.
+	 */
+	new()
+	{
+		matrix = new Int8MatrixAccumulator32<32, 1>()
+		staged = new Int8MatrixAccumulator32<32, 2>()
+		narrow = new Int8MatrixAccumulator32<8, 1>()
+	}
+
+	/**
+	 * Packs sixteen equal signed activation lanes with lane zero in the low bits.
+	 */
+	fn ActivationRow(value: int) logic[512]
+	{
+		var row: logic[512] = 0
+
+		for (var lane = 0; lane < 16; lane++) {
+			row = (row << 32) | ((value as logic[32]) as logic[512])
+		}
+
+		return row
+	}
+
+	/**
+	 * Packs 64 signed byte weights.
+	 */
+	fn WeightRow(value: int) logic[512]
+	{
+		var row: logic[512] = 0
+
+		for (var lane = 0; lane < 64; lane++) {
+			row = (row << 8) | ((value as logic[8]) as logic[512])
+		}
+
+		return row
+	}
+
+	/**
+	 * Tests both pipelines with values beyond int16 and immediate RAM reads.
+	 */
+	@Test
+	fn WideSumsAndProductStages()
+	{
+		assert matrix.Begin(3)
+		assert staged.Begin(3)
+		assert matrix.Read(2) == 0
+		assert staged.Read(2) == 0
+		values = ActivationRow(1048576)
+
+		for (var block = 0; block < 4; block++) {
+			assert matrix.LoadActivations(block)
+			assert staged.LoadActivations(block)
+		}
+
+		values = WeightRow(-128)
+		assert matrix.Accumulate(2)
+		assert staged.Accumulate(2)
+		var expected: logic[64] = 0xfffffffe00000000
+		assert matrix.Read(2) == (expected as logic[65])
+		assert staged.Read(2) == (expected as logic[65])
+		values = WeightRow(127)
+		assert matrix.Accumulate(2)
+		assert staged.Accumulate(2)
+		expected = 0xfffffffffc000000
+		assert matrix.Read(2) == (expected as logic[65])
+		assert staged.Read(2) == (expected as logic[65])
+		assert matrix.Read(0) == 0
+		assert matrix.Seed(1, 0x8000000000000000)
+		assert matrix.Read(1) == (0x8000000000000000 as logic[65])
+		assert matrix.Begin(1)
+		assert matrix.Read(0) == 0
+		assert (matrix.Read(1) >> 64) != 0
+	}
+
+	/**
+	 * Overflow cannot be hidden by a later cancelling update; Begin recovers.
+	 */
+	@Test
+	fn OverflowPoisonAndRecovery()
+	{
+		assert matrix.Begin(1)
+		assert matrix.Seed(0, 0x7fffffffffffffff)
+		values = ActivationRow(1)
+
+		for (var block = 0; block < 4; block++) {
+			assert matrix.LoadActivations(block)
+		}
+
+		values = WeightRow(1)
+		assert !matrix.Accumulate(0)
+		assert matrix.Read(0) == ((1 as logic[65]) << 64)
+		values = WeightRow(-1)
+		assert !matrix.Accumulate(0)
+		assert !matrix.Seed(0, 0)
+		assert matrix.Begin(1)
+		assert matrix.Read(0) == 0
+		assert !matrix.Accumulate(0)
+		assert (matrix.Read(0) >> 64) != 0
+		assert matrix.Begin(1)
+		assert (matrix.Read(-1) >> 64) != 0
+		assert matrix.Read(0) == 0
+		assert !matrix.Begin(1025)
+		assert (matrix.Read(0) >> 64) != 0
+	}
+
+	/**
+	 * Width validation rejects truncation; every activation block must be loaded.
+	 */
+	@Test
+	fn NarrowRangesAndCapacity()
+	{
+		assert narrow.Begin(1024)
+		assert narrow.Read(1023) == 0
+		values = ActivationRow(128)
+		assert !narrow.LoadActivations(0)
+		values = ActivationRow(-128)
+
+		for (var block = 0; block < 4; block++) {
+			assert narrow.LoadActivations(block)
+		}
+
+		values = WeightRow(-128)
+		assert narrow.Accumulate(1023)
+		assert narrow.Read(1023) == 1048576
+		assert !narrow.Accumulate(1024)
+		assert (narrow.Read(1023) >> 64) != 0
+		assert narrow.Begin(1)
+		assert narrow.Read(0) == 0
+	}
+
+	/**
+	 * Sparse signed weights catch lane order, block order and accumulation across chunks.
+	 */
+	@Test
+	fn MultipleChunksAndLaneOrder()
+	{
+		assert matrix.Begin(1)
+		assert staged.Begin(1)
+
+		for (var chunk = 0; chunk < 12; chunk++) {
+			for (var block = 0; block < 4; block++) {
+				values = 0
+
+				for (var lane = 0; lane < 16; lane++) {
+					var value = chunk * 64 + block * 16 + lane
+					values = (values >> 32) | (((value as logic[32]) as logic[512]) << 480)
+				}
+
+				assert matrix.LoadActivations(block)
+				assert staged.LoadActivations(block)
+			}
+
+			values = 0xf8000000000000000000000000000007fa000000000000000000000000000005fc000000000000000000000000000003fe000000000000000000000000000001
+			assert matrix.Accumulate(0)
+			assert staged.Accumulate(0)
+
+			if (chunk == 2) {
+				assert matrix.Read(0) == (((-1956) as logic[64]) as logic[65])
+				assert staged.Read(0) == (((-1956) as logic[64]) as logic[65])
+			}
+		}
+
+		assert matrix.Read(0) == (((-21648) as logic[64]) as logic[65])
+		assert staged.Read(0) == (((-21648) as logic[64]) as logic[65])
+	}
+
+	/**
+	 * Full-width products and negative overflow preserve exact signed behavior.
+	 */
+	@Test
+	fn SignedLimits()
+	{
+		assert matrix.Begin(1)
+		assert staged.Begin(1)
+		values = ActivationRow(-2147483647 - 1)
+
+		for (var block = 0; block < 4; block++) {
+			assert matrix.LoadActivations(block)
+			assert staged.LoadActivations(block)
+		}
+
+		values = WeightRow(-128)
+		assert matrix.Accumulate(0)
+		assert staged.Accumulate(0)
+		assert matrix.Read(0) == ((1 as logic[65]) << 44)
+		assert staged.Read(0) == ((1 as logic[65]) << 44)
+		assert matrix.Seed(0, 0x8000000000000000)
+		values = WeightRow(1)
+		assert !matrix.Accumulate(0)
+		assert matrix.Read(0) == ((1 as logic[65]) << 64)
+	}
+
+	/**
+	 * Distinct values across address-bit boundaries must never alias other rows.
+	 */
+	@Test
+	fn CapacityAndRowIsolation()
+	{
+		var indexes: int[13] = [0, 1, 15, 16, 63, 64, 255, 256, 511, 512, 767, 768, 1023]
+		assert matrix.Begin(1024)
+
+		for (var i = 0; i < 13; i++) {
+			assert matrix.Seed(indexes[i], (indexes[i] + 123) as logic[64])
+		}
+
+		for (var i = 0; i < 13; i++) {
+			assert matrix.Read(indexes[i]) == ((indexes[i] + 123) as logic[65])
+		}
+
+		assert matrix.Begin(1)
+		assert matrix.Read(0) == 0
+		assert (matrix.Read(1023) >> 64) != 0
+	}
+
+	/**
+	 * Producer holds the row until each serialized call has returned.
+	 */
+	process Connect[]()
+	{
+		matrix.values = values
+		staged.values = values
+		narrow.values = values
+	}
+}
