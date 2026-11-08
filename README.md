@@ -13,16 +13,19 @@ inspect.
 
 ```toml
 [dependencies]
-"Livt.ML" = "1.6.0"
+"Livt.ML" = "1.6.1"
 ```
 
-`Livt.ML 1.6.0` depends on `Livt.Math 1.7.0` for reusable arithmetic and
-`Livt.IO 1.3.0` for RAM-backed tensor storage. See [CHANGELOG.md](CHANGELOG.md)
+Version 1.6.1 publishes package discovery metadata, this README, the changelog,
+and the MIT license. Its component API is unchanged from 1.6.0.
+
+`Livt.ML 1.6.1` depends on `Livt.Math 1.7.2` for reusable arithmetic and
+`Livt.IO 1.8.1` for RAM-backed tensor storage. See [CHANGELOG.md](CHANGELOG.md)
 for release notes and compatibility guidance. Memory sources
 use the generic Livt.IO API: byte tensors use scheduled
 `BlockRam<byte, 2048>` banks, and causal attention uses
 `AsynchronousDistributedRam32x32`. Run `livt sync` after updating dependencies.
-`Livt.Math 1.7.0` must be available in your registry or local workspace before
+`Livt.Math 1.7.2` and `Livt.IO 1.8.1` must be available in your registry or local workspace before
 resolving this version of `Livt.ML`.
 
 ## 📚 API Overview

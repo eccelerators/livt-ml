@@ -2,6 +2,18 @@
 
 All notable changes to this package are documented here.
 
+## 1.6.1 - 2026-11-08
+
+### Added
+
+- Publish package discovery metadata, the README, the changelog, and the MIT
+  license with this version.
+
+### Changed
+
+- Update dependencies to `Livt.Math 1.7.2` and `Livt.IO 1.8.1`. Existing
+  component APIs remain unchanged from 1.6.0.
+
 ## 1.6.0 - 2026-11-07
 
 ### Added
